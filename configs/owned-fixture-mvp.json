@@ -1,0 +1,9 @@
+{
+  "schema_version": "dllm-experiment/v1",
+  "experiment_id": "owned-cwe121-replay-mvp",
+  "candidate_bank_size": 4,
+  "validator_timeout_seconds": 2.0,
+  "expected_cwe": "CWE-121",
+  "fixture": "fixtures/replay/stable-diffcoder-cwe121.json",
+  "target": "fixtures/cwe121/vuln.c"
+}

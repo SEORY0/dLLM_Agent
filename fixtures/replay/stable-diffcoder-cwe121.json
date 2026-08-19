@@ -1,0 +1,55 @@
+{
+  "schema_version": "dllm-replay/v1",
+  "provenance_kind": "synthetic-deterministic-fixture",
+  "compatible_model": "Stable-DiffCoder",
+  "compatible_revision": "10cdaf9b486f1cf0273ad968459dbe2d21a1482a",
+  "target_sha256": "42e55e7371d23312996c73b374e47d2459469e9fc4ef2f0dac592c3b15985144",
+  "proof_input": "DLC-PROOF-000001",
+  "proof_input_sha256": "2db6f282624b12b61f6d147229e59635e929a05fdb88daa2ce0da7f85e6dac88",
+  "trajectories": [
+    {
+      "candidate_id": "candidate-01",
+      "nfe": 12,
+      "vulnerability_probability": 0.99,
+      "localization_probability": 0.99,
+      "consistency": 0.98,
+      "trace": ["masked", "copy-site", "stack-overflow"],
+      "cwe": "CWE-121",
+      "span": {"path": "fixtures/cwe121/vuln.c", "start_line": 13, "end_line": 13},
+      "explanation": "A 16-byte copy writes into an 8-byte stack destination."
+    },
+    {
+      "candidate_id": "candidate-02",
+      "nfe": 10,
+      "vulnerability_probability": 0.68,
+      "localization_probability": 0.62,
+      "consistency": 0.70,
+      "trace": ["masked", "input-read", "bounds-question"],
+      "cwe": "CWE-121",
+      "span": {"path": "fixtures/cwe121/vuln.c", "start_line": 7, "end_line": 7},
+      "explanation": "The fixed-size read may contribute to a later stack overwrite."
+    },
+    {
+      "candidate_id": "candidate-03",
+      "nfe": 14,
+      "vulnerability_probability": 0.55,
+      "localization_probability": 0.40,
+      "consistency": 0.50,
+      "trace": ["masked", "return-path", "weak-signal"],
+      "cwe": "CWE-121",
+      "span": {"path": "fixtures/cwe121/vuln.c", "start_line": 14, "end_line": 14},
+      "explanation": "The return path follows mutation of a small stack array."
+    },
+    {
+      "candidate_id": "candidate-04",
+      "nfe": 8,
+      "vulnerability_probability": 0.30,
+      "localization_probability": 0.25,
+      "consistency": 0.35,
+      "trace": ["masked", "guard", "low-confidence"],
+      "cwe": "CWE-121",
+      "span": {"path": "fixtures/cwe121/vuln.c", "start_line": 9, "end_line": 10},
+      "explanation": "The input-size guard is related but is not itself the overwrite."
+    }
+  ]
+}
