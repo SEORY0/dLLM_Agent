@@ -2,12 +2,12 @@
 
 from pathlib import Path
 
-from dllm_agent.io import parse_json
-from dllm_agent.models import ReplayFixture
-from dllm_agent.scoring import (
+from dllm_agent.core.io import parse_json
+from dllm_agent.core.models import ReplayFixture
+from dllm_agent.replay.scoring import (
     ScoreInputs,
-    no_fixed_point_permutation,
     rank_trajectories,
+    rotate_trace_for_qa,
     trajectory_score,
 )
 
@@ -43,7 +43,7 @@ def test_candidate_selection_is_deterministic_when_scores_are_ranked() -> None:
     )
 
 
-def test_permutation_has_no_fixed_points_when_control_is_applied() -> None:
+def test_trace_is_rotated_when_synthetic_qa_control_is_built() -> None:
     # Given
     fixture = parse_json(
         ROOT / "fixtures/replay/stable-diffcoder-cwe121.json", ReplayFixture, "fixture"
@@ -51,7 +51,7 @@ def test_permutation_has_no_fixed_points_when_control_is_applied() -> None:
     candidate = fixture.trajectories[0]
 
     # When
-    control = no_fixed_point_permutation(candidate)
+    control = rotate_trace_for_qa(candidate)
 
     # Then
     assert all(left != right for left, right in zip(candidate.trace, control, strict=True))

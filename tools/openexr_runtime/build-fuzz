@@ -1,0 +1,16 @@
+#!/bin/sh
+set -eu
+
+test "$#" -eq 0
+umask 000
+trap 'chmod -R a+rwX /work/build-fuzz 2>/dev/null || true' EXIT
+unset CFLAGS CXXFLAGS
+cmake \
+  -S /opt/dllm/runtime \
+  -B /work/build-fuzz \
+  -G "Unix Makefiles" \
+  -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DDLLM_MODE=asan \
+  -DOPENEXR_INSTALL_ROOT=/opt/openexr-asan
+cmake --build /work/build-fuzz --target dllm_harness --parallel 1 --verbose

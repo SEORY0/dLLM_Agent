@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from dllm_agent.errors import BoundaryError
-from dllm_agent.io import parse_json, read_bytes
-from dllm_agent.models import ExperimentConfig, ReplayFixture
+from dllm_agent.core.errors import BoundaryError
+from dllm_agent.core.io import parse_json, read_bytes
+from dllm_agent.core.models import ExperimentConfig, ReplayFixture
 
 
 def test_fixture_rejects_unknown_version_at_boundary(tmp_path: Path) -> None:

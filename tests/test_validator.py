@@ -2,11 +2,12 @@
 
 from pathlib import Path
 
-from dllm_agent.models import Finding, SourceSpan
-from dllm_agent.validator import ValidatorRequest, validate
+from dllm_agent.core.models import Finding, SourceSpan
+from dllm_agent.replay.validator import ValidatorRequest, validate
 
 ROOT = Path(__file__).parents[1]
 TARGET = ROOT / "fixtures/cwe121/vuln.c"
+TARGET_BYTES = TARGET.read_bytes()
 FINDING = Finding(
     candidate_id="candidate-01",
     cwe="CWE-121",
@@ -17,7 +18,7 @@ FINDING = Finding(
 
 def test_validator_proves_owned_stack_overflow_with_asan() -> None:
     # Given
-    request = ValidatorRequest(TARGET, FINDING, b"DLC-PROOF-000001", 2.0)
+    request = ValidatorRequest(TARGET.name, TARGET_BYTES, FINDING, b"DLC-PROOF-000001", 2.0)
 
     # When
     verdict = validate(request)
@@ -28,7 +29,7 @@ def test_validator_proves_owned_stack_overflow_with_asan() -> None:
 
 def test_validator_rejects_safe_short_input() -> None:
     # Given
-    request = ValidatorRequest(TARGET, FINDING, b"SAFE\n", 2.0)
+    request = ValidatorRequest(TARGET.name, TARGET_BYTES, FINDING, b"SAFE\n", 2.0)
 
     # When
     verdict = validate(request)
@@ -37,14 +38,14 @@ def test_validator_rejects_safe_short_input() -> None:
     assert verdict.status == "rejected"
 
 
-def test_validator_returns_inconclusive_when_execution_times_out(tmp_path: Path) -> None:
+def test_validator_returns_inconclusive_when_execution_times_out() -> None:
     # Given
-    target = tmp_path / "loop.c"
-    _ = target.write_text("int main(void) { for (;;) {} }\n", encoding="utf-8")
+    target_name = "loop.c"
+    target_bytes = b"int main(void) { for (;;) {} }\n"
     finding = FINDING.model_copy(
-        update={"span": SourceSpan(path=str(target), start_line=1, end_line=1)}
+        update={"span": SourceSpan(path=target_name, start_line=1, end_line=1)}
     )
-    request = ValidatorRequest(target, finding, b"", 0.01)
+    request = ValidatorRequest(target_name, target_bytes, finding, b"", 0.01)
 
     # When
     verdict = validate(request)
@@ -54,11 +55,9 @@ def test_validator_returns_inconclusive_when_execution_times_out(tmp_path: Path)
     assert verdict.timed_out
 
 
-def test_validator_returns_inconclusive_when_compiler_rejects_target(tmp_path: Path) -> None:
+def test_validator_returns_inconclusive_when_compiler_rejects_target() -> None:
     # Given
-    target = tmp_path / "invalid.c"
-    _ = target.write_text("not c", encoding="utf-8")
-    request = ValidatorRequest(target, FINDING, b"", 2.0)
+    request = ValidatorRequest("invalid.c", b"not c", FINDING, b"", 2.0)
 
     # When
     verdict = validate(request)

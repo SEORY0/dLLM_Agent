@@ -1,0 +1,43 @@
+{
+  "schema_version": "dllm-poc-revision-experiment-config/v1",
+  "mode": "fixture-validation-not-model-efficacy",
+  "target_pin": "AcademySoftwareFoundation/openexr@v3.4.14",
+  "model_pin": "ByteDance-Seed/Stable-DiffCoder-8B-Instruct@10cdaf9b486f1cf0273ad968459dbe2d21a1482a",
+  "image_pin": "sha256:7591279f51256ef5e80341c788d31145ecf1dd0f7a64db7f0cdeaba527ff5add",
+  "arms": [
+    "libfuzzer-only",
+    "structured-one-shot",
+    "feedback-no-remask",
+    "selective-revision",
+    "pseudo-feedback"
+  ],
+  "native_reference": {
+    "arm": "native-hunt-reference",
+    "reference_kind": "non-isomorphic"
+  },
+  "default_pilot": {
+    "repetitions": 5,
+    "particles": 4,
+    "initial_nfe_per_particle": 128,
+    "revision_epochs": 3,
+    "revision_nfe_per_particle_epoch": 16,
+    "probe_seconds": 3,
+    "probes_per_snapshot": 2,
+    "proof_seconds": 30,
+    "max_model_arm_nfe": 704,
+    "requested_fuzz_proof_seconds_per_arm_repetition": 126
+  },
+  "seed_schedule": {
+    "particle_seed_base": 202608200000,
+    "fuzzer_seed_base": 202608210000,
+    "retrieval_seed_base": 202608220000,
+    "permutation_seed_base": 202608230000,
+    "proof_seed_base": 202608240000,
+    "bootstrap_seed": 202608209999
+  },
+  "analysis": {
+    "bootstrap_resamples": 10000,
+    "primary_contrast": "selective-revision_vs_pseudo-feedback",
+    "go_threshold": 0.05
+  }
+}

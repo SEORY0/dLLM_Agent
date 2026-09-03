@@ -1,0 +1,258 @@
+{
+  "schema_version": "dllm-openexr-particle-fixture/v1",
+  "field_order": [
+    "origin_x",
+    "origin_y",
+    "width",
+    "height",
+    "compression",
+    "pixel_type",
+    "line_order",
+    "x_sampling",
+    "payload_pattern",
+    "chunk_offset"
+  ],
+  "selectors": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "mode": "validity-preserving",
+  "sha256": "3dacb4a1977a7e584b50b0359297253b475ff1d18984020abf980bca605cd1e2",
+  "anchor_sha256": "ae2bfa268cf31e5724adf2b06fa686e0db285a66704d320189cdc2de9f45332c",
+  "content_hex": "762f3101020000006368616e6e656c730063686c697374001300000059000100000000000000010000000100000000636f6d7072657373696f6e00636f6d7072657373696f6e0001000000006461746157696e646f7700626f7832690010000000feffffff00000000010000000f000000646973706c617957696e646f7700626f7832690010000000feffffff00000000010000000f0000006c696e654f72646572006c696e654f72646572000100000000706978656c417370656374526174696f00666c6f617400040000000000803f73637265656e57696e646f7743656e746572007632660008000000000000000000000073637265656e57696e646f77576964746800666c6f617400040000000000803f009601000000000000a601000000000000b601000000000000c601000000000000d601000000000000e601000000000000f601000000000000060200000000000016020000000000002602000000000000360200000000000046020000000000005602000000000000660200000000000076020000000000008602000000000000000000000800000000000000000000000100000008000000000000000000000002000000080000000000000000000000030000000800000000000000000000000400000008000000000000000000000005000000080000000000000000000000060000000800000000000000000000000700000008000000000000000000000008000000080000000000000000000000090000000800000000000000000000000a0000000800000000000000000000000b0000000800000000000000000000000c0000000800000000000000000000000d0000000800000000000000000000000e0000000800000000000000000000000f000000080000000000000000000000",
+  "field_spans": [
+    {
+      "field": "pixel_type",
+      "start": 30,
+      "end": 34
+    },
+    {
+      "field": "x_sampling",
+      "start": 38,
+      "end": 42
+    },
+    {
+      "field": "compression",
+      "start": 75,
+      "end": 76
+    },
+    {
+      "field": "origin_x",
+      "start": 97,
+      "end": 101
+    },
+    {
+      "field": "origin_y",
+      "start": 101,
+      "end": 105
+    },
+    {
+      "field": "width",
+      "start": 105,
+      "end": 109
+    },
+    {
+      "field": "height",
+      "start": 109,
+      "end": 113
+    },
+    {
+      "field": "origin_x",
+      "start": 137,
+      "end": 141
+    },
+    {
+      "field": "origin_y",
+      "start": 141,
+      "end": 145
+    },
+    {
+      "field": "width",
+      "start": 145,
+      "end": 149
+    },
+    {
+      "field": "height",
+      "start": 149,
+      "end": 153
+    },
+    {
+      "field": "line_order",
+      "start": 177,
+      "end": 178
+    },
+    {
+      "field": "chunk_offset",
+      "start": 277,
+      "end": 405
+    },
+    {
+      "field": "origin_y",
+      "start": 405,
+      "end": 409
+    },
+    {
+      "field": "payload_pattern",
+      "start": 413,
+      "end": 421
+    },
+    {
+      "field": "origin_y",
+      "start": 421,
+      "end": 425
+    },
+    {
+      "field": "payload_pattern",
+      "start": 429,
+      "end": 437
+    },
+    {
+      "field": "origin_y",
+      "start": 437,
+      "end": 441
+    },
+    {
+      "field": "payload_pattern",
+      "start": 445,
+      "end": 453
+    },
+    {
+      "field": "origin_y",
+      "start": 453,
+      "end": 457
+    },
+    {
+      "field": "payload_pattern",
+      "start": 461,
+      "end": 469
+    },
+    {
+      "field": "origin_y",
+      "start": 469,
+      "end": 473
+    },
+    {
+      "field": "payload_pattern",
+      "start": 477,
+      "end": 485
+    },
+    {
+      "field": "origin_y",
+      "start": 485,
+      "end": 489
+    },
+    {
+      "field": "payload_pattern",
+      "start": 493,
+      "end": 501
+    },
+    {
+      "field": "origin_y",
+      "start": 501,
+      "end": 505
+    },
+    {
+      "field": "payload_pattern",
+      "start": 509,
+      "end": 517
+    },
+    {
+      "field": "origin_y",
+      "start": 517,
+      "end": 521
+    },
+    {
+      "field": "payload_pattern",
+      "start": 525,
+      "end": 533
+    },
+    {
+      "field": "origin_y",
+      "start": 533,
+      "end": 537
+    },
+    {
+      "field": "payload_pattern",
+      "start": 541,
+      "end": 549
+    },
+    {
+      "field": "origin_y",
+      "start": 549,
+      "end": 553
+    },
+    {
+      "field": "payload_pattern",
+      "start": 557,
+      "end": 565
+    },
+    {
+      "field": "origin_y",
+      "start": 565,
+      "end": 569
+    },
+    {
+      "field": "payload_pattern",
+      "start": 573,
+      "end": 581
+    },
+    {
+      "field": "origin_y",
+      "start": 581,
+      "end": 585
+    },
+    {
+      "field": "payload_pattern",
+      "start": 589,
+      "end": 597
+    },
+    {
+      "field": "origin_y",
+      "start": 597,
+      "end": 601
+    },
+    {
+      "field": "payload_pattern",
+      "start": 605,
+      "end": 613
+    },
+    {
+      "field": "origin_y",
+      "start": 613,
+      "end": 617
+    },
+    {
+      "field": "payload_pattern",
+      "start": 621,
+      "end": 629
+    },
+    {
+      "field": "origin_y",
+      "start": 629,
+      "end": 633
+    },
+    {
+      "field": "payload_pattern",
+      "start": 637,
+      "end": 645
+    },
+    {
+      "field": "origin_y",
+      "start": 645,
+      "end": 649
+    },
+    {
+      "field": "payload_pattern",
+      "start": 653,
+      "end": 661
+    }
+  ]
+}

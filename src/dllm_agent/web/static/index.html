@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="dLLM Hunt Dashboard for reviewing runs, coverage, fuzzing evidence, and candidate instances.">
+    <title>dLLM Hunt Dashboard</title>
+    <link rel="stylesheet" href="/assets/app.css">
+    <script type="module" src="/assets/app.js"></script>
+  </head>
+  <body data-page="console" data-mode="summary">
+    <a class="skip-link" href="#main">Skip to dashboard</a>
+    <header class="topbar" role="banner">
+      <div class="brand">
+        <h1>dLLM Hunt Dashboard</h1>
+      </div>
+      <dl class="top-metrics" aria-label="Dashboard context">
+        <div><dt>Status</dt><dd data-bind="connection">Connecting</dd></div>
+        <div><dt>Target</dt><dd data-bind="target">catalog pending</dd></div>
+        <div><dt>Runs</dt><dd data-bind="run-count">0</dd></div>
+      </dl>
+      <nav class="view-nav" aria-label="Primary views">
+        <a href="/">Runs</a>
+        <a href="/showcase">Showcase</a>
+      </nav>
+    </header>
+
+    <main id="main" class="dashboard" tabindex="-1">
+      <section class="summary-view" data-view="summary" aria-labelledby="runs-title">
+        <div class="panel-heading">
+          <div>
+            <p class="overline">Runs</p>
+            <h2 id="runs-title">Run summary</h2>
+          </div>
+          <span class="badge" data-role="catalog-status">Loading catalog</span>
+        </div>
+        <div class="table-wrap">
+          <table class="runs-table">
+            <caption>OSS-CRS-style minimal run index</caption>
+            <thead>
+              <tr>
+                <th>Run ID</th>
+                <th>Status</th>
+                <th>Target</th>
+                <th>dLLM Instances</th>
+                <th>Coverage</th>
+                <th>Findings</th>
+                <th>Artifacts</th>
+              </tr>
+            </thead>
+            <tbody data-role="runs-table-body">
+              <tr><td colspan="7">Loading run catalog.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="detail-view" data-view="detail" aria-labelledby="detail-title" hidden>
+        <div class="panel-heading">
+          <div>
+            <p class="overline">Run detail</p>
+            <h2 id="detail-title" data-role="detail-title">Run evidence</h2>
+          </div>
+          <a class="secondary-action" href="/">All runs</a>
+        </div>
+
+        <section class="panel detail-summary" aria-label="Run status and fuzzing summary">
+          <dl class="metric-strip" data-role="detail-metrics"></dl>
+          <p class="claim-boundary" data-role="claim-copy">Loading report evidence.</p>
+        </section>
+
+        <section class="panel" aria-labelledby="instances-title">
+          <div class="panel-heading">
+            <div>
+              <p class="overline">dLLM Instances</p>
+              <h2 id="instances-title">Candidate instances</h2>
+            </div>
+          </div>
+          <div class="instance-grid" data-role="instance-grid" aria-live="polite"></div>
+        </section>
+
+        <section class="panel" aria-labelledby="coverage-title">
+          <div class="panel-heading"><p class="overline">Code Coverage</p><h2 id="coverage-title">Coverage totals</h2></div>
+          <dl class="coverage-grid" data-role="coverage-grid"></dl>
+        </section>
+
+        <section class="panel" aria-labelledby="fuzz-title">
+          <div class="panel-heading"><p class="overline">Fuzzing</p><h2 id="fuzz-title">Fuzz stats and artifacts</h2></div>
+          <dl class="fuzz-grid" data-role="fuzz-grid"></dl>
+          <div class="table-wrap">
+            <table class="evidence-table">
+              <caption>Fuzz corpus and crash artifacts</caption>
+              <thead><tr><th>Kind</th><th>Status</th><th>Name</th><th>Size</th><th>Copy</th></tr></thead>
+              <tbody data-role="evidence-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <details class="panel disclosure" data-role="trajectory-disclosure">
+          <summary>Trajectory evidence</summary>
+          <div class="instance-grid" data-role="trajectory-grid"></div>
+        </details>
+
+        <details class="panel disclosure" data-role="source-disclosure">
+          <summary>Source evidence</summary>
+          <pre class="source-view"><code data-role="source-code"></code></pre>
+        </details>
+
+        <details class="panel disclosure" data-role="hash-disclosure">
+          <summary>Hash evidence</summary>
+          <div class="table-wrap">
+            <table>
+              <caption>Report, command, and artifact hashes</caption>
+              <tbody data-role="hash-body"></tbody>
+            </table>
+          </div>
+        </details>
+      </section>
+    </main>
+  </body>
+</html>

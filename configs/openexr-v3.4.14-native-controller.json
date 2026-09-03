@@ -1,0 +1,11 @@
+{
+  "schema_version": "dllm-native-hunt-config/v1",
+  "stages": [
+    {
+      "duration_seconds": 5,
+      "fuzzer_seeds": [20260819, 20260820],
+      "survivors": 1
+    }
+  ],
+  "proof_duration_seconds": 20
+}

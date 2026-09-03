@@ -1,0 +1,16 @@
+#!/bin/sh
+set -eu
+
+test "$#" -eq 0
+umask 000
+trap 'chmod -R a+rwX /work/build-coverage 2>/dev/null || true' EXIT
+unset CFLAGS CXXFLAGS
+cmake \
+  -S /opt/dllm/runtime \
+  -B /work/build-coverage \
+  -G "Unix Makefiles" \
+  -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DDLLM_MODE=coverage \
+  -DOPENEXR_INSTALL_ROOT=/opt/openexr-coverage
+cmake --build /work/build-coverage --target dllm_harness --parallel 1 --verbose

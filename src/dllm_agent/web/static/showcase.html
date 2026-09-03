@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Primitive showcase for dLLM Hunt Console states.">
+    <title>dLLM Hunt Console Showcase</title>
+    <link rel="stylesheet" href="/assets/app.css">
+    <script type="module" src="/assets/showcase.js"></script>
+  </head>
+  <body data-page="showcase">
+    <a class="skip-link" href="#main">Skip to showcase</a>
+    <header class="topbar">
+      <div class="brand"><span class="icon-mark" aria-hidden="true"></span><h1>Primitive Showcase</h1></div>
+      <nav class="view-nav" aria-label="Showcase navigation"><a href="./index.html">Console</a><a href="#states" aria-current="page">States</a></nav>
+    </header>
+    <main id="main" class="showcase" tabindex="-1">
+      <section class="panel">
+        <div class="panel-heading"><p class="overline">States</p><h2 id="states">Badges and controls</h2></div>
+        <div class="show-grid">
+          <span class="badge">Queued</span><span class="badge status-running">Running</span><span class="badge status-proved">Proved</span><span class="badge status-warning">No bug</span><span class="badge status-error">Failed</span>
+          <button class="primary-action" type="button">Enabled</button><button class="primary-action" type="button" disabled>Disabled</button><button class="icon-button" type="button" aria-label="Focused sample">▶</button>
+        </div>
+      </section>
+      <section class="panel denoise-panel">
+        <div class="panel-heading"><p class="overline">UI-only synthetic data</p><h2>Exact-token and aggregate modes</h2><span class="badge">Captured transfer replay</span></div>
+        <div class="show-columns">
+          <div><h3>Exact token mode</h3><div class="token-field demo exact-demo"></div><p class="mode-copy">Exact-token mode: each committed token maps to captured transfer records. Scroll the row horizontally on narrow screens.</p></div>
+          <div><h3>Aggregate mode</h3><div class="token-field demo aggregate-demo"></div><p class="mode-copy">Aggregate mode: step totals were captured, but token positions were not. Scroll the row horizontally on narrow screens.</p></div>
+        </div>
+      </section>
+      <section class="panel">
+        <div class="panel-heading"><p class="overline">Selectors</p><h2>Candidate list states</h2></div>
+        <div class="candidate-list showcase-candidates" role="radiogroup" aria-label="Showcase candidates">
+          <button class="candidate-card selected" role="radio" aria-checked="true" type="button"><span>candidate-02</span><strong>0.946</strong><small>selected · clean API boundary</small></button>
+          <button class="candidate-card rejected" role="radio" aria-checked="false" type="button"><span>candidate-03</span><strong>Rejected</strong><small>disallowed include</small></button>
+          <button class="candidate-card loading" role="radio" aria-checked="false" disabled type="button"><span>candidate-04</span><strong>Loading</strong><small>waiting for score</small></button>
+        </div>
+      </section>
+      <section class="panel">
+        <div class="panel-heading"><p class="overline">Empty and error</p><h2>Evidence fallbacks</h2></div>
+        <div class="empty-state">No trajectory resource selected.</div>
+        <div class="form-message error" role="status">Job submission failed: API rejected a non-allowlisted resource id.</div>
+      </section>
+    </main>
+  </body>
+</html>

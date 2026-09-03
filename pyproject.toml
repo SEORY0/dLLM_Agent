@@ -8,22 +8,49 @@ version = "0.1.0"
 description = "Deterministic replay-based dLLM vulnerability discovery MVP"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = ["pydantic>=2.11,<3", "rich>=14,<15", "typer>=0.16,<1"]
+dependencies = [
+    "fastapi>=0.141,<1",
+    "pydantic>=2.11,<3",
+    "rich>=14,<15",
+    "typer>=0.16,<1",
+    "uvicorn>=0.52,<1",
+]
 
 [project.scripts]
 dllm-agent = "dllm_agent.cli:app"
 
 [dependency-groups]
-dev = ["basedpyright>=1.31", "pytest>=8.4", "ruff>=0.12"]
+dev = [
+    "basedpyright>=1.31",
+    "httpx2>=2.12,<3",
+    "playwright>=1.62,<2",
+    "pytest>=8.4",
+    "ruff>=0.12",
+]
+
+[tool.hatch.build]
+exclude = [
+    "/.omo",
+    "/.omx",
+    "/artifacts",
+    "/dist",
+]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/dllm_agent"]
+packages = ["src/dllm_agent", "tools"]
 
 [tool.basedpyright]
 typeCheckingMode = "all"
 pythonVersion = "3.12"
 pythonPlatform = "All"
-include = ["src", "tests"]
+include = [
+    "src",
+    "tests",
+    "tools/runtime",
+    "tools/selective_revision_payloads.py",
+    "tools/selective_revision_sampler.py",
+    "tools/selective_revision_worker.py",
+]
 exclude = ["**/__pycache__", "**/.venv", "**/build", "**/dist"]
 reportUnusedCallResult = "warning"
 reportUnnecessaryTypeIgnoreComment = "error"
@@ -35,6 +62,7 @@ reportPrivateUsage = "error"
 target-version = "py312"
 line-length = 100
 src = ["src", "tests"]
+exclude = [".omo"]
 
 [tool.ruff.lint]
 select = ["ALL"]

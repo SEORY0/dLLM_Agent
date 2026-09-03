@@ -1,0 +1,1 @@
+"""libtiff structured target adapter."""

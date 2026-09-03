@@ -1,0 +1,43 @@
+{
+  "schema_version": "dllm-hunt/v1",
+  "hunt_id": "jsoncons-ubjson-bytes-nonempty-20260819",
+  "target_id": "jsoncons-ubjson-bytes-nonempty",
+  "repository_url": "https://github.com/danielaparker/jsoncons.git",
+  "commit_sha": "af497a1c1ea9043f4ad8d799617b7d00d6676153",
+  "security_policy_url": "https://github.com/danielaparker/jsoncons/security/advisories/new",
+  "security_policy_sha256": "df8d8819cfb769e8f1085425cd8713f70254ed22d0fb58ca210a38fdc5fd83ce",
+  "prompt": "prompts/jsoncons-ubjson-harness-nonempty.md",
+  "model_id": "ByteDance-Seed/Stable-DiffCoder-8B-Instruct",
+  "model_revision": "10cdaf9b486f1cf0273ad968459dbe2d21a1482a",
+  "image_id": "sha256:131884e6d9d2cc3962203c97a66c76634a521b1ff71a677f3c79022efb4a84cd",
+  "sanitizers": "address",
+  "allowed_includes": [
+    "cstddef",
+    "cstdint",
+    "system_error",
+    "vector",
+    "jsoncons/json.hpp",
+    "jsoncons_ext/ubjson/ubjson.hpp",
+    "jsoncons_ext/ubjson/ubjson_cursor.hpp"
+  ],
+  "required_symbols": [
+    "LLVMFuzzerTestOneInput",
+    "try_decode_ubjson",
+    "ubjson_bytes_cursor",
+    "std::error_code"
+  ],
+  "seed_hex": [
+    "5a",
+    "54",
+    "46",
+    "5b5d",
+    "7b7d",
+    "5500",
+    "53550548656c6c6f",
+    "5b2349015500"
+  ],
+  "fuzz_seconds": 120,
+  "max_len": 4096,
+  "rss_limit_mb": 2048,
+  "timeout_seconds": 5
+}
