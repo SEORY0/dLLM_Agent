@@ -182,21 +182,32 @@ online-portfolio 장기 실행에서만 쓴다. 두 모드 모두 `run_manifest.
   요구.
 - **검증 결과:** 아래 §7 참조.
 
-### Phase 2 — Failure Registry 영속화 (다음 착수 대상, 미착수)
+### Phase 2 — Failure Registry 영속화 — 구현 완료 (2026-09-04)
 
-- `revision/failure_registry.py`: `FailureRecord`, `load`/`append`/`seed_outcomes`,
-  `registry_mode: RegistryMode`(cold/warm, 위 §3.3 참조) config 필드.
-- `revision/pipeline.py` 호출부에서 run 시작 시 `registry_mode`를 확인 — `cold`면 registry를
-  전혀 열지 않고, `warm`이면 로드 → `seed_outcomes` → `trajectory_policy` outcomes 인자에
-  병합. Run 종료 시 관측된 `LineageFieldOutcome`을 `FailureRecord`로 변환해 append(warm 여부와
-  무관하게 항상 기록 — 다음 warm run이 쓸 수 있도록).
-- 스키마 버전 필드(`schema_version: "dllm-failure-registry/v1"`)를 붙여 기존 manifest 관례를
-  따른다.
-- **테스트:** `tests/test_poc_revision_failure_registry.py` — round-trip append/load, cause_bucket
-  ↔ 기존 `invalid_count`/`duplicate_count`/`proof_failure_count` 매핑이 정확한지,
-  cross-run seeding이 §A.1 실행 중단 조건(예: hash-identical candidate 요구)을 깨지 않는지.
-- **검증:** `pytest tests/test_poc_revision_failure_registry.py tests/test_poc_revision_trajectory_policy.py -v`,
-  `basedpyright src/dllm_agent/revision/failure_registry.py`.
+- `revision/failure_registry.py`(신규): `FailureRecord`(target/field/cause_bucket당 1 레코드),
+  `load`/`append`(atomic temp+rename, `core/io.write_model`과 동일 관례), `failure_records()`
+  (관측된 `LineageFieldOutcome`을 bucket별로 explode), `seed_outcomes()`(영속 레코드를 target
+  pin으로 필터링해 특정 lineage용 `LineageFieldOutcome`으로 역변환).
+- `revision/models.py`: `RevisionConfig`에 `registry_mode`("cold"/"warm", 기본 cold),
+  `failure_registry_path`, `target_pin_sha256` 추가 — 전부 optional/기본값 있음, 기존 config
+  JSON 파일과 하위호환. warm인데 path가 없으면 validator가 fail-closed.
+- `revision/pipeline.py`: `_run_online_selective`가 `load_seed_records`(registry_mode=="warm"일
+  때만 실제 로드)로 얻은 레코드를 `choose_lineage_field` 호출 시 `state.field_outcomes`와 합쳐
+  넘긴다(`trajectory_policy.py` 함수 시그니처는 변경 없음). `_run_poc_revision_async` 끝에서
+  `persist_failure_records`가 이번 run의 관측 결과를 append — **run 자신의 mode와 무관하게**
+  path만 설정돼 있으면 항상 기록(cold run도 다음 warm run에 기여). `run_poc_revision`의 public
+  시그니처("Task 4가 고정")는 그대로 — target scoping은 이미 있는 `RevisionConfig` 객체를 통해
+  전달된다. `_run_online_selective`가 PLR0915(문장 수 제한)를 넘겨 promote/drop 분기를
+  `_apply_archive_decision`으로 추출(순수 리팩터, 동작 변화 없음).
+- **문서:** `docs/source-layout.md`, `tests/source_layout_support.py`에 새 모듈 반영 — Phase 1
+  때와 동일하게 이 exact-inventory 테스트를 빠뜨려 임시로 234→235 회귀를 냈다가 즉시 고쳤다
+  (교훈: 새 revision 모듈을 추가할 때마다 이 두 파일을 빠짐없이 동기화할 것).
+- **테스트:** `tests/test_poc_revision_failure_registry.py`(신규, 13 케이스) — round-trip
+  append/load, 손상된 JSONL fail-closed, target-pin 격리, cause_bucket↔카운터 매핑, cold에서
+  기존 파일이 있어도 빈 seed, warm에서 정확히 로드, path 없으면 no-op, 그리고 동일 seed를 두 번
+  주입했을 때 `choose_lineage_field`가 결정론적으로(그리고 무-seed 대비 실제로 다르게) 선택함을
+  확인하는 인과 테스트.
+- **검증 결과:** 아래 §7 참조.
 
 ### Phase 3 — H5/B\* 실행 (신규 아키텍처 없음, 기존 §8.1 설계의 실행)
 
@@ -235,3 +246,23 @@ online-portfolio 장기 실행에서만 쓴다. 두 모드 모두 `run_manifest.
   쌓이기 전까지 착수하지 않는다.
 - 이 계획은 stock Stable-DiffCoder의 "자가 수정" 주장을 하지 않는다 — 여전히 이 저장소가
   구현한 project-owned selective-revision 경로에 대한 이야기다(`docs/dllm-native-online-portfolio-harness.md:68-70` 원칙 유지).
+
+## 7. 검증 결과 (Phase 1–2)
+
+두 phase 모두 Windows 네이티브 Python이 아니라 WSL Ubuntu에서 검증했다 — 기존
+`experiments/openexr_one_day/cell_runner.py`가 POSIX 전용 `resource` 모듈을 최상위에서
+import하기 때문에 native Windows에서는 이 저장소의 revision 테스트 대부분이 애초에
+수집(collect)조차 되지 않는다(Phase 1 이전부터 있던 제약이며, 이 계획의 범위 밖). WSL은
+저장소가 실제로 겨냥하는 Linux/Docker 런타임과 일치한다.
+
+| 항목 | Phase 1 (`4b4e27a`, `25de070`) | Phase 2 (`87fb9ce`) |
+|---|---|---|
+| 신규 테스트 | 11개, 전부 통과 | 13개, 전부 통과 |
+| 전체 `pytest` 회귀 | 실패/에러 집합이 Phase 1 이전 baseline과 byte-identical(기존 무관 실패 234개, 에러 6개) | 실패/에러 집합이 Phase 1 이후 baseline과 byte-identical(동일 234/6) — `git stash`로 diff 양방향 확인 |
+| `basedpyright`(전체 프로젝트, `typeCheckingMode=all`) | 0 errors | 0 errors |
+| `ruff check .` | 변경 파일 전부 통과 | 변경 파일 전부 통과. `tools/analyze_openexr_one_day.py`의 `RUF100`은 이 작업과 무관한 기존 이슈로 확인(파일 미변경) |
+
+Phase 2 작업 중 exact-inventory 회귀(`docs/source-layout.md` / `tests/source_layout_support.py`를
+새 모듈 추가 시마다 동기화해야 하는 저장소 규칙)를 한 번 놓쳤다가(234→235) 즉시 발견해 고쳤다.
+다음 phase에서도 새 `revision/*.py` 파일을 추가할 때 이 두 파일 동기화를 첫 단계 체크리스트에
+넣는다.
