@@ -46,6 +46,7 @@ class RevisionConfig(FrozenModel):
     archive_size: int = Field(default=32, gt=0)
     plateau_epochs: int = Field(default=1, gt=0)
     proof_family_attempt_cap: int = Field(default=2, gt=0)
+    frontier_width: int = Field(default=1, ge=1)
     registry_mode: RegistryMode = "cold"
     failure_registry_path: str | None = None
     target_pin_sha256: Sha256 | None = None

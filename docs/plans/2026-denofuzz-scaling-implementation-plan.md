@@ -209,18 +209,52 @@ online-portfolio 장기 실행에서만 쓴다. 두 모드 모두 `run_manifest.
   확인하는 인과 테스트.
 - **검증 결과:** 아래 §7 참조.
 
-### Phase 3 — H5/B\* 실행 (신규 아키텍처 없음, 기존 §8.1 설계의 실행)
+### Phase 3 — H5/B\* 실행 배선 — 구현 완료 (2026-09-04)
 
-- Phase 1+2가 적용된 `search-tree` arm과, ablation 표(harness 문서)에 이미 정의된
-  `single-scout`(=현재 `online-portfolio` 그대로) 및 §D절의 AR-FIM equal-budget arm을 동일
-  target/container pin, corpus, seed로 나란히 돌린다.
-- Budget sweep(작은 pilot 규모: `particle_count`/`epochs` 2~3단계)으로 `time-to-first-proved-cause`
-  누적곡선을 그려 B\* 관측 시도. §1.2 기준대로 미관측이면 "미관측"으로 명시 보고.
-- 이 phase는 **신규 코드가 거의 없다** — Phase 1/2 산출물을 기존 `poc-revision` CLI와
-  `experiments/openexr_one_day` 캠페인 오케스트레이션에 새 config 파일(`configs/
-  openexr-v3.4.14-search-tree-pilot.json`)로 연결하는 배선 작업이다.
-- **검증:** 기존 §A.1 실행 중단 조건과 §H절 판정 gate를 그대로 적용. 새 통계 절차를 발명하지
-  않는다.
+- `revision/models.py`: `RevisionConfig.frontier_width: int = 1`(`ge=1`) 추가. 기본값 1로 기존
+  config 전부 하위호환.
+- `revision/pipeline.py`: `_run_online_selective` 루프에 `_backtrack_parent`/
+  `_lineage_frontier_keys`/`_archive_record` 3개 헬퍼를 추가해 Phase 1의
+  `search_tree.select_lineage_frontier`와 `portfolio.choose_backtrack_key`를 실제로 호출한다.
+  - `_lineage_frontier_keys`는 `frontier_width<=1`이면 **`select_lineage_frontier`를 아예
+    호출하지 않고** `(active record의 key,)` 단일 튜플만 반환한다 — 재파생이 아니라 구성 자체로
+    오늘의 단일 active-scout 선택과 동일함을 보장한다. `frontier_width>1`일 때만
+    `select_lineage_frontier`로 archive에서 같은 lineage의 다른 non-dominated 후보를 추가로
+    가져와 active-key 뒤에 덧붙인다.
+  - `_backtrack_parent`가 `choose_backtrack_key(particle_id, frontier_keys, epoch)`로 이번
+    epoch의 실제 확장 지점을 고르고, `revise_unique`에 넘기는 parent, cost lookup key,
+    reversion target(`parents[child_id]`)을 전부 그 선택으로 치환한다. 이게 real backtracking이다
+    — 이전에는 `active[particle_id]`만 계속 확장했다.
+  - 기존 `active`/archive 승격·강등 로직(`_apply_archive_decision`)은 **전혀 건드리지 않았다**
+    — 백트래킹은 "이번 epoch에 누구를 확장할지"만 바꾸고, 결과 Pareto 판정은 그대로다.
+- **테스트로 실제 검증:** `tests/test_poc_revision_pipeline.py`의 기존
+  `test_online_archive_retained_incomparable_child_is_scheduled_next` fixture를 그대로 재사용해
+  두 개 신규 테스트를 추가했다.
+  - `frontier_width=1`: 2번째 revision이 여전히 promoted child에서 확장됨(기존 동작과 동일).
+  - `frontier_width=2`: 같은 시나리오에서 2번째 revision이 **archived parent로 백트래킹**함
+    (round-robin `epoch % len(frontier)`가 예측한 그대로) — 이게 mock-run 수준의 "에러 없이
+    호출" 검증이자, backtracking이 실제로 관측 가능한 파이프라인 산출물을 바꾼다는 인과 증거다.
+- **Config 2종:** `configs/openexr-v3.4.14-search-tree-pilot.json`(`frontier_width:4`,
+  `registry_mode:"cold"`, `archive_size:16`=particle_count(4)×frontier_width(4)),
+  `configs/openexr-v3.4.14-search-tree-warm-pilot.json`(동일 + `registry_mode:"warm"`,
+  `failure_registry_path:"artifacts/openexr-failure-registry.jsonl"`). 두 config 모두
+  `target_pin_sha256`은 `sha256(target.commit_sha)`로 채웠다(cli.py 자동 유도는 Phase 2에서
+  보류한 결정 그대로 — config author가 명시).
+- **텔레메트리 점검 결과 (신규 구현 없음, 조사만):** `PocRevisionReport`/`RunManifest`에
+  `time-to-first-proved-cause`나 `validated_success@1` 같은 이름의 필드는 **없다**. 이 저장소는
+  `RevisionEvent`를 의도적으로 timestamp-free하게 설계했다(`models.py` 자체 docstring: "Timestamp-free
+  event row"). 대신 이미 존재하는 `RevisionEvent.sequence`/`nfe`/`forward_calls`/`gpu_ms`와
+  `online_proof_status`(`OnlineProofVerdict`에도 원인 클래스 포함)를 조합하면 **NFE-indexed**
+  anytime-discovery curve(wall-clock이 아니라 "누적 NFE 대비 최초 proved-cause 시점")를 사후
+  계산할 수 있다 — 이게 이 저장소의 재현성 원칙과 맞는 올바른 축이다. `RuntimeAccounting`도
+  `recorded_nfe`/`recorded_forward_calls`/`recorded_gpu_ms`/`probe_invocations`/
+  `exact_proof_invocations`를 이미 report에 싣는다. **새 스키마 필드나 분석 스크립트는 이번
+  phase에서 추가하지 않았다** — 실제 GPU pilot 데이터 없이 분석기를 먼저 만드는 건 이 저장소가
+  스스로 경계하는 "미측정 주장" 패턴이기 때문이다. B\* 관측 시도는 실제 실행 뒤 이 기존 필드들로
+  집계하고, sanitizer finding이 전혀 없으면(과거 OpenEXR PoC pilot의 `NO-GO`처럼) "B\* 미관측"으로
+  fail-closed 보고한다 — 이 규칙은 코드가 아니라 §1.2에 이미 사전등록돼 있으므로 별도 구현이
+  필요 없다.
+- **검증:** 아래 §7 참조.
 
 ## 5. 격리·보안 경계 유지 방안
 
@@ -247,22 +281,48 @@ online-portfolio 장기 실행에서만 쓴다. 두 모드 모두 `run_manifest.
 - 이 계획은 stock Stable-DiffCoder의 "자가 수정" 주장을 하지 않는다 — 여전히 이 저장소가
   구현한 project-owned selective-revision 경로에 대한 이야기다(`docs/dllm-native-online-portfolio-harness.md:68-70` 원칙 유지).
 
-## 7. 검증 결과 (Phase 1–2)
+## 7. 검증 결과 (Phase 1–3)
 
-두 phase 모두 Windows 네이티브 Python이 아니라 WSL Ubuntu에서 검증했다 — 기존
+세 phase 모두 Windows 네이티브 Python이 아니라 WSL Ubuntu에서 검증했다 — 기존
 `experiments/openexr_one_day/cell_runner.py`가 POSIX 전용 `resource` 모듈을 최상위에서
 import하기 때문에 native Windows에서는 이 저장소의 revision 테스트 대부분이 애초에
 수집(collect)조차 되지 않는다(Phase 1 이전부터 있던 제약이며, 이 계획의 범위 밖). WSL은
 저장소가 실제로 겨냥하는 Linux/Docker 런타임과 일치한다.
 
-| 항목 | Phase 1 (`4b4e27a`, `25de070`) | Phase 2 (`87fb9ce`) |
-|---|---|---|
-| 신규 테스트 | 11개, 전부 통과 | 13개, 전부 통과 |
-| 전체 `pytest` 회귀 | 실패/에러 집합이 Phase 1 이전 baseline과 byte-identical(기존 무관 실패 234개, 에러 6개) | 실패/에러 집합이 Phase 1 이후 baseline과 byte-identical(동일 234/6) — `git stash`로 diff 양방향 확인 |
-| `basedpyright`(전체 프로젝트, `typeCheckingMode=all`) | 0 errors | 0 errors |
-| `ruff check .` | 변경 파일 전부 통과 | 변경 파일 전부 통과. `tools/analyze_openexr_one_day.py`의 `RUF100`은 이 작업과 무관한 기존 이슈로 확인(파일 미변경) |
+| 항목 | Phase 1 (`4b4e27a`, `25de070`) | Phase 2 (`87fb9ce`) | Phase 3 |
+|---|---|---|---|
+| 신규 테스트 | 11개, 전부 통과 | 13개, 전부 통과 | 4개, 전부 통과(pipeline 2 + config 역직렬화 2) |
+| 전체 `pytest` 회귀 | byte-identical(기존 무관 실패 234개, 에러 6개) | byte-identical(동일 234/6) | byte-identical(동일 234/6) — 세 번 모두 `git stash`로 diff 양방향 확인 |
+| `basedpyright`(전체, `typeCheckingMode=all`) | 0 errors | 0 errors | 0 errors |
+| `ruff check .` | 변경 파일 전부 통과 | 변경 파일 전부 통과 | 변경 파일 전부 통과 |
+| exact-inventory (`source-layout.md`/`source_layout_support.py`) | 통과 | 한 번 놓쳤다가(234→235) 즉시 발견해 고침 | 해당 없음 — 이번 phase는 새 `.py` 모듈을 추가하지 않아 동기화 불필요, 실제로 불필요함을 확인 |
 
-Phase 2 작업 중 exact-inventory 회귀(`docs/source-layout.md` / `tests/source_layout_support.py`를
-새 모듈 추가 시마다 동기화해야 하는 저장소 규칙)를 한 번 놓쳤다가(234→235) 즉시 발견해 고쳤다.
-다음 phase에서도 새 `revision/*.py` 파일을 추가할 때 이 두 파일 동기화를 첫 단계 체크리스트에
-넣는다.
+`tools/analyze_openexr_one_day.py`의 `RUF100`은 세 phase 내내 이 작업과 무관한 기존 이슈로
+반복 확인됐다(파일 미변경).
+
+### Mock-run 재현 명령
+
+GPU 없이도 Phase 3의 backtracking 배선이 파이프라인 상에서 실제로 다른 산출물을 내는지
+확인할 수 있는 mock-run은 다음과 같다(`DeterministicSampler`/`SequenceProbe` fake로
+`run_poc_revision`을 end-to-end 실행):
+
+```bash
+uv run pytest tests/test_poc_revision_pipeline.py -k frontier_width -v
+```
+
+실제 GPU pilot(이 세션에서는 실행하지 않았다 — RTX 3090과 Stable-DiffCoder 로드가 필요)은
+다음 명령으로 착수한다:
+
+```bash
+dllm-agent poc-revision \
+  --config configs/openexr-v3.4.14-search-tree-pilot.json \
+  --source <verified-openexr-checkout> \
+  --runtime-python <stable-diffcoder-venv-python> \
+  --cache-dir <hf-cache-dir> \
+  --artifact-dir <artifact-root>/search-tree-pilot \
+  --output <artifact-root>/search-tree-pilot/report.json
+```
+
+warm ablation은 `--config configs/openexr-v3.4.14-search-tree-warm-pilot.json`으로 같은
+명령을 반복하되, `failure_registry_path`(`artifacts/openexr-failure-registry.jsonl`)가 이전
+cold run에서 이미 채워져 있어야 의미가 있다.

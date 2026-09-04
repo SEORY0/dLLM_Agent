@@ -73,6 +73,7 @@ from dllm_agent.revision.policy import attribute_feedback
 from dllm_agent.revision.portfolio import (
     LineageState,
     PortfolioPolicy,
+    choose_backtrack_key,
     revision_due,
     update_lineage,
 )
@@ -83,6 +84,7 @@ from dllm_agent.revision.proof_archive import (
     OnlineProofVerdict,
     classify_online_proof,
 )
+from dllm_agent.revision.search_tree import select_lineage_frontier
 from dllm_agent.revision.trajectory_policy import (
     LineageFieldOutcome,
     choose_lineage_field,
@@ -402,21 +404,26 @@ async def _run_online_selective(
         parents: dict[str, ProbeRecord] = {}
         remasks: dict[str, RemaskDecision] = {}
         for record in eligible:
-            controller_result = _controller_visible_result(record.particle.result, treatment_policy)
             lineage_id = record.particle.particle_id
+            parent_record = _backtrack_parent(record, archive, protected, inputs.config, epoch)
+            controller_result = _controller_visible_result(
+                parent_record.particle.result, treatment_policy
+            )
             field_name = choose_lineage_field(
                 controller_result,
                 _seeded_outcomes(state, seed_records, inputs.config, lineage_id),
                 lineage_id=lineage_id,
             )
-            remask = _online_remask_decision(state, epoch, record, field_name, controller_result)
+            remask = _online_remask_decision(
+                state, epoch, parent_record, field_name, controller_result
+            )
             state.decisions.append(remask)
-            state.append_event("remask_decided", record.particle.particle_id, remask=remask)
+            state.append_event("remask_decided", lineage_id, remask=remask)
             children, duplicates, dedup, rejected = revise_unique(
                 inputs.config,
                 inputs.request,
                 inputs.sampler,
-                [record],
+                [parent_record],
                 remask,
                 state.seen,
                 epoch,
@@ -425,19 +432,19 @@ async def _run_online_selective(
             state.rejected += rejected
             _record_failed_revision_outcome(
                 state,
-                lineage_id=record.particle.particle_id,
+                lineage_id=lineage_id,
                 remask=remask,
                 duplicate_count=dedup,
                 invalid_count=rejected,
             )
-            parent_sha = {record.particle.particle_id: record.particle.snapshot.sha256}
+            parent_sha = {lineage_id: parent_record.particle.snapshot.sha256}
             _record_snapshots(state, children, remask, parent_sha)
             _record_snapshots(state, duplicates, remask, parent_sha, dedup_hit=True)
             for child in children:
                 revised.append(child)
-                parents[child.particle_id] = record
+                parents[child.particle_id] = parent_record
                 remasks[child.particle_id] = remask
-                parent_cost = state.archive_costs[_record_key(record)]
+                parent_cost = state.archive_costs[_record_key(parent_record)]
                 state.archive_costs[_particle_key(child)] = _add_costs(
                     parent_cost, _cost_from_result(child.result)
                 )
@@ -493,6 +500,57 @@ def _apply_archive_decision(
             archive_decision="dropped",
             archive_snapshot_sha256=state.archive_snapshot_sha256,
         )
+
+
+def _backtrack_parent(
+    record: ProbeRecord,
+    archive: list[ProbeRecord],
+    protected: frozenset[ArchiveCandidateKey],
+    config: RevisionConfig,
+    epoch: int,
+) -> ProbeRecord:
+    """Pick this epoch's expansion point for one lineage from its frontier.
+
+    `frontier_width<=1` always returns `record` unchanged: `_lineage_frontier_keys`
+    short-circuits to the single-element `(record's own key,)` without ever calling
+    `select_lineage_frontier`, so `choose_backtrack_key` has nothing to pick but that
+    same key -- today's single-active-scout choice, by construction.
+    """
+    frontier_keys = _lineage_frontier_keys(record, archive, protected, config.frontier_width)
+    backtrack_key = choose_backtrack_key(record.particle.particle_id, frontier_keys, epoch)
+    if backtrack_key == _record_key(record):
+        return record
+    return _archive_record(archive, backtrack_key, fallback=record)
+
+
+def _lineage_frontier_keys(
+    active_record: ProbeRecord,
+    archive: list[ProbeRecord],
+    protected: frozenset[ArchiveCandidateKey],
+    frontier_width: int,
+) -> tuple[ArchiveCandidateKey, ...]:
+    """Return up to `frontier_width` candidate keys, always with the active record first."""
+    active_key = _record_key(active_record)
+    if frontier_width <= 1:
+        return (active_key,)
+    lineage_frontier = select_lineage_frontier(
+        active_record.particle.particle_id,
+        tuple(archive),
+        (),
+        frontier_width=frontier_width,
+        protected_ids=protected,
+    )
+    others = tuple(node.key for node in lineage_frontier.nodes if node.key != active_key)
+    return (active_key, *others[: frontier_width - 1])
+
+
+def _archive_record(
+    archive: list[ProbeRecord], key: ArchiveCandidateKey, *, fallback: ProbeRecord
+) -> ProbeRecord:
+    for candidate in archive:
+        if _record_key(candidate) == key:
+            return candidate
+    return fallback
 
 
 def load_seed_records(config: RevisionConfig) -> tuple[FailureRecord, ...]:
