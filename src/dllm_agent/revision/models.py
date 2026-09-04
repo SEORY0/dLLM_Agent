@@ -10,6 +10,7 @@ from dllm_agent.core.models import FrozenModel, Probability, Sha256
 from dllm_agent.revision.proof_archive import OnlineProofStatus, OnlineProofVerdict
 from dllm_agent.targets.openexr.particle import FIELD_ORDER, FieldName, SelectorSlots
 
+type RegistryMode = Literal["cold", "warm"]
 type BuildStatus = Literal["succeeded", "failed", "timed_out", "skipped"]
 type RunStatus = Literal["completed", "crashed", "timed_out", "skipped"]
 type ControllerMode = Literal["legacy", "online-portfolio"]
@@ -45,6 +46,9 @@ class RevisionConfig(FrozenModel):
     archive_size: int = Field(default=32, gt=0)
     plateau_epochs: int = Field(default=1, gt=0)
     proof_family_attempt_cap: int = Field(default=2, gt=0)
+    registry_mode: RegistryMode = "cold"
+    failure_registry_path: str | None = None
+    target_pin_sha256: Sha256 | None = None
 
     @model_validator(mode="after")
     def _require_repeatable_epoch_budget(self) -> Self:
@@ -60,6 +64,9 @@ class RevisionConfig(FrozenModel):
             raise ValueError(msg)
         if self.archive_size < self.particle_count:
             msg = "archive must hold protected initial lineages"
+            raise ValueError(msg)
+        if self.registry_mode == "warm" and self.failure_registry_path is None:
+            msg = "warm registry mode requires a failure_registry_path"
             raise ValueError(msg)
         return self
 
