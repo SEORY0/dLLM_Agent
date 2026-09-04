@@ -42,7 +42,7 @@ baseline(AR-FIM/구조화 local edit, 이미 §D 표에 정의됨)보다 뒤처�
 B\*가 pilot 규모(현재 `particle_count=4`) 안에서 관측되지 않으면 "B\* 미관측"으로 명시적으로
 보고하며, 존재를 가정하지 않는다.
 
-이 두 관측(H5, B\*)은 **explorаtory**이며 §8.3의 preregistered 통계 gate를 새로 발명하지 않고
+이 두 관측(H5, B\*)은 **exploratory**이며 §8.3의 preregistered 통계 gate를 새로 발명하지 않고
 기존 H1 paired-CI 절차를 그대로 재사용한다.
 
 ## 2. 기각된 오버엔지니어링 항목
@@ -131,29 +131,65 @@ gradient-free guidance 업그레이드(§2 표의 유일 생존 B 항목)는 이
 거쳐 충분한 표본(`trials` 합계 임계치, 추후 pilot 분산으로 확정)을 쌓은 뒤에만 착수하고, 그
 전까지는 `_single_outcome_pressure`의 수동 가중치를 그대로 둔다.
 
+**Cold/Warm start 격리 (2026-09-04 sign-off 보완).** `FailureRecord.load`를 호출할지 여부를
+config에서 명시적으로 통제한다.
+
+```python
+type RegistryMode = Literal["cold", "warm"]
+# RevisionConfig(...).registry_mode: RegistryMode = "cold"
+```
+
+`cold`(기본값)는 registry 파일이 있어도 무시하고 빈 튜플로 시작한다 — H1의 candidate-bank
+trace-permutation control(§E, `docs/experiment-protocol.md`)이나 H5의 `single-scout` ablation처럼
+"이전 run의 지식이 이번 run 결과를 오염시키지 않았다"를 보장해야 하는 벤치마크/판정 run은
+`cold`를 강제한다. `warm`은 §3.3의 `seed_outcomes`를 실제로 적용하며, 운영/탐색용
+online-portfolio 장기 실행에서만 쓴다. 두 모드 모두 `run_manifest.json`에
+`registry_mode`를 기록해, 사후에 "이 run이 이전 지식을 봤는가"를 hash 근거로 검증할 수 있게
+한다.
+
 ## 4. Phase 계획
 
-### Phase 1 — 얇은 search-tree 일반화 (H5 인프라)
+### Phase 1 — 얇은 search-tree 일반화 (H5 인프라) — 구현 완료 (2026-09-04)
 
-- `revision/search_tree.py`: `DenoNode`/`SearchAction` 정의, 결정적 `node_id` 해시 함수.
-- `revision/archive.py` 확장: "child가 active scout로 승격되면 나머지는 그냥 archive"하는 현재
-  로직 옆에, `archive_size` 한도 안에서 **frontier 집합**(status="frontier" node 여럿)을
-  유지하는 선택지를 추가한다. 기존 단일 scout 동작은 `frontier_width=1`인 특수 케이스로 남긴다
-  — 회귀 없음.
-- `revision/portfolio.py`: 다음 revision 대상을 active scout뿐 아니라 frontier 중에서 Pareto
-  crowding-distance로 고를 수 있게 한다(백트래킹).
-- **테스트:** `tests/test_poc_revision_search_tree.py` — `node_id` 결정성, frontier 선택이
-  `frontier_width=1`일 때 기존 archive 테스트(`tests/test_poc_revision_archive.py`)와 동일 결과를
-  내는지(회귀 고정), 다중 조상 백트래킹 단위 테스트.
-- **검증:** `pytest tests/test_poc_revision_search_tree.py tests/test_poc_revision_archive.py
-  tests/test_poc_revision_portfolio.py -v`, `basedpyright src/dllm_agent/revision/search_tree.py`.
+- `revision/search_tree.py`(신규): `DenoNode`(해시 identity만 보유, snapshot/trajectory
+  payload 없음), `SearchAction`/`search_action_id`(결정적 `sha256(source_key+field+positions)`),
+  `LineageFrontier`/`select_lineage_frontier`.
+- `revision/archive.py`: **Pareto dominance/crowding 로직은 변경하지 않았다** — 이미
+  `select_parent_child`가 임의 `capacity`와 `ArchiveCandidateKey=(particle_id, snapshot_sha256)`를
+  받아 같은 lineage의 parent/child가 동시에 살아남는 경우를 지원하고 있었다
+  (`tests/test_poc_revision_archive.py::test_parent_and_child_with_same_particle_id_remain_distinct_by_snapshot`
+  로 기존에 이미 검증됨). 재사용을 공식화하는 한 줄짜리 순수 필터 헬퍼
+  `lineage_candidates(records, lineage_id)`만 추가했다.
+- `revision/portfolio.py`: `choose_backtrack_key(lineage_id, frontier, epoch)` 추가 — frontier
+  튜플을 epoch로 round-robin해 백트래킹 대상을 고른다. `frontier_width=1`(단일 원소 튜플)이면
+  항상 그 하나를 반환해 오늘의 단일 active-scout 동작과 동일하다.
+- **Frontier pruning 규칙 (2026-09-04 sign-off 보완).** `select_lineage_frontier`가
+  `select_parent_child`의 `selection.dropped`를 그대로 `status="pruned"` `DenoNode`로 변환한다.
+  `archive_size`(=`frontier_width`) 초과분은 기존 crowding-distance 절단(`archive.py`의
+  `_crowding_truncate`)이 이미 최하위 Pareto 후보부터 떨어뜨린다 — 별도 pruning 알고리즘을
+  새로 만들지 않았다. "메모리 참조 해제"는 `DenoNode`가애초에 `ArchiveCandidateKey`(문자열 두
+  개) 외에는 아무 것도 들고 있지 않도록 설계해 구조적으로 달성했다 — pruned 상태로 전환된
+  노드를 호출부가 더 이상 `nodes` 튜플에 담지 않는 순간 `ProbeRecord`/snapshot 참조가 자연히
+  해제된다. `tests/test_poc_revision_search_tree.py::test_pruned_nodes_carry_no_snapshot_payload`가
+  `DenoNode`의 필드 집합이 `{key, parent_key, depth, status}`뿐임을 고정한다.
+- **테스트:** `tests/test_poc_revision_search_tree.py`(신규, 12 케이스) — action id 결정성/필드
+  민감성, `frontier_width=1`이 기존 archive 테스트 fixture와 정확히 같은 active/dropped 키를
+  내는 회귀 증명, `frontier_width=2`에서 병존, 다른 lineage 격리, pruned 노드 payload 없음,
+  backtrack round-robin과 빈 frontier fail-closed.
+- **문서:** `docs/source-layout.md`(revision 패키지 파일 목록에 `search_tree.py` 추가),
+  `tests/source_layout_support.py`(`FINAL_RUNTIME_MODULES`에 모듈 추가) — 저장소의 exact-inventory
+  회귀 테스트(`tests/test_source_layout.py::test_current_module_inventory_is_exact_final_layout`)가
+  요구.
+- **검증 결과:** 아래 §7 참조.
 
-### Phase 2 — Failure Registry 영속화
+### Phase 2 — Failure Registry 영속화 (다음 착수 대상, 미착수)
 
-- `revision/failure_registry.py`: `FailureRecord`, `load`/`append`/`seed_outcomes`.
-- `revision/pipeline.py` 호출부에서 run 시작 시 registry 로드 → `seed_outcomes` →
-  `trajectory_policy` outcomes 인자에 병합. Run 종료 시 관측된 `LineageFieldOutcome`을
-  `FailureRecord`로 변환해 append.
+- `revision/failure_registry.py`: `FailureRecord`, `load`/`append`/`seed_outcomes`,
+  `registry_mode: RegistryMode`(cold/warm, 위 §3.3 참조) config 필드.
+- `revision/pipeline.py` 호출부에서 run 시작 시 `registry_mode`를 확인 — `cold`면 registry를
+  전혀 열지 않고, `warm`이면 로드 → `seed_outcomes` → `trajectory_policy` outcomes 인자에
+  병합. Run 종료 시 관측된 `LineageFieldOutcome`을 `FailureRecord`로 변환해 append(warm 여부와
+  무관하게 항상 기록 — 다음 warm run이 쓸 수 있도록).
 - 스키마 버전 필드(`schema_version: "dllm-failure-registry/v1"`)를 붙여 기존 manifest 관례를
   따른다.
 - **테스트:** `tests/test_poc_revision_failure_registry.py` — round-trip append/load, cause_bucket

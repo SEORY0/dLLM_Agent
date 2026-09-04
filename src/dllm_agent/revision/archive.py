@@ -87,6 +87,13 @@ class ArchiveSelection:
         return tuple(key[0] for key in self.protected_keys)
 
 
+def lineage_candidates(
+    records: tuple[ProbeRecord, ...], lineage_id: str
+) -> tuple[ProbeRecord, ...]:
+    """Return only the records belonging to one lineage, preserving order."""
+    return tuple(record for record in records if record.particle.particle_id == lineage_id)
+
+
 def select_parent_child(  # noqa: PLR0913 - archive selection needs explicit policy inputs.
     parents: tuple[ProbeRecord, ...],
     children: tuple[ProbeRecord, ...],

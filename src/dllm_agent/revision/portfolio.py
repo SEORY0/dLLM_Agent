@@ -1,10 +1,12 @@
 """Immutable per-lineage plateau tracking for online revision."""
 
-from typing import Final
+from dataclasses import dataclass
+from typing import Final, override
 
 from pydantic import Field
 
 from dllm_agent.core.models import FrozenModel, Sha256
+from dllm_agent.revision.archive import ArchiveCandidateKey
 from dllm_agent.revision.models import ProbeFeedback
 
 type _RewardKey = tuple[bool, int, int, int, int, int]
@@ -84,6 +86,35 @@ def revision_due(state: LineageState, policy: PortfolioPolicy) -> bool:
     if state.consecutive_non_improving_epochs < policy.plateau_epochs:
         return False
     return not _active_family_is_capped(state, policy)
+
+
+@dataclass(frozen=True, slots=True)
+class EmptyFrontierError(ValueError):
+    """Raised when backtracking is attempted with no live frontier nodes."""
+
+    lineage_id: str
+
+    @override
+    def __str__(self) -> str:
+        """Return a lineage-scoped empty-frontier error."""
+        return f"lineage {self.lineage_id!r} has no frontier nodes to backtrack to"
+
+
+def choose_backtrack_key(
+    lineage_id: str, frontier: tuple[ArchiveCandidateKey, ...], epoch: int
+) -> ArchiveCandidateKey:
+    """Deterministically choose which frontier node to expand this epoch.
+
+    Round-robins across the frontier by epoch index so backtracking visits
+    every live node over time instead of always re-expanding the most recent
+    one. `frontier_width=1` callers always pass a single-element tuple, so
+    this trivially returns that node -- identical to today's single
+    active-scout behavior; backtracking only becomes observable once a
+    lineage's frontier holds more than one node.
+    """
+    if len(frontier) == 0:
+        raise EmptyFrontierError(lineage_id=lineage_id)
+    return frontier[epoch % len(frontier)]
 
 
 def _reward_from_feedback(feedback: ProbeFeedback) -> LineageReward:

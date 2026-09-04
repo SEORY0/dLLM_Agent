@@ -141,6 +141,7 @@ FINAL_RUNTIME_MODULES: Final = module_set(
     dllm_agent.revision.controller_models
     dllm_agent.revision.models dllm_agent.revision.pipeline dllm_agent.revision.policy
     dllm_agent.revision.portfolio dllm_agent.revision.proof_archive
+    dllm_agent.revision.search_tree
     dllm_agent.revision.trajectory_policy
     dllm_agent.web dllm_agent.web.app dllm_agent.web.catalog dllm_agent.web.contracts
     dllm_agent.web.jobs dllm_agent.web.processes

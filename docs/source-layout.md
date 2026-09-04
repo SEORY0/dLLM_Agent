@@ -23,7 +23,7 @@ flowchart TB
     root --> hunt["hunt: artifacts.py, models.py, pipeline.py, scoring.py, validation.py"]
     root --> runtime["runtime: live_sampler.py, revision_checks.py, revision_client.py, revision_process.py"]
     root --> native["native: artifacts.py, models.py, pipeline.py, scoring.py"]
-    root --> revision["revision: archive.py, artifacts.py, command.py, controller_helpers.py, controller_models.py, models.py, pipeline.py, policy.py, portfolio.py, proof_archive.py, trajectory_policy.py"]
+    root --> revision["revision: archive.py, artifacts.py, command.py, controller_helpers.py, controller_models.py, models.py, pipeline.py, policy.py, portfolio.py, proof_archive.py, search_tree.py, trajectory_policy.py"]
     root --> experiments["experiments"]
     experiments --> multitarget["multitarget: artifacts.py, bank_generation.py, budget.py, campaign_coordinator.py, campaign_core.py, campaign_evidence.py, campaign_execution.py, campaign_preparation.py, campaign_recording.py, campaign_recovery.py, candidate_bank.py, container_monitor.py, corpus.py, docker_runtime.py, ledger.py, model_adapter.py, probe_runner.py, proof.py, proof_batch.py, schedule.py, slot_sampler.py, slot_sampler_contracts.py, slot_sampler_utils.py"]
     experiments --> one_day["openexr_one_day: analysis.py, c0_source.py, candidate_bank.py, cell_runner.py, config_digest.py, coordinator.py, corpus_seed.py, coverage_series.py, evidence_backing.py, failure_taxonomy.py, model_executor.py, models.py, post_search.py, proof_batch.py, qualification.py, qualification_banks.py, qualification_collectors.py, qualification_runtime.py, qualification_smoke.py, qualification_smoke_models.py, qualification_smoke_production.py, recovery.py, resident_evidence.py, resident_pool.py, runtime.py, schedule.py"]
@@ -164,6 +164,9 @@ language/engine matrix, and standalone WebUI architecture.
   `src/dllm_agent/revision/proof_archive.py`,
   `src/dllm_agent/revision/portfolio.py`, and
   `src/dllm_agent/revision/trajectory_policy.py`.
+- Per-lineage search-tree frontier tracking (`DenoNode`, `SearchAction`, multi-ancestor
+  backtracking over the existing archive Pareto selection) lives in
+  `src/dllm_agent/revision/search_tree.py`.
 - Installed PoC revision command config and run-manifest evidence live in
   `src/dllm_agent/revision/command.py`; live adapter composition remains in
   `src/dllm_agent/cli.py`.
