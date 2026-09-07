@@ -1498,6 +1498,103 @@ def test_online_archive_retained_incomparable_child_is_scheduled_next(
     assert child_sha in report.archive_snapshot_sha256
 
 
+def test_online_frontier_width_one_matches_default_single_scout_pipeline(
+    tmp_path: Path,
+) -> None:
+    """Given frontier_width=1 explicitly, when the same scenario runs, then the second
+    revision still expands the promoted child -- identical to the implicit default."""
+    # Given
+    parent_selectors: SelectorSlots = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    child_selectors: SelectorSlots = (0, 0, 1, 0, 0, 0, 0, 0, 0, 0)
+    sampler = DeterministicSampler(
+        revisions={
+            "origin_x": child_selectors,
+            "width": child_selectors,
+            "height": child_selectors,
+        }
+    )
+    parent_sha = _snapshot_sha256(parent_selectors)
+    child_sha = _snapshot_sha256(child_selectors)
+
+    def metrics(snapshot: str) -> _ProbeMetrics:
+        if snapshot == parent_sha:
+            return _ProbeMetrics(new_edges=10, value_profile_features=1, execs=100)
+        if snapshot == child_sha:
+            return _ProbeMetrics(new_edges=5, value_profile_features=5, execs=50)
+        return _ProbeMetrics(new_edges=5, value_profile_features=5, execs=50)
+
+    # When
+    report = run_poc_revision(
+        _config(
+            archive_size=2,
+            controller_mode="online-portfolio",
+            epochs=2,
+            plateau_epochs=1,
+            frontier_width=1,
+        ),
+        _run_request("selective-revision"),
+        sampler,
+        SequenceProbe(metrics),
+        RecordingProof("skipped"),
+        tmp_path,
+    )
+
+    # Then
+    assert len(sampler.revision_requests) == 2
+    assert sampler.revision_requests[1].parent_selectors == child_selectors
+    assert parent_sha in report.archive_snapshot_sha256
+    assert child_sha in report.archive_snapshot_sha256
+
+
+def test_online_frontier_width_backtracks_to_archived_alternate_snapshot(
+    tmp_path: Path,
+) -> None:
+    """Given frontier_width=2 on the same retained-tradeoff scenario, when the second
+    revision comes due, then it backtracks to the archived parent instead of the
+    promoted child -- the search-tree mechanism this width unlocks."""
+    # Given
+    parent_selectors: SelectorSlots = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    child_selectors: SelectorSlots = (0, 0, 1, 0, 0, 0, 0, 0, 0, 0)
+    sampler = DeterministicSampler(
+        revisions={
+            "origin_x": child_selectors,
+            "width": child_selectors,
+            "height": child_selectors,
+        }
+    )
+    parent_sha = _snapshot_sha256(parent_selectors)
+    child_sha = _snapshot_sha256(child_selectors)
+
+    def metrics(snapshot: str) -> _ProbeMetrics:
+        if snapshot == parent_sha:
+            return _ProbeMetrics(new_edges=10, value_profile_features=1, execs=100)
+        if snapshot == child_sha:
+            return _ProbeMetrics(new_edges=5, value_profile_features=5, execs=50)
+        return _ProbeMetrics(new_edges=5, value_profile_features=5, execs=50)
+
+    # When
+    report = run_poc_revision(
+        _config(
+            archive_size=2,
+            controller_mode="online-portfolio",
+            epochs=2,
+            plateau_epochs=1,
+            frontier_width=2,
+        ),
+        _run_request("selective-revision"),
+        sampler,
+        SequenceProbe(metrics),
+        RecordingProof("skipped"),
+        tmp_path,
+    )
+
+    # Then
+    assert len(sampler.revision_requests) == 2
+    assert sampler.revision_requests[1].parent_selectors == parent_selectors
+    assert parent_sha in report.archive_snapshot_sha256
+    assert child_sha in report.archive_snapshot_sha256
+
+
 def test_online_proof_dedupes_exact_snapshot_before_runner() -> None:
     """Given duplicate proof records, when proofs are selected, then exact artifact is once."""
     # Given
@@ -1542,6 +1639,7 @@ def _config(  # noqa: PLR0913
     plateau_epochs: int = 1,
     proof_family_attempt_cap: int = 2,
     archive_size: int | None = None,
+    frontier_width: int = 1,
 ) -> RevisionConfig:
     return RevisionConfig(
         schema_version="dllm-poc-revision-config/v1",
@@ -1556,6 +1654,7 @@ def _config(  # noqa: PLR0913
         archive_size=max(8, particle_count) if archive_size is None else archive_size,
         plateau_epochs=plateau_epochs,
         proof_family_attempt_cap=proof_family_attempt_cap,
+        frontier_width=frontier_width,
     )
 
 

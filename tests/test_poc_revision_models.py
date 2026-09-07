@@ -111,6 +111,39 @@ def test_online_portfolio_config_opts_in_with_plateau_epochs() -> None:
     assert config.revision.archive_size >= config.revision.particle_count
 
 
+def test_search_tree_pilot_config_is_cold_with_a_wide_frontier() -> None:
+    """Given the search-tree pilot config, when parsed, then it isolates prior knowledge."""
+    config = PocRevisionCommandConfig.model_validate_json(
+        (_ROOT / "configs/openexr-v3.4.14-search-tree-pilot.json").read_bytes()
+    )
+
+    assert config.revision.controller_mode == "online-portfolio"
+    assert config.revision.frontier_width == 4
+    assert config.revision.registry_mode == "cold"
+    assert config.revision.failure_registry_path is None
+    assert config.revision.target_pin_sha256 is not None
+    revision = config.revision
+    assert revision.archive_size >= revision.particle_count * revision.frontier_width
+
+
+def test_search_tree_warm_pilot_config_matches_the_cold_arm_except_registry_mode() -> None:
+    """Given the paired warm ablation config, when parsed, then only registry fields differ."""
+    cold = PocRevisionCommandConfig.model_validate_json(
+        (_ROOT / "configs/openexr-v3.4.14-search-tree-pilot.json").read_bytes()
+    )
+    warm = PocRevisionCommandConfig.model_validate_json(
+        (_ROOT / "configs/openexr-v3.4.14-search-tree-warm-pilot.json").read_bytes()
+    )
+
+    assert warm.revision.registry_mode == "warm"
+    assert warm.revision.failure_registry_path == "artifacts/openexr-failure-registry.jsonl"
+    assert warm.revision.target_pin_sha256 == cold.revision.target_pin_sha256
+    rewound = warm.revision.model_copy(
+        update={"registry_mode": "cold", "failure_registry_path": None}
+    )
+    assert rewound == cold.revision
+
+
 def test_revision_event_rejects_unknown_kind() -> None:
     """Given an unknown ledger kind, when parsed, then the strict union rejects it."""
     event_payload = _event_payload("particle_started")

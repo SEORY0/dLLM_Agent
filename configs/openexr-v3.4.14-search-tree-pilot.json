@@ -1,0 +1,52 @@
+{
+  "schema_version": "dllm-poc-revision-command/v1",
+  "revision": {
+    "schema_version": "dllm-poc-revision-config/v1",
+    "particle_count": 4,
+    "epochs": 3,
+    "initial_steps": 8,
+    "revision_steps": 2,
+    "probe_seconds": 1,
+    "fuzzer_seeds": [
+      20260821,
+      20260822
+    ],
+    "proof_seconds": 10,
+    "controller_mode": "online-portfolio",
+    "archive_size": 16,
+    "plateau_epochs": 1,
+    "proof_family_attempt_cap": 2,
+    "frontier_width": 4,
+    "registry_mode": "cold",
+    "target_pin_sha256": "fcd1cd802c16f59e90d4a028b4d1217431b5c9b4e90c81764f4eaa80e4a2cef4"
+  },
+  "run": {
+    "schema_version": "dllm-poc-revision-run/v1",
+    "arm": "selective-revision",
+    "pseudo_feedback_rotation_seed": 0,
+    "particle_seed_base": 202609040000,
+    "proof_seed": 202609040001
+  },
+  "target": {
+    "repository_url": "https://github.com/AcademySoftwareFoundation/openexr.git",
+    "commit_sha": "777d231a179de1711d2a942810d9559216ab3f4c",
+    "security_policy_url": "https://github.com/AcademySoftwareFoundation/openexr/security/policy",
+    "security_policy_sha256": "a29644c43663d8cad3a3f2f22fa064f1d138df9873e32e410265756d25755087"
+  },
+  "probe": {
+    "image_id": "sha256:7591279f51256ef5e80341c788d31145ecf1dd0f7a64db7f0cdeaba527ff5add",
+    "harness_sha256": "4cf61b34216777285bf0ec2deba85611d04208d42151cf07bab4962dc4400f8f",
+    "rss_limit_mb": 256,
+    "timeout_seconds": 1
+  },
+  "model": {
+    "model_id": "ByteDance-Seed/Stable-DiffCoder-8B-Instruct",
+    "revision": "10cdaf9b486f1cf0273ad968459dbe2d21a1482a",
+    "device": "cuda:0",
+    "timeout_seconds": 3600.0
+  },
+  "prompt": {
+    "path": "prompts/openexr-poc-revision.md",
+    "sha256": "0f9a9a0dc3786d173b0cbfbd6056292e02feb491b221b92a197d3d50535fe3a2"
+  }
+}
