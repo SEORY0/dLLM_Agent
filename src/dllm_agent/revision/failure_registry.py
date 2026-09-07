@@ -9,12 +9,16 @@ lineage: `lineage_id` is a per-run particle index, not a stable identity
 across runs) so seeding never crosses target pins.
 """
 
+import contextlib
+import time
+from collections.abc import Generator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, override
 
 from pydantic import Field, ValidationError
 
+from dllm_agent.core.io import sha256_bytes
 from dllm_agent.core.models import FrozenModel, Sha256
 from dllm_agent.revision.trajectory_policy import LineageFieldOutcome
 from dllm_agent.targets.openexr.particle import FieldName
@@ -22,6 +26,8 @@ from dllm_agent.targets.openexr.particle import FieldName
 type CauseBucket = Literal["invalid", "duplicate", "proof_failure"]
 
 _CAUSE_BUCKETS: tuple[CauseBucket, ...] = ("invalid", "duplicate", "proof_failure")
+_LOCK_TIMEOUT_SECONDS = 30.0
+_LOCK_POLL_SECONDS = 0.01
 
 
 class FailureRecord(FrozenModel):
@@ -68,8 +74,21 @@ def load(path: Path) -> tuple[FailureRecord, ...]:
 
 
 def append(path: Path, record: FailureRecord) -> None:
-    """Atomically append one record to the registry file."""
-    _write_all(path, (*load(path), record))
+    """Atomically append one record, serialized against other concurrent appenders.
+
+    `_write_all` replaces the whole file, so two overlapping read-modify-write
+    calls (from separate processes sharing one registry path) would otherwise
+    let the second replace silently discard the first's record.
+    """
+    with _locked(path):
+        _write_all(path, (*load(path), record))
+
+
+def records_sha256(records: tuple[FailureRecord, ...]) -> str | None:
+    """Hash the exact serialized content of a set of loaded records, or None if empty."""
+    if len(records) == 0:
+        return None
+    return sha256_bytes(_jsonl(records).encode())
 
 
 def failure_records(
@@ -122,6 +141,36 @@ def _outcome(lineage_id: str, record: FailureRecord) -> LineageFieldOutcome:
 def _write_all(path: Path, records: tuple[FailureRecord, ...]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(f".{path.name}.tmp")
-    body = "".join(record.model_dump_json() + "\n" for record in records)
-    _ = temporary.write_text(body, encoding="utf-8")
+    _ = temporary.write_text(_jsonl(records), encoding="utf-8")
     _ = temporary.replace(path)
+
+
+def _jsonl(records: tuple[FailureRecord, ...]) -> str:
+    return "".join(record.model_dump_json() + "\n" for record in records)
+
+
+@contextlib.contextmanager
+def _locked(path: Path) -> Generator[None]:
+    """Hold an exclusive cross-process lock across one read-modify-write update.
+
+    Uses exclusive file creation (`"x"` mode), which is atomic on both POSIX
+    (O_EXCL) and Windows (CREATE_NEW) -- no extra dependency needed. A lock
+    left behind by a crashed writer fails closed after the timeout rather
+    than blocking every future append forever.
+    """
+    lock_path = path.with_name(f"{path.name}.lock")
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    deadline = time.monotonic() + _LOCK_TIMEOUT_SECONDS
+    while True:
+        try:
+            with lock_path.open("x"):
+                break
+        except FileExistsError:
+            if time.monotonic() > deadline:
+                reason = f"lock held longer than {_LOCK_TIMEOUT_SECONDS}s"
+                raise FailureRegistryError(path=path, reason=reason) from None
+            time.sleep(_LOCK_POLL_SECONDS)
+    try:
+        yield
+    finally:
+        lock_path.unlink(missing_ok=True)

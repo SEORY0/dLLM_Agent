@@ -1,5 +1,6 @@
 """Tests for cross-run persistence of the tri-modal field-outcome signal."""
 
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,7 @@ from dllm_agent.revision.failure_registry import (
     append,
     failure_records,
     load,
+    records_sha256,
     seed_outcomes,
 )
 from dllm_agent.revision.models import RegistryMode, RevisionConfig
@@ -58,6 +60,39 @@ def test_load_rejects_a_corrupted_registry_line(tmp_path: Path) -> None:
 
     with pytest.raises(FailureRegistryError, match="line 1"):
         _ = load(path)
+
+
+def test_append_under_concurrent_writers_loses_no_record(tmp_path: Path) -> None:
+    """Given many threads appending to the same path at once, when all finish, then every
+    record survives -- the read-modify-write replace in `_write_all` must be serialized."""
+    path = tmp_path / "registry.jsonl"
+    writer_count = 20
+    records = tuple(
+        _record(target_pin_sha256=_PIN_A, field="width", cause_bucket="invalid", count=index + 1)
+        for index in range(writer_count)
+    )
+
+    with ThreadPoolExecutor(max_workers=writer_count) as pool:
+        futures = [pool.submit(append, path, record) for record in records]
+        for future in futures:
+            future.result()
+
+    assert len(load(path)) == writer_count
+
+
+def test_records_sha256_is_none_for_no_records() -> None:
+    """Given no records, when hashing, then there is nothing to prove was consumed."""
+    assert records_sha256(()) is None
+
+
+def test_records_sha256_is_deterministic_and_content_sensitive() -> None:
+    """Given the same records twice, when hashing, then the digest matches; given a
+    different set, then it changes."""
+    first = _record(target_pin_sha256=_PIN_A, field="width", cause_bucket="invalid", count=1)
+    second = _record(target_pin_sha256=_PIN_A, field="height", cause_bucket="duplicate", count=2)
+
+    assert records_sha256((first,)) == records_sha256((first,))
+    assert records_sha256((first,)) != records_sha256((first, second))
 
 
 def test_seed_outcomes_isolates_by_target_pin() -> None:

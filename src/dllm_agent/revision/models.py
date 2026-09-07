@@ -246,3 +246,4 @@ class PocRevisionReport(FrozenModel):
     online_proof_verdicts: tuple[OnlineProofVerdict, ...] = ()
     archive_snapshot_sha256: tuple[Sha256, ...] = ()
     runtime_accounting: RuntimeAccounting = RuntimeAccounting()
+    failure_registry_seed_sha256: Sha256 | None = None

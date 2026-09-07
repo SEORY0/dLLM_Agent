@@ -53,6 +53,7 @@ from dllm_agent.revision.failure_registry import (
     append,
     failure_records,
     load,
+    records_sha256,
     seed_outcomes,
 )
 from dllm_agent.revision.models import (
@@ -143,6 +144,7 @@ class _RunState:
     proof: ProofSummary | None = None
     proofed_snapshot_sha256: set[str] = field(default_factory=set)
     exact_proof_invocations: int = 0
+    failure_registry_seed_sha256: str | None = None
 
     def append_event(
         self, kind: RevisionEventKind, particle_id: str, **evidence: Unpack[_EventEvidence]
@@ -230,7 +232,8 @@ async def _run_poc_revision_async(inputs: _RunInputs) -> PocRevisionReport:
     snapshot_artifacts = await _write_snapshot_artifacts(inputs.artifact_dir, state)
     _ = latest
     config_hash_sha256 = sha256_bytes(inputs.config.model_dump_json().encode())
-    persist_failure_records(inputs.config, state.field_outcomes, run_id=config_hash_sha256)
+    registry_run_id = _registry_run_id(inputs.config, inputs.request)
+    persist_failure_records(inputs.config, state.field_outcomes, run_id=registry_run_id)
     return PocRevisionReport(
         schema_version="dllm-poc-revision-report/v1",
         config_hash_sha256=config_hash_sha256,
@@ -246,6 +249,7 @@ async def _run_poc_revision_async(inputs: _RunInputs) -> PocRevisionReport:
         online_proof_verdicts=tuple(state.online_proofs),
         archive_snapshot_sha256=state.archive_snapshot_sha256,
         runtime_accounting=_runtime_accounting(inputs, state, online_enabled),
+        failure_registry_seed_sha256=state.failure_registry_seed_sha256,
     )
 
 
@@ -394,6 +398,7 @@ async def _run_online_selective(
             proof_attempted=_feedback_attempted(state, record.feedback),
         )
     seed_records = load_seed_records(inputs.config)
+    state.failure_registry_seed_sha256 = records_sha256(seed_records)
 
     for epoch in range(inputs.config.epochs):
         due = _online_revision_records(epoch, active, lineages, portfolio_policy)
@@ -568,6 +573,18 @@ def _seeded_outcomes(
 ) -> tuple[LineageFieldOutcome, ...]:
     seeded = seed_outcomes(seed_records, lineage_id, config.target_pin_sha256 or "")
     return (*state.field_outcomes, *seeded)
+
+
+def _registry_run_id(config: RevisionConfig, request: RevisionRunRequest) -> str:
+    """Derive a persisted run identity from config + this run's own seeds.
+
+    `config_hash_sha256` alone would collapse two run requests that share a
+    config but differ in seeds (particle_seed_base/proof_seed/...) onto the
+    same registry run_id. Folding in the run request keeps run_id a
+    deterministic function of the actual run identity, matching how
+    config_hash_sha256 itself is derived (no wall clock / random uuid).
+    """
+    return sha256_bytes((config.model_dump_json() + request.model_dump_json()).encode())
 
 
 def persist_failure_records(
