@@ -280,6 +280,11 @@ online-portfolio 장기 실행에서만 쓴다. 두 모드 모두 `run_manifest.
   쌓이기 전까지 착수하지 않는다.
 - 이 계획은 stock Stable-DiffCoder의 "자가 수정" 주장을 하지 않는다 — 여전히 이 저장소가
   구현한 project-owned selective-revision 경로에 대한 이야기다(`docs/dllm-native-online-portfolio-harness.md:68-70` 원칙 유지).
+- **Failure registry 압축(compaction) 보류**: 현재 registry는 append-only라 같은
+  `(target_pin_sha256, field, cause_bucket)` 조합도 실행마다 새 줄로 계속 쌓인다. 실제 GPU
+  pilot을 여러 차례 돌려 파일 크기가 실질적으로 문제가 되는 걸 관측하기 전까지는 동일 키
+  레코드를 합산하는 압축 로직을 만들지 않는다(YAGNI) — §8에서 배치 쓰기(`append_many`)로
+  런당 파일 재작성 횟수는 이미 줄여뒀다.
 
 ## 7. 검증 결과 (Phase 1–3)
 
@@ -326,3 +331,28 @@ dllm-agent poc-revision \
 warm ablation은 `--config configs/openexr-v3.4.14-search-tree-warm-pilot.json`으로 같은
 명령을 반복하되, `failure_registry_path`(`artifacts/openexr-failure-registry.jsonl`)가 이전
 cold run에서 이미 채워져 있어야 의미가 있다.
+
+## 8. PR #1 리뷰 반영 — Failure Registry 동시성/추적성 수정 (2026-09-07)
+
+레포 오너 승인 전 AI 코드 리뷰에서 지적된 3건을 검증 후 모두 수정했다. GPU 실행 전이므로
+동작 자체(H1–H5 로직)는 바뀌지 않았고, Phase 2 registry의 내구성·추적성만 강화됐다.
+
+| # | 지적 | 확인 결과 | 조치 |
+|---|---|---|---|
+| P1 | `append()`의 read-modify-write(`load` 후 `_write_all`)가 프로세스 간 동기화 없이 파일 전체를 교체해, 동시 저장 시 한쪽 기록이 유실됨 | 재현됨 — 20개 스레드가 같은 registry 파일에 동시에 `append`하면 잠금 없이는 레코드가 사라짐 | `failure_registry.py`에 배타적 파일 생성(`Path.open("x")`, POSIX `O_EXCL`/Windows `CREATE_NEW` 양쪽에서 원자적)을 이용한 크로스 프로세스 락(`_locked`)을 추가하고 `append()`의 read-modify-write 구간 전체를 그 안에서 실행하도록 감쌌다. 새 의존성 없음(stdlib만 사용). 락이 30초 이상 잡혀 있으면(예: 보유 프로세스 크래시) 무한 대기 대신 `FailureRegistryError`로 fail-closed한다. |
+| P2 | warm 실행이 실제로 어떤 registry 내용을 seed로 소비했는지 결과에 남지 않아 재현성 검증 불가 | 확인됨 — `load_seed_records`가 읽은 레코드가 리포트 어디에도 해시로 남지 않았음 | `failure_registry.records_sha256()`을 추가하고, `PocRevisionReport`에 `failure_registry_seed_sha256: Sha256 \| None` 필드를 추가했다. warm 모드에서는 이번 실행이 실제로 읽은 레코드 집합의 해시가, cold 모드에서는 `None`이 채워진다 — registry 파일이 이후에 바뀌거나 rotate돼도 "이 리포트를 만든 입력이 정확히 무엇이었는지" 사후 검증 가능. |
+| P2 | `run_id`로 `config_hash_sha256`을 그대로 재사용해, 같은 config를 공유하지만 시드(`particle_seed_base`/`proof_seed`/...)가 다른 별도 run request가 registry에서 서로 구별되지 않음 | 확인됨 — `config_hash_sha256`은 `RevisionConfig`만의 함수라 `RevisionRunRequest`가 다른 두 실행이 같은 id를 공유함 | `pipeline._registry_run_id(config, request)`를 신설해 `config`와 `run_request`를 함께 해시하도록 바꿨다. `config_hash_sha256` 필드 자체(기존 리포트 계약)는 그대로 두고 `persist_failure_records`에 넘기는 `run_id`만 교체했다. 완전히 동일한 (config, run_request) 재실행은 여전히 같은 id를 재사용하는데, 이는 저장소의 timestamp-free 결정론 원칙과 일치하는 의도된 동작이다(무작위 UUID/wall-clock을 넣지 않음) — 이 부분은 리뷰 제안을 그대로 받지 않고 근거를 남기고 좁혀서 반영했다. |
+
+### 8.1 배치 쓰기(`append_many`) 추가
+
+위 3건 수정과 별개로, 락을 추가하고 나니 `persist_failure_records`가 outcome × cause bucket마다
+`append()`를 개별 호출해(런 하나당 최대 수십 번) 매번 락을 잡았다 풀고 파일 전체를 다시
+읽는 구조라는 게 눈에 띄었다. `failure_registry.append_many()`를 신설해 한 런의 레코드를
+모아 락 한 번으로 읽고-쓰기 하도록 바꿨다(`append()`는 이제 `append_many(path, (record,))`의
+얇은 wrapper). 동일 키 레코드를 합쳐서 파일 자체를 압축하는 것(§6의 보류 항목)과는 다르다 —
+이건 쓰기 방식만 배치로 바꾼 것으로, registry의 append-only 시맨틱은 그대로다.
+
+검증: 새 테스트 9개(동시성 1, `records_sha256` 2, `append_many` 2, seed-hash 리포트 2, run_id
+구분 1, 나머지는 기존 registry round-trip 커버) 전부 통과, WSL 전체 회귀
+`234 failed, 651 passed, 6 errors`로 병합된 #1 이후와 byte-identical, `basedpyright`(전체)
+`0 errors`, `ruff check`(변경 파일) 통과.

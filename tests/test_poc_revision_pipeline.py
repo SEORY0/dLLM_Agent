@@ -24,10 +24,12 @@ from dllm_agent.revision.controller_models import (
     RevisionRunRequest,
     RevisionTrajectoryStep,
 )
+from dllm_agent.revision.failure_registry import FailureRecord, append, load, records_sha256
 from dllm_agent.revision.models import (
     PocRevisionReport,
     ProbeFeedback,
     ProofSummary,
+    RegistryMode,
     RevisionConfig,
 )
 from dllm_agent.revision.pipeline import online_proof_candidates, run_poc_revision
@@ -1595,6 +1597,149 @@ def test_online_frontier_width_backtracks_to_archived_alternate_snapshot(
     assert child_sha in report.archive_snapshot_sha256
 
 
+def test_registry_run_id_distinguishes_run_requests_sharing_a_config(tmp_path: Path) -> None:
+    """Given two run requests that share a config but differ in seed, when each persists
+    failure outcomes to the same registry file, then their records carry distinct run ids
+    -- config_hash_sha256 alone would have collapsed them onto one id."""
+    # Given
+    child_selectors: SelectorSlots = (0, 0, 1, 0, 0, 0, 0, 0, 0, 0)
+    registry_path = tmp_path / "registry.jsonl"
+    config = _config(
+        archive_size=2,
+        controller_mode="online-portfolio",
+        epochs=2,
+        plateau_epochs=1,
+        failure_registry_path=str(registry_path),
+        target_pin_sha256=sha256_bytes(b"target"),
+    )
+
+    def revision_sampler() -> DeterministicSampler:
+        return DeterministicSampler(
+            revisions={
+                "origin_x": child_selectors,
+                "width": child_selectors,
+                "height": child_selectors,
+            }
+        )
+
+    # When
+    _ = run_poc_revision(
+        config,
+        _run_request("selective-revision", particle_seed_base=1),
+        revision_sampler(),
+        SequenceProbe(lambda _snapshot: _ProbeMetrics(new_edges=5)),
+        RecordingProof("skipped"),
+        tmp_path / "run-a",
+    )
+    _ = run_poc_revision(
+        config,
+        _run_request("selective-revision", particle_seed_base=2),
+        revision_sampler(),
+        SequenceProbe(lambda _snapshot: _ProbeMetrics(new_edges=5)),
+        RecordingProof("skipped"),
+        tmp_path / "run-b",
+    )
+
+    # Then
+    records = load(registry_path)
+    run_ids = {record.last_seen_run_id for record in records}
+    assert len(records) > 0
+    assert len(run_ids) == 2
+
+
+def test_report_seed_sha_is_none_in_cold_mode_even_with_a_populated_registry(
+    tmp_path: Path,
+) -> None:
+    """Given a populated registry, when cold, then the report carries no seed hash."""
+    # Given
+    registry_path = tmp_path / "registry.jsonl"
+    target_pin = sha256_bytes(b"target")
+    append(registry_path, _seed_record(target_pin))
+    child_selectors: SelectorSlots = (0, 0, 1, 0, 0, 0, 0, 0, 0, 0)
+    sampler = DeterministicSampler(
+        revisions={
+            "origin_x": child_selectors,
+            "width": child_selectors,
+            "height": child_selectors,
+        }
+    )
+
+    # When
+    report = run_poc_revision(
+        _config(
+            archive_size=2,
+            controller_mode="online-portfolio",
+            epochs=2,
+            plateau_epochs=1,
+            registry_mode="cold",
+            failure_registry_path=str(registry_path),
+            target_pin_sha256=target_pin,
+        ),
+        _run_request("selective-revision"),
+        sampler,
+        SequenceProbe(lambda _snapshot: _ProbeMetrics(new_edges=5)),
+        RecordingProof("skipped"),
+        tmp_path,
+    )
+
+    # Then
+    assert report.failure_registry_seed_sha256 is None
+
+
+def test_report_seed_sha_matches_the_exact_registry_content_consumed_in_warm_mode(
+    tmp_path: Path,
+) -> None:
+    """Given a populated registry, when warm, then the report's seed hash matches the exact
+    records read to seed it -- proof of which registry state fed this run's decisions,
+    verifiable even if the registry file is mutated or rotated afterward."""
+    # Given
+    registry_path = tmp_path / "registry.jsonl"
+    target_pin = sha256_bytes(b"target")
+    append(registry_path, _seed_record(target_pin))
+    seeded_at_start = load(registry_path)
+    child_selectors: SelectorSlots = (0, 0, 1, 0, 0, 0, 0, 0, 0, 0)
+    sampler = DeterministicSampler(
+        revisions={
+            "origin_x": child_selectors,
+            "width": child_selectors,
+            "height": child_selectors,
+        }
+    )
+
+    # When
+    report = run_poc_revision(
+        _config(
+            archive_size=2,
+            controller_mode="online-portfolio",
+            epochs=2,
+            plateau_epochs=1,
+            registry_mode="warm",
+            failure_registry_path=str(registry_path),
+            target_pin_sha256=target_pin,
+        ),
+        _run_request("selective-revision"),
+        sampler,
+        SequenceProbe(lambda _snapshot: _ProbeMetrics(new_edges=5)),
+        RecordingProof("skipped"),
+        tmp_path,
+    )
+
+    # Then
+    assert report.failure_registry_seed_sha256 == records_sha256(seeded_at_start)
+
+
+def _seed_record(target_pin_sha256: Sha256) -> FailureRecord:
+    return FailureRecord(
+        target_pin_sha256=target_pin_sha256,
+        field="width",
+        cause_bucket="invalid",
+        count=1,
+        reward_delta_sum=0.0,
+        trials=1,
+        last_seen_run_id="seed-run",
+    )
+
+
 def test_online_proof_dedupes_exact_snapshot_before_runner() -> None:
     """Given duplicate proof records, when proofs are selected, then exact artifact is once."""
     # Given
@@ -1640,6 +1785,9 @@ def _config(  # noqa: PLR0913
     proof_family_attempt_cap: int = 2,
     archive_size: int | None = None,
     frontier_width: int = 1,
+    registry_mode: RegistryMode = "cold",
+    failure_registry_path: str | None = None,
+    target_pin_sha256: Sha256 | None = None,
 ) -> RevisionConfig:
     return RevisionConfig(
         schema_version="dllm-poc-revision-config/v1",
@@ -1655,6 +1803,9 @@ def _config(  # noqa: PLR0913
         plateau_epochs=plateau_epochs,
         proof_family_attempt_cap=proof_family_attempt_cap,
         frontier_width=frontier_width,
+        registry_mode=registry_mode,
+        failure_registry_path=failure_registry_path,
+        target_pin_sha256=target_pin_sha256,
     )
 
 
