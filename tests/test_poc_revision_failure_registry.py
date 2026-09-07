@@ -12,6 +12,7 @@ from dllm_agent.revision.failure_registry import (
     FailureRecord,
     FailureRegistryError,
     append,
+    append_many,
     failure_records,
     load,
     records_sha256,
@@ -78,6 +79,26 @@ def test_append_under_concurrent_writers_loses_no_record(tmp_path: Path) -> None
             future.result()
 
     assert len(load(path)) == writer_count
+
+
+def test_append_many_writes_all_records_in_one_round_trip(tmp_path: Path) -> None:
+    """Given several records, when appended as a batch, then all land in append order."""
+    path = tmp_path / "registry.jsonl"
+    first = _record(target_pin_sha256=_PIN_A, field="width", cause_bucket="invalid", count=1)
+    second = _record(target_pin_sha256=_PIN_A, field="height", cause_bucket="duplicate", count=2)
+
+    append_many(path, (first, second))
+
+    assert load(path) == (first, second)
+
+
+def test_append_many_is_a_noop_for_an_empty_batch(tmp_path: Path) -> None:
+    """Given no records, when appending a batch, then no registry file is created."""
+    path = tmp_path / "registry.jsonl"
+
+    append_many(path, ())
+
+    assert not path.exists()
 
 
 def test_records_sha256_is_none_for_no_records() -> None:

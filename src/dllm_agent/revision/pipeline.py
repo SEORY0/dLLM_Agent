@@ -50,7 +50,7 @@ from dllm_agent.revision.controller_models import (
 )
 from dllm_agent.revision.failure_registry import (
     FailureRecord,
-    append,
+    append_many,
     failure_records,
     load,
     records_sha256,
@@ -590,15 +590,21 @@ def _registry_run_id(config: RevisionConfig, request: RevisionRunRequest) -> str
 def persist_failure_records(
     config: RevisionConfig, outcomes: Sequence[LineageFieldOutcome], *, run_id: str
 ) -> None:
-    """Append this run's observed outcomes for a later warm run, regardless of this run's mode."""
+    """Append this run's observed outcomes for a later warm run, regardless of this run's mode.
+
+    Batched into one `append_many` call rather than one `append` per record, so a run with
+    many outcomes acquires the registry lock once instead of once per (outcome, cause bucket).
+    """
     if config.failure_registry_path is None or config.target_pin_sha256 is None:
         return
-    path = Path(config.failure_registry_path)
-    for outcome in outcomes:
+    records = tuple(
+        record
+        for outcome in outcomes
         for record in failure_records(
             outcome, target_pin_sha256=config.target_pin_sha256, run_id=run_id
-        ):
-            append(path, record)
+        )
+    )
+    append_many(Path(config.failure_registry_path), records)
 
 
 def _controller_visible_result(

@@ -74,14 +74,24 @@ def load(path: Path) -> tuple[FailureRecord, ...]:
 
 
 def append(path: Path, record: FailureRecord) -> None:
-    """Atomically append one record, serialized against other concurrent appenders.
+    """Atomically append one record, serialized against other concurrent appenders."""
+    append_many(path, (record,))
+
+
+def append_many(path: Path, records: tuple[FailureRecord, ...]) -> None:
+    """Atomically append many records under a single lock/read/write round trip.
 
     `_write_all` replaces the whole file, so two overlapping read-modify-write
     calls (from separate processes sharing one registry path) would otherwise
-    let the second replace silently discard the first's record.
+    let the second replace silently discard the first's records -- `_locked`
+    serializes them. Batching a run's own records into one call, instead of
+    one `append` per record, also keeps the lock held (and the file re-read)
+    once per caller instead of once per record.
     """
+    if len(records) == 0:
+        return
     with _locked(path):
-        _write_all(path, (*load(path), record))
+        _write_all(path, (*load(path), *records))
 
 
 def records_sha256(records: tuple[FailureRecord, ...]) -> str | None:
