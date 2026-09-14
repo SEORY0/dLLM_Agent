@@ -1,3 +1,12 @@
+# `openexr` below is a named BuildKit build context, not a build stage --
+# supply a real git checkout of OpenEXR pinned to the exact commit below
+# (the RUN block verifies `git rev-parse HEAD`/tree hash/clean worktree,
+# so a source tarball without `.git` metadata will fail that check):
+#
+#   git clone https://github.com/AcademySoftwareFoundation/openexr.git /tmp/openexr-src
+#   git -C /tmp/openexr-src checkout 777d231a179de1711d2a942810d9559216ab3f4c
+#   DOCKER_BUILDKIT=1 docker build --build-context openexr=/tmp/openexr-src \
+#     -f tools/openexr_runtime/Dockerfile -t dllm-openexr-runtime .
 FROM cybergym/oss-fuzz@sha256:e0b7469d54b9a687cb88d3d11861d09e28b67ad498c93ac91139dcbe6bee4c02
 
 LABEL org.opencontainers.image.source="https://github.com/AcademySoftwareFoundation/openexr.git" \
