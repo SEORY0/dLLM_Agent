@@ -131,7 +131,8 @@ def generate_qualification_candidate_banks(
 ) -> QualificationBankSummary:
     """Generate or reload ten isolated qualification candidate banks."""
     schedule = build_campaign_schedule(
-        main_start_monotonic_seconds=config.main_start_monotonic_seconds
+        main_start_monotonic_seconds=config.main_start_monotonic_seconds,
+        gpu_count=len(config.resource_map.model_cores),
     )
     generated: set[int] = set()
     banks: dict[int, CandidateBank] = {}

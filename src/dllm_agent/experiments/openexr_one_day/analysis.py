@@ -592,7 +592,8 @@ def audit_campaign(campaign_root: Path) -> CampaignAudit:
     _reject_unsafe_tree(root)
     manifest = _load_campaign_manifest(root / "campaign-manifest.json")
     schedule = build_campaign_schedule(
-        main_start_monotonic_seconds=manifest.config.main_start_monotonic_seconds
+        main_start_monotonic_seconds=manifest.config.main_start_monotonic_seconds,
+        gpu_count=len(manifest.config.resource_map.model_cores),
     )
     try:
         expected_manifest = build_campaign_manifest(manifest.config, schedule)
@@ -865,7 +866,8 @@ def _audit_arm_rows(
     rows: tuple[RawArmReportRow, ...],
 ) -> tuple[AuditedArm, ...]:
     schedule = build_campaign_schedule(
-        main_start_monotonic_seconds=manifest.config.main_start_monotonic_seconds
+        main_start_monotonic_seconds=manifest.config.main_start_monotonic_seconds,
+        gpu_count=len(manifest.config.resource_map.model_cores),
     )
     outcomes = {cell.cell_id: cell for cell in outcome.cells}
     audited: list[AuditedArm] = []

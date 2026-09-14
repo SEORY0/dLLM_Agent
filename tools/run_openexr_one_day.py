@@ -35,6 +35,13 @@ from dllm_agent.experiments.openexr_one_day.qualification import (
     finalize_config_payload_from_artifacts,
     write_record_backed_qualification_from_measurements,
 )
+from dllm_agent.experiments.openexr_one_day.qualification_collectors import (
+    collect_all_measurements,
+)
+from dllm_agent.experiments.openexr_one_day.qualification_runtime import (
+    QualificationRuntimePaths,
+    build_production_collector_inputs,
+)
 from dllm_agent.experiments.openexr_one_day.qualification_smoke_models import (
     WRAPPER_NAME,
     QualificationSmokeArtifact,
@@ -110,6 +117,58 @@ def qualify_live(
                 "state": result.state,
                 "evidence_sha256": result.evidence.evidence_sha256,
                 "failing_gate": result.start_gates.failing_gate(),
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+    )
+
+
+@app.command("collect")
+def collect(  # noqa: PLR0913, PLR0917
+    config: Annotated[Path, typer.Option()],
+    target_harness_path: Annotated[Path, typer.Option()],
+    remote_code_path: Annotated[Path, typer.Option()],
+    search_binary_path: Annotated[Path, typer.Option()],
+    search_image_ref: Annotated[str, typer.Option()],
+    coverage_binary_path: Annotated[Path, typer.Option()],
+    coverage_image_ref: Annotated[str, typer.Option()],
+    coverage_build_manifest_path: Annotated[Path, typer.Option()],
+    c0_source_path: Annotated[Path, typer.Option()],
+    dictionary_path: Annotated[Path, typer.Option()],
+    smoke_artifact_path: Annotated[Path, typer.Option()],
+) -> None:
+    """Run all 12 production qualification collectors and publish measurements.
+
+    Writes canonical per-gate measurement JSON under `<artifact_root>/measurements`
+    (real nvidia-smi/procfs/Docker-coverage evidence, not synthetic test doubles).
+    Run this after `finalize-config --qualification-state qualified` and before
+    `qualify-live`.
+    """
+    loaded = load_verified_campaign_config(config)
+    paths = QualificationRuntimePaths(
+        target_harness_path=target_harness_path,
+        remote_code_path=remote_code_path,
+        search_binary_path=search_binary_path,
+        coverage_binary_path=coverage_binary_path,
+        coverage_build_manifest_path=coverage_build_manifest_path,
+        c0_source_path=c0_source_path,
+        dictionary_path=dictionary_path,
+        search_image_ref=search_image_ref,
+        coverage_image_ref=coverage_image_ref,
+        smoke_artifact_path=smoke_artifact_path,
+    )
+    try:
+        inputs = build_production_collector_inputs(config=loaded, paths=paths)
+        evidence_path = collect_all_measurements(inputs)
+    except CoordinatorError as error:
+        _ = typer.echo(str(error), err=True)
+        raise typer.Exit(2) from error
+    _ = typer.echo(
+        json.dumps(
+            {
+                "measurements_root": str(inputs.measurements_root),
+                "evidence_path": str(evidence_path),
             },
             sort_keys=True,
             separators=(",", ":"),

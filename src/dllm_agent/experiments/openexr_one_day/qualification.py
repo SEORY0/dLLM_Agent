@@ -434,7 +434,10 @@ def write_record_backed_qualification_from_measurements(
     _reject_placeholder_provenance(config)
     manifest = build_campaign_manifest(
         config,
-        build_campaign_schedule(main_start_monotonic_seconds=config.main_start_monotonic_seconds),
+        build_campaign_schedule(
+            main_start_monotonic_seconds=config.main_start_monotonic_seconds,
+            gpu_count=len(config.resource_map.model_cores),
+        ),
     )
     measurements: dict[QualificationGateName, dict[str, JsonValue]] = {
         gate: _read_gate_measurements(measurements_root, gate) for gate in QUALIFICATION_GATE_NAMES
@@ -757,13 +760,14 @@ def _derive_gate_passed_from_measurements(  # noqa: C901, PLR0911, PLR0912
         case "vram":
             preload = _int_map_value(measurements, "pre_load_free_bytes")
             postload = _int_map_value(measurements, "post_load_free_bytes")
+            gpu_indexes = range(len(config.resource_map.model_cores))
             return (
-                set(preload) == {str(index) for index in range(8)}
-                and set(postload) == {str(index) for index in range(8)}
+                set(preload) == {str(index) for index in gpu_indexes}
+                and set(postload) == {str(index) for index in gpu_indexes}
                 and all(
                     preload[str(index)] >= _MINIMUM_PRELOAD_VRAM_BYTES
                     and postload[str(index)] >= _MINIMUM_POSTLOAD_VRAM_BYTES
-                    for index in range(8)
+                    for index in gpu_indexes
                 )
             )
         case "ram":

@@ -1,0 +1,151 @@
+{
+  "artifact_root": "/data/dllm-agent/openexr-one-day-1gpu-draft",
+  "c0_sha256": "ae9d361e47cc503dc91b827f4956fdf8ca16ffb3804ecdfcf83dd627f8a64f96",
+  "c0_source_path": "fixtures/openexr/c0-validity-preserving-zero.hex",
+  "candidate_steps": 8,
+  "config_id": "openexr-v3.4.14-one-day-1gpu-draft",
+  "config_sha256": "74211287cc07495ee067d64e57ebb46e8c345465897249e5c319b9c67c99bc05",
+  "coverage_binary_sha256": "8888888888888888888888888888888888888888888888888888888888888888",
+  "coverage_build_manifest_sha256": "9999999999999999999999999999999999999999999999999999999999999999",
+  "coverage_image_digest": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+  "deep_parse_checker_sha256": "621ca050c5b65d5537885288d9f42bb7bcee8d9d038d5ee4782e75b6e01372ba",
+  "dictionary_path": "configs/openexr-v3.4.14.dict",
+  "dictionary_sha256": "9419f2003be8f41d286360ea3dec3f8fa967244111eecec0fd292db0ae6fed93",
+  "main_start_monotonic_seconds": 70000.0,
+  "max_input_length": 1048576,
+  "model_cache_dir": "/data/dllm-agent/cache",
+  "model_revision": "10cdaf9b486f1cf0273ad968459dbe2d21a1482a",
+  "prompt_path": "prompts/openexr-system.md",
+  "prompt_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+  "proof_duration_seconds": 30,
+  "proof_seed_base": 9000000,
+  "qualification_evidence_path": "qualification.json",
+  "qualification_state": "draft",
+  "remote_code_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+  "resource_map": {
+    "core_numa_nodes": {
+      "0": 0,
+      "1": 0,
+      "10": 1,
+      "11": 1,
+      "12": 1,
+      "13": 1,
+      "14": 1,
+      "15": 1,
+      "16": 1,
+      "17": 1,
+      "18": 1,
+      "19": 1,
+      "2": 0,
+      "20": 0,
+      "21": 0,
+      "22": 0,
+      "23": 0,
+      "24": 0,
+      "25": 0,
+      "26": 0,
+      "27": 0,
+      "28": 0,
+      "29": 0,
+      "3": 0,
+      "30": 1,
+      "31": 1,
+      "32": 1,
+      "33": 1,
+      "34": 1,
+      "35": 1,
+      "36": 1,
+      "37": 1,
+      "38": 1,
+      "39": 1,
+      "4": 0,
+      "5": 0,
+      "6": 0,
+      "7": 0,
+      "8": 0,
+      "9": 0
+    },
+    "gpu_numa_nodes": [
+      0
+    ],
+    "gpu_records": [
+      {
+        "index": 0,
+        "numa_node": 0,
+        "uuid": "GPU-a8821ad6-2a99-42d9-696c-12372fd30262"
+      }
+    ],
+    "model_cores": [
+      {
+        "core_id": 0,
+        "sibling_core_id": 20
+      }
+    ],
+    "monitor_cores": [
+      {
+        "core_id": 19,
+        "sibling_core_id": 39
+      }
+    ],
+    "proof_cores": [
+      {
+        "core_id": 18,
+        "sibling_core_id": 38
+      }
+    ],
+    "search_cores": [
+      {
+        "core_id": 4,
+        "sibling_core_id": 24
+      },
+      {
+        "core_id": 5,
+        "sibling_core_id": 25
+      },
+      {
+        "core_id": 6,
+        "sibling_core_id": 26
+      },
+      {
+        "core_id": 7,
+        "sibling_core_id": 27
+      },
+      {
+        "core_id": 8,
+        "sibling_core_id": 28
+      },
+      {
+        "core_id": 9,
+        "sibling_core_id": 29
+      },
+      {
+        "core_id": 14,
+        "sibling_core_id": 34
+      },
+      {
+        "core_id": 15,
+        "sibling_core_id": 35
+      },
+      {
+        "core_id": 16,
+        "sibling_core_id": 36
+      },
+      {
+        "core_id": 17,
+        "sibling_core_id": 37
+      }
+    ]
+  },
+  "rss_limit_mb": 2048,
+  "runtime_python": "/usr/bin/python3",
+  "sanitizers": [
+    "address",
+    "undefined"
+  ],
+  "schema_version": "dllm-openexr-one-day-config/v1",
+  "search_binary_sha256": "6666666666666666666666666666666666666666666666666666666666666666",
+  "search_image_digest": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+  "target_commit": "777d231a179de1711d2a942810d9559216ab3f4c",
+  "target_harness_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+  "target_timeout_seconds": 10
+}

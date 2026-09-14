@@ -246,8 +246,8 @@ def _validated_bindings(
     bindings: tuple[ResidentWorkerBinding, ...],
 ) -> tuple[ResidentWorkerBinding, ...]:
     ordered = tuple(sorted(bindings, key=lambda binding: int(binding.gpu_index)))
-    if tuple(int(binding.gpu_index) for binding in ordered) != tuple(range(8)):
-        raise ResidentPoolError(reason="resident pool requires physical GPUs 0 through 7")
+    if tuple(int(binding.gpu_index) for binding in ordered) != tuple(range(len(ordered))):
+        raise ResidentPoolError(reason="resident pool requires contiguous physical GPUs from 0")
     cache_paths = {binding.worker.cache_dir.resolve() for binding in ordered}
     if len(cache_paths) != 1:
         raise ResidentPoolError(reason="resident workers must share one cache path")
