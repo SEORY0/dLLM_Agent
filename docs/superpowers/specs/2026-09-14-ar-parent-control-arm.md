@@ -82,10 +82,43 @@ time, GPU model을 원시값 그대로 나란히 보고하고, 절대로 가공 
 - `tests/test_multitarget_ar_slot_sampler.py` — 3개, 전부 순수 파이썬 fake로
   실행(GPU/torch 불필요).
 
-## 6. 아직 하지 않은 것
+## 6. 다음 후보 2개 (합의됨, 아직 다운로드/배선 전)
+
+사용자 확인: Seed-Coder-8B-Instruct(AR parent) + Stable-DiffCoder-8B-Instruct
+(dLLM) 두 개가 실제로 로드·실행되는 것을 먼저 확인한 뒤 아래 두 개를 추가한다.
+
+- **"strong independent AR" control**: `Qwen/Qwen2.5-Coder-7B-Instruct`.
+  7.61B, 표준 `AutoModelForCausalLM`(커스텀 코드 불필요), Seed-Coder와 계통이
+  다른 독립 AR — `research-report.md` §8.2가 요구하는 "강한 독립 AR" 조건을
+  만족한다. Hub는 Apache-2.0 표시하지만 실제 LICENSE artifact는 없음(다른 세
+  checkpoint와 동일 패턴, 동일하게 미해결로 기록).
+- **2번째 dLLM 후보**: `Dream-org/Dream-Coder-v0-Instruct-7B`(이미
+  `research-report.md`에 fallback으로 기재돼 있었으나, HF repo id가 실제로는
+  `DreamLM/...`가 아니라 `Dream-org/...`였다 — 이번에 바로잡음). 7B, 커스텀
+  `modeling_dream.py`/`tokenization_dream.py`라 `trust_remote_code=True` 필요.
+  모델 카드는 `torch==2.5.1`/`transformers==4.46.2`를 권장하지만 이 저장소는
+  2.11.0/5.17.0을 쓴다 — 실제로 로드되는지 별도 검증 필요. Apache-2.0 표시,
+  동일 no-LICENSE-artifact 패턴. **정확한 revision commit hash는 페이지
+  요약 도구로 얻은 값이 SHA-1 자리수(40자)와 맞지 않아 신뢰하지 않았다** —
+  실제 다운로드 시 `git ls-remote` 또는 `huggingface-cli download`가 resolve한
+  값을 써야 한다.
+
+**GPU 병렬 수용력(계산만, 실측 아님):** 4개 checkpoint 모두 8B급 BF16 —
+Stable-DiffCoder 실측치(RTX 3090에서 16.50GB)를 기준으로 4개 합쳐도 약
+66GB. 워크스테이션의 2×96GB(RTX PRO 6000 Blackwell)면 넷 다 동시에 상주시키고도
+여유가 크다(예: GPU당 2개, 약 33GB/96GB). `ResidentWorkerPool`은 이미 "GPU당
+하나의 상주 모델을 한 번 로드해 재사용"하는 형태라 이기종 모델(AR 2개 + dLLM
+2개)로 확장하는 것도 구조적으로는 어렵지 않다 — 다만 실제 배선은 아직 없다.
+
+## 7. 아직 하지 않은 것
 
 - 실제 Seed-Coder-8B-Instruct 가중치로 실행 검증(현재는 fake model 단위 테스트만).
 - one-day campaign 또는 다른 실전 경로에 AR arm을 실제로 배선(의도적으로 범위 밖).
-- "strong independent AR"(계통이 다른 모델) control.
+- 위 §6의 두 후보(Qwen2.5-Coder-7B-Instruct, Dream-Coder-v0-Instruct-7B) 다운로드·
+  실제 로드 검증·`ResidentWorkerPool` 이기종 확장 배선.
 - selective-revision과 AR parent를 동일 후보 은행·예산에서 직접 비교하는 실행
   스크립트(다음 단계).
+- 표본 크기 확대: `research-report.md` §5(line 177/188/194)가 이미 "hash-locked
+  pilot의 관측 분산으로 power를 계산해 full n을 정한다"고 명시했고, 그 pilot(M3
+  Phase 1, 32-pair smoke)은 아직 실행되지 않았다. 실측 없이 ICLR급 규모로
+  임의 확대하는 것은 이 사전등록 원칙과 충돌하므로 하지 않는다.
