@@ -19,6 +19,21 @@ dependencies = [
 [project.scripts]
 dllm-agent = "dllm_agent.cli:app"
 
+[project.optional-dependencies]
+gpu = [
+    "torch>=2.7",
+    "transformers",
+    "huggingface_hub",
+]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
 [dependency-groups]
 dev = [
     "basedpyright>=1.31",
