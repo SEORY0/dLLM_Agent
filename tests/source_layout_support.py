@@ -65,6 +65,7 @@ FINAL_RUNTIME_MODULES: Final = module_set(
     dllm_agent.core dllm_agent.core.errors dllm_agent.core.io dllm_agent.core.models
     dllm_agent.experiments
     dllm_agent.experiments.multitarget
+    dllm_agent.experiments.multitarget.ar_slot_sampler
     dllm_agent.experiments.multitarget.artifacts
     dllm_agent.experiments.multitarget.bank_generation
     dllm_agent.experiments.multitarget.budget
@@ -132,7 +133,8 @@ FINAL_RUNTIME_MODULES: Final = module_set(
     dllm_agent.fuzzing.coverage.runner
     dllm_agent.hunt dllm_agent.hunt.validation dllm_agent.hunt.models
     dllm_agent.hunt.artifacts dllm_agent.hunt.scoring dllm_agent.hunt.pipeline
-    dllm_agent.runtime dllm_agent.runtime.live_sampler dllm_agent.runtime.revision_checks
+    dllm_agent.runtime dllm_agent.runtime.ar_model_loader dllm_agent.runtime.live_sampler
+    dllm_agent.runtime.revision_checks
     dllm_agent.runtime.revision_client dllm_agent.runtime.revision_process
     dllm_agent.native dllm_agent.native.artifacts dllm_agent.native.models
     dllm_agent.native.pipeline dllm_agent.native.scoring
