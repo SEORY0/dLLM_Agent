@@ -63,6 +63,9 @@ class ExactProofRequest(Protocol):
     @property
     def proof_seed(self) -> int: ...
 
+    @property
+    def search_image_digest(self) -> str: ...
+
 
 @dataclass(frozen=True, slots=True)
 class _ResultEvidence:
@@ -107,7 +110,7 @@ class ProofResult(FrozenModel):
     root_signature: str | None
     run_argv_sha256: tuple[Sha256, ...]
     run_argv_bytes: tuple[bytes, ...]
-    image_digest: Literal["sha256:7591279f51256ef5e80341c788d31145ecf1dd0f7a64db7f0cdeaba527ff5add"]
+    image_digest: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
     target_commit: Literal["777d231a179de1711d2a942810d9559216ab3f4c"]
     proof_binary: Literal["/opt/dllm/bin/poc_probe-asan"]
     proof_seed: int = Field(ge=0)
@@ -159,13 +162,17 @@ def prove_snapshot(request: ExactProofRequest, runner: ProofCommand | None = Non
     command = run_command if runner is None else runner
     first_seed, second_seed = _replay_seeds(request.proof_seed)
     first, first_argv, first_artifacts = run_exact(
-        request.snapshot, request.duration_seconds, first_seed, command
+        request.snapshot, request.duration_seconds, first_seed, command, request.search_image_digest
     )
     reject_boundary_process(first)
     first_log = log_bytes(first)
     first_signature = asan_signature(first_log)
     second, second_argv, second_artifacts = run_exact(
-        request.snapshot, request.duration_seconds, second_seed, command
+        request.snapshot,
+        request.duration_seconds,
+        second_seed,
+        command,
+        request.search_image_digest,
     )
     reject_boundary_process(second)
     second_log = log_bytes(second)
@@ -221,7 +228,12 @@ def prove_snapshot(request: ExactProofRequest, runner: ProofCommand | None = Non
             )
         )
     structured = structured_minimize(
-        request.snapshot, request.duration_seconds, request.proof_seed, command, first_signature
+        request.snapshot,
+        request.duration_seconds,
+        request.proof_seed,
+        command,
+        first_signature,
+        request.search_image_digest,
     )
     minimized = try_minimized(
         structured.input_bytes,
@@ -229,6 +241,7 @@ def prove_snapshot(request: ExactProofRequest, runner: ProofCommand | None = Non
         request.proof_seed,
         command,
         first_signature,
+        request.search_image_digest,
     )
     return _proved_result(
         _ProvedEvidence(
@@ -272,7 +285,7 @@ def _result(evidence: _ResultEvidence) -> ProofResult:
         ),
         run_argv_sha256=tuple(argv_sha256(argv) for argv in evidence.argvs),
         run_argv_bytes=tuple(_argv_bytes(argv) for argv in evidence.argvs),
-        image_digest=OPENEXR_PROOF_IMAGE_DIGEST,
+        image_digest=evidence.request.search_image_digest,
         target_commit=OPENEXR_TARGET_COMMIT,
         proof_binary=OPENEXR_PROOF_BINARY,
         proof_seed=evidence.request.proof_seed,

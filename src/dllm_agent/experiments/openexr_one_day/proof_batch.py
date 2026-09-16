@@ -27,6 +27,7 @@ from dllm_agent.experiments.openexr_one_day.evidence_backing import (
     persist_backing_bytes,
     validate_backing_file,
 )
+from dllm_agent.targets.openexr.proof_execution import OPENEXR_PROOF_IMAGE_DIGEST
 
 type ProofStatus = Literal["proved", "not_reproduced", "crash_without_sanitizer"]
 _JSON_OBJECT: Final = TypeAdapter(dict[str, JsonValue])
@@ -66,6 +67,9 @@ class ProofBatchRequest(FrozenModel):
     duration_seconds: int = Field(gt=0)
     search_finished_monotonic_seconds: float
     search_cpu_seconds: float = Field(ge=0.0)
+    search_image_digest: str = Field(
+        default=OPENEXR_PROOF_IMAGE_DIGEST, pattern=r"^sha256:[0-9a-f]{64}$"
+    )
 
     @model_validator(mode="after")
     def _private_paths(self) -> Self:
@@ -86,6 +90,7 @@ class ExactProofRequestModel(FrozenModel):
     snapshot_sha256: Sha256
     duration_seconds: int = Field(gt=0)
     proof_seed: int = Field(ge=0)
+    search_image_digest: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
 
 
 class ProofOutcome(Protocol):
@@ -362,7 +367,7 @@ def _exact_request(
 ) -> ExactProofRequestModel:
     content = (request.cell_root / owner.input_path).read_bytes()
     # fmt: off
-    return ExactProofRequestModel(snapshot=content, snapshot_sha256=owner.input_sha256, duration_seconds=request.duration_seconds, proof_seed=request.proof_seed)  # noqa: E501
+    return ExactProofRequestModel(snapshot=content, snapshot_sha256=owner.input_sha256, duration_seconds=request.duration_seconds, proof_seed=request.proof_seed, search_image_digest=request.search_image_digest)  # noqa: E501
     # fmt: on
 
 

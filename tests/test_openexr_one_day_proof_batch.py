@@ -29,6 +29,7 @@ from dllm_agent.experiments.openexr_one_day.proof_batch import (
     run_deferred_proof_batch,
 )
 from dllm_agent.targets.openexr.proof import prove_snapshot, proved_cause_id
+from dllm_agent.targets.openexr.proof_execution import OPENEXR_PROOF_IMAGE_DIGEST
 from tests.openexr_one_day_task4_fakes import (
     FakeProofOutcome,
     ManualClock,
@@ -448,6 +449,7 @@ def test_exact_proof_downgrades_asan_without_root_frames() -> None:
         snapshot_sha256=sha256_bytes(snapshot),
         duration_seconds=1,
         proof_seed=7,
+        search_image_digest=OPENEXR_PROOF_IMAGE_DIGEST,
     )
     calls: list[tuple[str, ...]] = []
 

@@ -23,6 +23,7 @@ from dllm_agent.revision.models import (
 from dllm_agent.revision.proof_archive import OnlineProofStatus
 from dllm_agent.targets.openexr.particle import FieldName, MaterializedSnapshot, SelectorSlots
 from dllm_agent.targets.openexr.probe import ProbeRequest, ProbeResult, provisional_probe_family_key
+from dllm_agent.targets.openexr.proof_execution import OPENEXR_PROOF_IMAGE_DIGEST
 
 type HistoricalExperimentArm = Literal[
     "libfuzzer-only",
@@ -142,6 +143,15 @@ class ProofRequest(FrozenModel):  # noqa: D101
     snapshot_sha256: Sha256
     duration_seconds: int = Field(gt=0)
     proof_seed: int = Field(ge=0)
+    # ponytail: this poc-revision pipeline still assumes the historical baked
+    # digest rather than reading the probe's real image_id -- same class of bug
+    # the one-day campaign's proof runner had before it was fixed to thread
+    # config.search_image_digest through. Not fixed here to keep this PR's
+    # blast radius to the one-day campaign; thread ProbeConfig.image_id
+    # through RevisionConfig/_RunInputs when this pipeline needs a real digest.
+    search_image_digest: str = Field(
+        default=OPENEXR_PROOF_IMAGE_DIGEST, pattern=r"^sha256:[0-9a-f]{64}$"
+    )
 
 
 class RevisionSampler(Protocol):  # noqa: D101
