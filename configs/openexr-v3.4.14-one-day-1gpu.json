@@ -107,9 +107,9 @@
     ],
     "gpu_records": [
       {
-        "index": 0,
+        "index": 1,
         "numa_node": 0,
-        "uuid": "GPU-fce8b8f8-013c-de7a-bcc3-3b9f651d097b"
+        "uuid": "GPU-1824bc0e-afda-4c3f-454b-71e779e4db34"
       }
     ],
     "model_cores": [
