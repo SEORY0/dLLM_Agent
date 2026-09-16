@@ -114,6 +114,20 @@ _NVIDIA_GPU_TOPOLOGY_ARGV: Final = (
     "--query-gpu=index,uuid,pci.bus_id",
     "--format=csv,noheader,nounits",
 )
+
+
+def nvidia_gpu_topology_argv(physical_gpu_indices: tuple[int, ...]) -> tuple[str, ...]:
+    """Return the exact nvidia-smi argv for one topology query.
+
+    Restricted to ``physical_gpu_indices`` via ``-i`` when given, so a shared
+    box's other GPUs (in use by unrelated work) never enter this campaign's
+    resource_map identity evidence. Empty means "every GPU on the host" --
+    the original dedicated-cluster assumption.
+    """
+    if not physical_gpu_indices:
+        return _NVIDIA_GPU_TOPOLOGY_ARGV
+    indices = ",".join(str(index) for index in sorted(set(physical_gpu_indices)))
+    return (*_NVIDIA_GPU_TOPOLOGY_ARGV, "-i", indices)
 _PCI_DEVICE_ROOT: Final = Path("/sys/bus/pci/devices")
 _CACHE_WRITE_PROBE_NAME: Final = ".dllm-agent-cache-write-probe"
 _NVIDIA_DOMAIN_HEX_LEN: Final = 8
@@ -575,10 +589,19 @@ def collect_resource_topology_measurements(
     *,
     thread_sibling_root: Path = _THREAD_SIBLING_ROOT,
     pci_device_root: Path = _PCI_DEVICE_ROOT,
+    physical_gpu_indices: tuple[int, ...] = (),
 ) -> dict[str, JsonValue]:
-    """Collect raw CPU/GPU topology evidence through fixed shell-free commands."""
+    """Collect raw CPU/GPU topology evidence through fixed shell-free commands.
+
+    ``physical_gpu_indices`` restricts the nvidia-smi query to the specific
+    GPUs the campaign actually declares (via ``-i``) -- required on a shared
+    box where other physical GPUs may be in use by unrelated work and were
+    never meant to be part of this resource_map's identity evidence. Empty
+    (the historical default) queries every GPU on the host, matching the
+    original dedicated-cluster assumption where used GPUs == all GPUs.
+    """
     lscpu = runner.run(_LSCPU_TOPOLOGY_ARGV)
-    nvidia = runner.run(_NVIDIA_GPU_TOPOLOGY_ARGV)
+    nvidia = runner.run(nvidia_gpu_topology_argv(physical_gpu_indices))
     lscpu_stdout = _decode_stdout(lscpu, "lscpu")
     lscpu_stderr = _decode_stderr(lscpu, "lscpu")
     nvidia_stdout = _decode_stdout(nvidia, "nvidia-smi")
@@ -608,7 +631,7 @@ def collect_resource_topology_measurements(
             "lscpu_stderr": lscpu_stderr,
             "lscpu_stdout_sha256": sha256_bytes(lscpu_stdout.encode()),
             "lscpu_stderr_sha256": sha256_bytes(lscpu_stderr.encode()),
-            "nvidia_smi_argv": list(_NVIDIA_GPU_TOPOLOGY_ARGV),
+            "nvidia_smi_argv": list(nvidia_gpu_topology_argv(physical_gpu_indices)),
             "nvidia_smi_exit_code": nvidia.returncode,
             "nvidia_smi_stdout": nvidia_stdout,
             "nvidia_smi_stderr": nvidia_stderr,
@@ -1094,7 +1117,9 @@ def _resource_topology_matches(  # noqa: PLR0911
     try:
         if tuple(_sequence_value(measurements, "lscpu_argv")) != _LSCPU_TOPOLOGY_ARGV:
             return False
-        if tuple(_sequence_value(measurements, "nvidia_smi_argv")) != _NVIDIA_GPU_TOPOLOGY_ARGV:
+        expected_physical_indices = tuple(record.index for record in expected.gpu_records)
+        expected_argv = nvidia_gpu_topology_argv(expected_physical_indices)
+        if tuple(_sequence_value(measurements, "nvidia_smi_argv")) != expected_argv:
             return False
         lscpu_stdout = _str_value(measurements, "lscpu_stdout")
         lscpu_stderr = _str_value(measurements, "lscpu_stderr")

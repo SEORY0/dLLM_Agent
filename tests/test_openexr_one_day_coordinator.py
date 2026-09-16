@@ -272,6 +272,27 @@ def test_single_gpu_resource_map_is_accepted() -> None:
     assert len(validated.gpu_numa_nodes) == 1
 
 
+def test_single_gpu_resource_map_may_pin_a_nonzero_physical_gpu_index() -> None:
+    # Given a 2-GPU workstation where only physical GPU 1 is free to use
+    resource_map = {
+        "model_cores": (CoreAssignment(core_id=0, sibling_core_id=20),),
+        "search_cores": tuple(
+            CoreAssignment(core_id=index + 1, sibling_core_id=index + 21) for index in range(10)
+        ),
+        "proof_cores": (CoreAssignment(core_id=18, sibling_core_id=38),),
+        "monitor_cores": (CoreAssignment(core_id=19, sibling_core_id=39),),
+        "gpu_numa_nodes": (0,),
+        "gpu_records": ({"index": 1, "uuid": "GPU-" + "1" * 32, "numa_node": 0},),
+        "core_numa_nodes": dict.fromkeys(range(40), 0),
+    }
+
+    # When
+    validated = ResourceMap.model_validate(resource_map)
+
+    # Then
+    assert validated.gpu_records[0].index == 1
+
+
 def test_treatment_failure_freezes_curve_and_keeps_pair_but_exogenous_invalidates_pair(
     data_root: Path,
 ) -> None:

@@ -583,6 +583,9 @@ def _collect_measurements(
             inputs.command_runner,
             thread_sibling_root=inputs.topology.thread_sibling_root,
             pci_device_root=inputs.topology.pci_device_root,
+            physical_gpu_indices=tuple(
+                record.index for record in inputs.config.resource_map.gpu_records
+            ),
         ),
         "disk_space": collect_disk_space_measurements(inputs.disk_path),
         "vram": collect_vram_measurements(

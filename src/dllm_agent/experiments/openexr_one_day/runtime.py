@@ -663,13 +663,23 @@ class ProductionRuntimeFactory:
             for assignment in config.resource_map.model_cores
         )
         gpu_count = len(config.resource_map.model_cores)
+        gpu_records = config.resource_map.gpu_records
+        # Physical CUDA/nvidia-smi device per logical pool slot. gpu_records[i]
+        # is the workstation's real GPU for slot i (e.g. physical GPU 1 pinned
+        # as the sole slot 0 on a 2-GPU box); falls back to slot == device for
+        # historical contiguous-from-0 configs that never set gpu_records.
+        physical_indices = (
+            tuple(int(record.index) for record in gpu_records)
+            if gpu_records
+            else tuple(range(gpu_count))
+        )
         workers: tuple[ResidentRevisionWorker, ...] = tuple(
-            factory.create(device=f"cuda:{index}", cpu_affinity=affinities[index])
+            factory.create(device=f"cuda:{physical_indices[index]}", cpu_affinity=affinities[index])
             for index in range(gpu_count)
         )
         pool = ResidentWorkerPool(
             bindings=tuple(
-                ResidentWorkerBinding(GpuIndex(index), worker)
+                ResidentWorkerBinding(GpuIndex(index), worker, physical_indices[index])
                 for index, worker in enumerate(workers)
             ),
             telemetry_probe=ProductionTelemetryProbe(),

@@ -281,8 +281,14 @@ class ResourceMap(FrozenModel):
             raise CampaignValidationError("resource-map GPU NUMA evidence is incomplete")
         if self.gpu_records:
             expected_count = len(self.gpu_numa_nodes)
-            if tuple(record.index for record in self.gpu_records) != tuple(range(expected_count)):
+            # record.index is the real physical CUDA/nvidia-smi device for
+            # that pool slot -- not required to be 0-based/contiguous, since
+            # a config may pin a smaller GPU count to specific physical
+            # devices on a larger box (e.g. slot 0 -> physical GPU 1).
+            if len(self.gpu_records) != expected_count:
                 raise CampaignValidationError("resource-map GPU identity evidence is incomplete")
+            if len({record.index for record in self.gpu_records}) != expected_count:
+                raise CampaignValidationError("resource-map duplicate physical GPU index")
             if tuple(record.numa_node for record in self.gpu_records) != self.gpu_numa_nodes:
                 raise CampaignValidationError("resource-map GPU identity NUMA mismatch")
             if len({record.uuid for record in self.gpu_records}) != len(self.gpu_numa_nodes):
