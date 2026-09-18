@@ -174,7 +174,7 @@
     ]
   },
   "rss_limit_mb": 2048,
-  "runtime_python": "/usr/bin/python3",
+  "runtime_python": "/home/jackb/workspace/dLLM_Agent/.venv/bin/python3",
   "sanitizers": [
     "address",
     "undefined"
