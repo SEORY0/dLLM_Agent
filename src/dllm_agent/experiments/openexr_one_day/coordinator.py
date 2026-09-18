@@ -60,6 +60,7 @@ from dllm_agent.experiments.openexr_one_day.candidate_bank import (
     CandidateBank,
     build_candidate_bank,
     build_frozen_bank_adapters,
+    private_worker_delegate,
 )
 from dllm_agent.experiments.openexr_one_day.cell_runner import (
     CellEvidenceError,
@@ -2256,7 +2257,7 @@ def _adapters_by_repetition(
             bindings.append(
                 ArmBankBinding(
                     cast("ModelArm", cell.arm),
-                    cast("RevisionSampler", worker),
+                    private_worker_delegate(cast("RevisionSampler", worker)),
                     config.artifact_root / "mutable" / f"rep-{int(cell.repetition):02d}" / cell.arm,
                 )
             )
@@ -2272,8 +2273,8 @@ def _bank_sampler_for_repetition(
         if int(cell.repetition) == repetition and cell.arm in MODEL_ARMS:
             bank_worker_for = getattr(pool, "bank_worker_for", None)
             if callable(bank_worker_for):
-                return cast("RevisionSampler", bank_worker_for(cell))
-            return cast("RevisionSampler", pool.worker_for(cell))
+                return private_worker_delegate(cast("RevisionSampler", bank_worker_for(cell)))
+            return private_worker_delegate(cast("RevisionSampler", pool.worker_for(cell)))
     raise CoordinatorError(reason="model repetition has no resident worker")
 
 

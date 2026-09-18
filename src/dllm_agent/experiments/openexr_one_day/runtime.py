@@ -18,6 +18,7 @@ from dllm_agent.experiments.openexr_one_day.candidate_bank import (
     CandidateBank,
     build_candidate_bank,
     build_frozen_bank_adapters,
+    private_worker_delegate,
 )
 from dllm_agent.experiments.openexr_one_day.cell_runner import (
     CellResult,
@@ -241,9 +242,19 @@ class RuntimeDependencyGraph:
 
     @property
     def revision_delegates(self) -> dict[ModelArm, RevisionSampler]:
-        """Compatibility view over the four production arm workers."""
+        """Compatibility view over the four production arm workers.
+
+        Modulo-indexed (not a direct positional index) so this degrades
+        safely -- rather than IndexError -- when the pool has fewer bindings
+        than model arms (gpu_count < 4). Unwrapped (unlike the real
+        _adapters_by_repetition/_smoke_adapters model-arm binding paths,
+        which do use private_worker_delegate): this is an unused
+        compatibility view, not itself a path where multiple arms are ever
+        compared for delegate-object distinctness.
+        """
+        bindings = self.resident_pool.bindings
         return {
-            arm: cast("RevisionSampler", cast("object", self.resident_pool.bindings[index].worker))
+            arm: cast("RevisionSampler", cast("object", bindings[index % len(bindings)].worker))
             for index, arm in enumerate(_MODEL_ARMS)
         }
 
@@ -596,7 +607,9 @@ def _smoke_adapters(
     bindings = tuple(
         ArmBankBinding(
             cell.arm,
-            cast("RevisionSampler", cast("object", resident_pool.worker_for(cell))),
+            private_worker_delegate(
+                cast("RevisionSampler", cast("object", resident_pool.worker_for(cell)))
+            ),
             smoke_root / "mutable" / f"rep-{int(cell.repetition):02d}" / cell.arm,
         )
         for cell in cells
@@ -612,7 +625,9 @@ def _smoke_bank_sampler(
 ) -> RevisionSampler:
     for cell in cells:
         if int(cell.repetition) == repetition and cell.arm in MODEL_ARMS:
-            return cast("RevisionSampler", cast("object", resident_pool.worker_for(cell)))
+            return private_worker_delegate(
+                cast("RevisionSampler", cast("object", resident_pool.worker_for(cell)))
+            )
     raise CoordinatorError(reason="smoke bank sampler missing")
 
 

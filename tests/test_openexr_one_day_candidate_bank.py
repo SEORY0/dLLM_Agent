@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from dataclasses import FrozenInstanceError, dataclass, field
 from typing import TYPE_CHECKING
 
@@ -18,6 +19,7 @@ from dllm_agent.experiments.openexr_one_day.candidate_bank import (
     FrozenBankAdapter,
     build_candidate_bank,
     build_frozen_bank_adapters,
+    private_worker_delegate,
 )
 from dllm_agent.experiments.openexr_one_day.models import (
     MODEL_ARMS,
@@ -324,3 +326,64 @@ def _result(variant: int, call_index: int) -> RevisionResult:
         suggested_field="width",
         trajectory_evidence_sha256=sha256_bytes(b"[]"),
     )
+
+
+@dataclass(slots=True)  # noqa: MUTABLE_OK - fake records concurrent-entry evidence.
+class ConcurrencyTrackingSampler:
+    """Fake resident worker recording whether two calls ever overlapped."""
+
+    active: int = 0
+    max_concurrent: int = 0
+    calls: int = 0
+    _guard: threading.Lock = field(default_factory=threading.Lock)
+
+    def initial(self, request: InitialParticleRequest) -> RevisionResult:
+        del request
+        with self._guard:
+            self.active += 1
+            self.max_concurrent = max(self.max_concurrent, self.active)
+            self.calls += 1
+        # ponytail: fixed sleep, not a retry loop -- good enough to make a
+        # real race observable without flaking on a slow CI box.
+        _ = threading.Event().wait(0.02)
+        with self._guard:
+            self.active -= 1
+        return _result(0, 0)
+
+    def revise(self, request: RevisionRequest) -> RevisionResult:
+        del request
+        return _result(0, 0)
+
+
+def test_private_worker_delegate_gives_each_arm_a_distinct_object() -> None:
+    # Given one shared underlying worker (e.g. a 1-GPU pool)
+    worker = ConcurrencyTrackingSampler()
+
+    # When wrapped once per arm
+    selective_revision = private_worker_delegate(worker)
+    final_only = private_worker_delegate(worker)
+
+    # Then each wrapper is a distinct object, satisfying build_frozen_bank_adapters'
+    # privacy check, even though they share one underlying delegate
+    assert selective_revision is not final_only
+    assert len({id(selective_revision), id(final_only)}) == 2
+
+
+def test_private_worker_delegate_serializes_concurrent_calls_to_shared_worker() -> None:
+    # Given two arm delegates wrapping the same underlying worker
+    worker = ConcurrencyTrackingSampler()
+    delegates = (private_worker_delegate(worker), private_worker_delegate(worker))
+    request = _initial("selective-revision")
+
+    # When both delegates are called concurrently
+    threads = [
+        threading.Thread(target=delegate.initial, args=(request,)) for delegate in delegates
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    # Then the underlying worker never saw two calls active at once
+    assert worker.calls == len(delegates)
+    assert worker.max_concurrent == 1
