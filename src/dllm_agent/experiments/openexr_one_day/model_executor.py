@@ -132,7 +132,7 @@ class ProductionModelArmExecutor:
             schema_version="dllm-poc-revision-run/v1",
             arm=request.arm,
             pseudo_feedback_rotation_seed=request.cell.fuzzer_seed,
-            particle_seed_base=request.cell.fuzzer_seed,
+            particle_seed_base=_initial_particle_seed_base(request),
             proof_seed=0,
         )
         report = self.run_revision(
@@ -202,6 +202,19 @@ def _snapshot_bytes(report: PocRevisionReport) -> tuple[bytes, ...]:
             raise ModelPreparationError(cell_id, reason)
         payloads.append(payload)
     return tuple(payloads)
+
+
+def _initial_particle_seed_base(request: ModelArmExecutionRequest) -> int:
+    """Return the seed base initial-particle requests must use for this arm.
+
+    A frozen bank adapter validates each initial() request's seed against
+    its own requested_seed_base (shared across every arm reusing that bank,
+    per candidate_bank.py's _selected_lineages) -- not the arm's own
+    fuzzer_seed. Falling back to cell.fuzzer_seed keeps the non-frozen-bank
+    (legacy/direct revision_delegate) path unchanged.
+    """
+    seed_base = getattr(request.frozen_adapter, "requested_seed_base", None)
+    return seed_base if isinstance(seed_base, int) else request.cell.fuzzer_seed
 
 
 def _revision_config(request: ModelArmExecutionRequest) -> RevisionConfig:
