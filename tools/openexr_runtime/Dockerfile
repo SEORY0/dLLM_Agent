@@ -16,6 +16,17 @@ LABEL org.opencontainers.image.source="https://github.com/AcademySoftwareFoundat
       org.opencontainers.image.imath.revision="1e480d11cb98b032a2dece9b9a8730512effc7f6" \
       org.opencontainers.image.version="v3.4.14"
 
+# Deliberate deviation, recorded in the image label below (and to be reported in
+# the methods): the ASan/UBSan search build disables ONLY UBSan's `nonnull-attribute`
+# check. With -fno-sanitize-recover=undefined that single check aborts the process
+# at Imf::OpaqueAttribute's ctor (ImfOpaqueAttribute.cpp:35, a NULL passed to a
+# `nonnull` parameter for a zero-length copy) after ~2000 executions on nearly
+# every corpus, so every search cell degenerated into a ~140-restart loop and no
+# fuzzer made progress (measured: 1393 hits, one site, 10/10 cells). It is a
+# benign-class nit, not a memory-safety report; every other UBSan check and all of
+# ASan remain enabled and fatal.
+LABEL org.opencontainers.image.dllm.ubsan-disabled-checks="nonnull-attribute"
+
 COPY --from=openexr . /opt/openexr-src
 COPY tools/openexr_runtime/CMakeLists.txt /opt/dllm/runtime/CMakeLists.txt
 COPY tools/openexr_runtime/poc_probe.cc /opt/dllm/runtime/poc_probe.cc
@@ -38,8 +49,8 @@ RUN printf '%s  %s\n' "a29644c43663d8cad3a3f2f22fa064f1d138df9873e32e410265756d2
       -DCMAKE_INSTALL_PREFIX=/opt/openexr-asan \
       -DCMAKE_C_COMPILER=clang \
       -DCMAKE_CXX_COMPILER=clang++ \
-      -DCMAKE_C_FLAGS_DEBUG="-O1 -gline-tables-only -fno-omit-frame-pointer -fsanitize=address,undefined -fsanitize=fuzzer-no-link -fno-sanitize-recover=undefined" \
-      -DCMAKE_CXX_FLAGS_DEBUG="-O1 -gline-tables-only -fno-omit-frame-pointer -fsanitize=address,undefined -fsanitize=fuzzer-no-link -fno-sanitize-recover=undefined" \
+      -DCMAKE_C_FLAGS_DEBUG="-O1 -gline-tables-only -fno-omit-frame-pointer -fsanitize=address,undefined -fno-sanitize=nonnull-attribute -fsanitize=fuzzer-no-link -fno-sanitize-recover=undefined" \
+      -DCMAKE_CXX_FLAGS_DEBUG="-O1 -gline-tables-only -fno-omit-frame-pointer -fsanitize=address,undefined -fno-sanitize=nonnull-attribute -fsanitize=fuzzer-no-link -fno-sanitize-recover=undefined" \
       -DBUILD_SHARED_LIBS=OFF \
       -DBUILD_TESTING=OFF \
       -DOPENEXR_BUILD_TOOLS=OFF \

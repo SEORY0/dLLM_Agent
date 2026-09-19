@@ -166,6 +166,29 @@ def test_openexr_runtime_dockerfile_hardcodes_clean_pins_and_instrumentation() -
     assert dockerfile.count("CMAKE_BUILD_TYPE=Debug") == 2
 
 
+def test_search_build_disables_exactly_one_ubsan_check_and_says_so() -> None:
+    # Given
+    root = Path(__file__).parents[1] / "tools/openexr_runtime"
+    dockerfile = (root / "Dockerfile").read_text()
+    cmake = (root / "CMakeLists.txt").read_text()
+
+    # When: collect every -fno-sanitize=<check> (not -fno-sanitize-recover)
+    def disabled(text: str) -> set[str]:
+        return {
+            token.split("=", 1)[1]
+            for token in text.replace('"', " ").split()
+            if token.startswith("-fno-sanitize=")
+        }
+
+    # Then only nonnull-attribute is disabled (it aborts every search cell at
+    # ImfOpaqueAttribute.cpp:35 within ~2000 execs); anything wider must be a
+    # deliberate, reviewed change, and the deviation is recorded as an image label.
+    assert disabled(dockerfile) == {"nonnull-attribute"}
+    assert disabled(cmake) == {"nonnull-attribute"}
+    assert "-fno-sanitize-recover=undefined" in dockerfile
+    assert 'ubsan-disabled-checks="nonnull-attribute"' in dockerfile
+
+
 def test_openexr_fuzz_helper_leaves_only_build_directory_host_cleanable() -> None:
     # Given
     helper = (Path(__file__).parents[1] / "tools/openexr_runtime/build-fuzz").read_text()
