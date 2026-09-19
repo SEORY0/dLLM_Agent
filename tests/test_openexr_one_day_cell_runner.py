@@ -640,6 +640,11 @@ def test_long_probe_argv_uses_cpuset_and_persistent_private_roots() -> None:
         assert mount_sources
         assert all(source.startswith("/") for source in mount_sources)
         assert "-dict=/work/openexr.dict" in argv
+        # libFuzzer prints a NEW/REDUCE/pulse line per coverage change; a 300s smoke
+        # already overflowed the 8 MiB evidence log cap. verbosity=0 keeps sanitizer
+        # reports and -print_final_stats (all the classifier/evidence use).
+        assert "-verbosity=0" in argv
+        assert "-print_final_stats=1" in argv
         assert "-max_total_time=7200" in argv
         assert "-seed=71" in argv
 
