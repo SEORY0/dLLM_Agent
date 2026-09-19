@@ -628,7 +628,12 @@ def test_long_probe_argv_uses_cpuset_and_persistent_private_roots() -> None:
         assert argv[argv.index("--cpuset-cpus") + 1] == "7"
         assert "--cpus" not in argv
         assert f"{request.artifact_root}:/work:rw" in argv
-        assert f"{request.dictionary_path}:/work/openexr.dict:ro" in argv
+        assert f"{request.dictionary_path.resolve()}:/work/openexr.dict:ro" in argv
+        # Docker reads a relative -v source as a *named volume* and rejects it
+        # (exit 125), so every bind-mount source must be an absolute path.
+        mount_sources = [argv[i + 1].split(":")[0] for i, arg in enumerate(argv) if arg == "-v"]
+        assert mount_sources
+        assert all(source.startswith("/") for source in mount_sources)
         assert "-dict=/work/openexr.dict" in argv
         assert "-max_total_time=7200" in argv
         assert "-seed=71" in argv
