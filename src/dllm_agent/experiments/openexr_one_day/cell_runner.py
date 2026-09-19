@@ -405,9 +405,7 @@ class DockerSearchProcess:
             raise CellEvidenceError(reason="docker search ended without a return code")
         # _start_search merges stderr into stdout (stderr=STDOUT), so a real
         # Popen.communicate() returns (stdout, None); fakes return both streams.
-        log = (streams[0] or b"") + (streams[1] or b"")
-        if len(log) > _MAX_LOG_BYTES:
-            raise CellEvidenceError(reason="docker search log exceeds evidence limit")
+        log = _bounded_log((streams[0] or b"") + (streams[1] or b""))
         artifacts = _harvest_attempt(self._request, log)
         _persist_bytes(
             self._request.log_root / f"attempt-{self._request.attempt_index:06d}.log", log
@@ -1080,6 +1078,28 @@ def _start_search(argv: tuple[str, ...]) -> SearchChildProcess:
 def _children_cpu_seconds() -> float:
     usage = resource.getrusage(resource.RUSAGE_CHILDREN)
     return usage.ru_utime + usage.ru_stime
+
+
+_LOG_HEAD_BYTES: Final = 1_048_576
+
+
+def _bounded_log(raw: bytes) -> bytes:
+    """Bound one attempt's log to the evidence cap without discarding the attempt.
+
+    An over-long log used to abort the whole cell, which both loses the run and
+    destroys the evidence of what was so chatty; a 3-hour cell will always exceed
+    any fixed cap. Keep the head (seed/config lines) and the tail (where sanitizer
+    reports and the final stats live -- what _artifact_kind classifies on) and say
+    exactly how much was elided. The stored bytes are what gets hashed.
+    """
+    if len(raw) <= _MAX_LOG_BYTES:
+        return raw
+    marker_template = "\n[dllm: {elided:012d} bytes of libFuzzer output elided]\n"
+    marker_len = len(marker_template.format(elided=0).encode())
+    tail_len = _MAX_LOG_BYTES - _LOG_HEAD_BYTES - marker_len
+    elided = len(raw) - _LOG_HEAD_BYTES - tail_len
+    marker = marker_template.format(elided=elided).encode()
+    return raw[:_LOG_HEAD_BYTES] + marker + raw[-tail_len:]
 
 
 def _harvest_attempt(request: SearchLaunchRequest, log: bytes) -> tuple[SearchArtifact, ...]:
