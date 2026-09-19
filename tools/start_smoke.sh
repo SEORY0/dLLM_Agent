@@ -4,8 +4,10 @@
 #
 # main_start_monotonic_seconds is a *run-time* value (time.monotonic() resets on
 # reboot and is unrelated to wall-clock), so it can't live in a git-tracked
-# template. The smoke cells must launch just AFTER it (remaining <= 300s), so
-# stamp it a few seconds ahead of the model-prep phase.
+# template. Cells hold until this start time and then get a fixed 300s window, so
+# the lead just has to exceed model-prep time (~1.5-5 min): a longer lead only makes
+# the cells wait; a lead shorter than prep steals fuzzing time or, past the window,
+# leaves nothing to run ("missing cell ledger: events.jsonl").
 #
 #   tools/start_smoke.sh            # uses the defaults below
 #   CONFIG=... SMOKE_ROOT=... tools/start_smoke.sh
@@ -14,7 +16,7 @@ set -euo pipefail
 CONFIG="${CONFIG:-/data/dllm-agent/openexr-one-day-1gpu.json}"
 SMOKE_ROOT="${SMOKE_ROOT:-/data/dllm-agent/openexr-one-day-1gpu/smoke}"
 LOG="${LOG:-/data/dllm-agent/logs/smoke-run.log}"
-LEAD_SECONDS="${LEAD_SECONDS:-20}"
+LEAD_SECONDS="${LEAD_SECONDS:-420}"
 
 cd "$(dirname "$0")/.."
 mkdir -p "$(dirname "$LOG")"

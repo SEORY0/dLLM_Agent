@@ -9,7 +9,7 @@ from __future__ import annotations
 import subprocess
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from time import monotonic
+from time import monotonic, sleep
 from typing import TYPE_CHECKING, Final, Protocol, Self, cast
 
 from dllm_agent.core.io import sha256_bytes
@@ -92,6 +92,7 @@ from dllm_agent.targets.openexr.deep_parse import DockerDeepParseReplayer
 from dllm_agent.targets.openexr.probe import ProbeConfig, prepare_openexr_probe
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from contextlib import AbstractContextManager
     from subprocess import CompletedProcess
     from types import TracebackType
@@ -753,6 +754,7 @@ class ProductionCellRunner:
             index_path=request.artifact_root / "corpus-index.jsonl",
         )
         prefix = load_corpus_index(index_request) if index_request.index_path.exists() else ()
+        _wait_for_cell_start(request.start_monotonic_seconds)
         return run_openexr_cell(
             request,
             self.launcher,
@@ -763,6 +765,25 @@ class ProductionCellRunner:
     def cancel_active(self) -> None:
         """Cancel and reap every Docker search owned by this runner."""
         self.launcher.cancel_active()
+
+
+def _wait_for_cell_start(
+    start_monotonic_seconds: float,
+    *,
+    now: Callable[[], float] = monotonic,
+    pause: Callable[[float], None] = sleep,
+) -> None:
+    """Hold a cell until its scheduled start.
+
+    A cell's search window is [start, deadline]; launching before `start` would
+    hand the fuzzer more than the profile's duration (SearchLaunchRequest rejects
+    that), and launching after the deadline runs nothing. Waiting makes a generous
+    start-time lead always safe, so a slow model-prep phase can no longer race the
+    cell's fixed window. A late arrival (now >= start) is not delayed.
+    """
+    delay = start_monotonic_seconds - now()
+    if delay > 0:
+        pause(delay)
 
 
 class ProcReader(Protocol):
