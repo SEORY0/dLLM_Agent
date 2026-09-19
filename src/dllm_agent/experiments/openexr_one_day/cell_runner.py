@@ -235,7 +235,7 @@ class SearchChildProcess(Protocol):
         self,
         input: bytes | None = None,  # noqa: A002
         timeout: float | None = None,
-    ) -> tuple[bytes, bytes]: ...
+    ) -> tuple[bytes, bytes | None]: ...
     def terminate(self) -> None: ...
     def kill(self) -> None: ...
 
@@ -397,12 +397,14 @@ class DockerSearchProcess:
                 self._condition.notify_all()
 
     def _finish(
-        self, streams: tuple[bytes, bytes], *, forced_deadline: bool
+        self, streams: tuple[bytes | None, bytes | None], *, forced_deadline: bool
     ) -> SearchAttemptResult:
         return_code = self._child.returncode
         if return_code is None:
             raise CellEvidenceError(reason="docker search ended without a return code")
-        log = streams[0] + streams[1]
+        # _start_search merges stderr into stdout (stderr=STDOUT), so a real
+        # Popen.communicate() returns (stdout, None); fakes return both streams.
+        log = (streams[0] or b"") + (streams[1] or b"")
         if len(log) > _MAX_LOG_BYTES:
             raise CellEvidenceError(reason="docker search log exceeds evidence limit")
         artifacts = _harvest_attempt(self._request, log)

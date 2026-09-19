@@ -105,8 +105,12 @@ class FakeSearchPopen:
         self,
         input: bytes | None = None,  # noqa: A002
         timeout: float | None = None,
-    ) -> tuple[bytes, bytes]:
-        """Time out as scripted, then expose the terminal output and exit code."""
+    ) -> tuple[bytes, bytes | None]:
+        """Time out as scripted, then expose the terminal output and exit code.
+
+        Real Popen(stderr=STDOUT).communicate() returns (stdout, None); the
+        production launcher merges streams, so the fake must too.
+        """
         _ = input
         if self._timeouts:
             self._timeouts -= 1
@@ -114,7 +118,7 @@ class FakeSearchPopen:
                 cmd=("docker",), timeout=0.0 if timeout is None else timeout
             )
         self.returncode = self._exit_code
-        return self._output, b""
+        return self._output, None
 
     def terminate(self) -> None:
         """Record a supervisor termination request."""
