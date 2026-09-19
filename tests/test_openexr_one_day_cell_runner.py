@@ -644,6 +644,11 @@ def test_long_probe_argv_uses_cpuset_and_persistent_private_roots() -> None:
         # already overflowed the 8 MiB evidence log cap. verbosity=0 keeps sanitizer
         # reports and -print_final_stats (all the classifier/evidence use).
         assert "-verbosity=0" in argv
+        # -verbosity can't silence the *target's* own stderr: OpenEXR's error handler
+        # prints a line per malformed input (~107 MB in one 226 s attempt, measured).
+        # close_fd_mask=2 closes the target's stderr; libFuzzer dups it first and
+        # re-points the sanitizer report fd, so crash reports and stats survive.
+        assert "-close_fd_mask=2" in argv
         assert "-print_final_stats=1" in argv
         assert "-max_total_time=7200" in argv
         assert "-seed=71" in argv
