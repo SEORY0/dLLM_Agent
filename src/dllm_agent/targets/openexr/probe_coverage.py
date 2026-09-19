@@ -8,9 +8,9 @@ import subprocess
 from collections.abc import Callable, Mapping
 from pathlib import Path
 from subprocess import CompletedProcess
-from typing import Final, Literal, final
+from typing import ClassVar, Final, Literal, final
 
-from pydantic import Field, ValidationError
+from pydantic import ConfigDict, Field, ValidationError
 
 from dllm_agent.core.io import sha256_bytes
 from dllm_agent.core.models import FrozenModel, Sha256
@@ -94,27 +94,40 @@ class ProfileMergeRequest(FrozenModel):  # noqa: D101
     output_profdata_path: Path
 
 
-class _Metric(FrozenModel):
+class _LlvmExportModel(FrozenModel):
+    """Parse-only view of `llvm-cov export` JSON.
+
+    Real exports carry fields we don't use (`percent`, `notcovered`, `functions`,
+    `instantiations`, `totals`, `type`, `version`, and `mcdc` on newer LLVM), and
+    the set grows between LLVM releases -- so unknown keys are ignored. The fields
+    we *do* consume stay strictly required integers, which is what keeps the
+    percentage-only / missing-data rejections intact.
+    """
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="ignore")
+
+
+class _Metric(_LlvmExportModel):
     covered: int = Field(ge=0)
     count: int = Field(ge=0)
 
 
-class _Summary(FrozenModel):
+class _Summary(_LlvmExportModel):
     branches: _Metric
     regions: _Metric
     lines: _Metric
 
 
-class _ExportFile(FrozenModel):
+class _ExportFile(_LlvmExportModel):
     filename: str
     summary: _Summary
 
 
-class _ExportData(FrozenModel):
+class _ExportData(_LlvmExportModel):
     files: tuple[_ExportFile, ...]
 
 
-class _Export(FrozenModel):
+class _Export(_LlvmExportModel):
     data: tuple[_ExportData, ...] = Field(min_length=1)
 
 
