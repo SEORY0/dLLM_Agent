@@ -697,30 +697,58 @@ def validate_cell_evidence(request: CellRunRequest) -> CellResult:
         freeze_valid = not frozen
     else:
         freeze_valid = bool(frozen) and all(row.source_elapsed_seconds == freeze for row in frozen)
-    if (
-        result.manifest_sha256 != manifest_hash
-        or result.event_stream_sha256 != event_hash
-        or result.corpus_index_stream_sha256 != corpus_hash
-        or result.crash_stream_sha256 != crash_hash
-        or result.attempt_count != len(events)
-        or result.status != _expected_cell_status(request, final_event, len(events))
-        or result.finished_monotonic_seconds != expected_finished
-        or result.coverage_freeze_elapsed_seconds != expected_freeze
-        or result.search_accounting.cpu_seconds != sum(event.cpu_seconds for event in events)
-        or result.crash_occurrence_count != len(occurrences)
-        or result.corpus_index_scheduled_seconds != request.schedule_seconds
-        or tuple(row.scheduled_elapsed_seconds for row in rows) != request.schedule_seconds
-        or result.search_accounting.wall_seconds
-        != result.finished_monotonic_seconds - result.started_monotonic_seconds
-        or any(
-            observed < request.start_monotonic_seconds
-            or observed > request.deadline_monotonic_seconds
-            for observed in event_times
-        )
-        or any(first > second for first, second in pairwise(event_times))
-        or not freeze_valid
-    ):
-        raise CellEvidenceError(reason="cell evidence artifacts conflict")
+    checks = (
+        ("manifest_sha256", result.manifest_sha256 != manifest_hash),
+        ("event_stream_sha256", result.event_stream_sha256 != event_hash),
+        ("corpus_index_stream_sha256", result.corpus_index_stream_sha256 != corpus_hash),
+        ("crash_stream_sha256", result.crash_stream_sha256 != crash_hash),
+        ("attempt_count", result.attempt_count != len(events)),
+        (
+            "status",
+            result.status != _expected_cell_status(request, final_event, len(events)),
+        ),
+        ("finished_monotonic_seconds", result.finished_monotonic_seconds != expected_finished),
+        (
+            "coverage_freeze_elapsed_seconds",
+            result.coverage_freeze_elapsed_seconds != expected_freeze,
+        ),
+        (
+            "search_cpu_seconds",
+            result.search_accounting.cpu_seconds != sum(event.cpu_seconds for event in events),
+        ),
+        ("crash_occurrence_count", result.crash_occurrence_count != len(occurrences)),
+        (
+            "corpus_index_scheduled_seconds",
+            result.corpus_index_scheduled_seconds != request.schedule_seconds,
+        ),
+        (
+            "corpus_rows_schedule",
+            tuple(row.scheduled_elapsed_seconds for row in rows) != request.schedule_seconds,
+        ),
+        (
+            "wall_seconds",
+            result.search_accounting.wall_seconds
+            != result.finished_monotonic_seconds - result.started_monotonic_seconds,
+        ),
+        (
+            "event_time_outside_cell_window",
+            any(
+                observed < request.start_monotonic_seconds
+                or observed > request.deadline_monotonic_seconds
+                for observed in event_times
+            ),
+        ),
+        (
+            "event_times_not_monotonic",
+            any(first > second for first, second in pairwise(event_times)),
+        ),
+        ("freeze_rows", not freeze_valid),
+    )
+    if conflicts := [name for name, failed in checks if failed]:
+        # Name the failing checks: a bare "conflict" cost several live-run round
+        # trips to localize (the tests only match the stable prefix).
+        detail = ", ".join(conflicts)
+        raise CellEvidenceError(reason=f"cell evidence artifacts conflict: {detail}")
     return result
 
 
