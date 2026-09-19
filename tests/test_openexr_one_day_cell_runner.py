@@ -6,6 +6,7 @@ Module-size opt-out ``# noqa: SIZE_OK`` keeps Task 4 cell regressions in one own
 from __future__ import annotations
 
 import hashlib
+import os
 import tempfile
 from collections.abc import Generator  # noqa: TC003
 from contextlib import contextmanager
@@ -626,6 +627,10 @@ def test_long_probe_argv_uses_cpuset_and_persistent_private_roots() -> None:
 
         # Then
         assert argv[argv.index("--cpuset-cpus") + 1] == "7"
+        # The bind-mounted roots are created by the host user; with --cap-drop ALL a
+        # root container has no CAP_DAC_OVERRIDE and can't write them, silently
+        # dropping crash artifacts and corpus growth. Run as the host user instead.
+        assert argv[argv.index("--user") + 1] == f"{os.getuid()}:{os.getgid()}"
         assert "--cpus" not in argv
         assert f"{request.artifact_root}:/work:rw" in argv
         assert f"{request.dictionary_path.resolve()}:/work/openexr.dict:ro" in argv
