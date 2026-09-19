@@ -525,6 +525,7 @@ def run_openexr_cell(
         )
     cpu_seconds = 0.0
     attempt = 0
+    last_observed: float | None = None
     status: Literal["completed", "failed", "deadline", "restart_limit"] = "failed"
     while (
         clock.monotonic() < request.deadline_monotonic_seconds and attempt < _MAX_RESTART_ATTEMPTS
@@ -550,6 +551,7 @@ def run_openexr_cell(
                 outcome = process.terminate()
         cpu_seconds += outcome.cpu_seconds
         artifact_evidence = _record_artifacts(request, outcome, attempt, manifest_hash)
+        last_observed = min(clock.monotonic(), request.deadline_monotonic_seconds)
         _append_cell_event(
             request,
             CellEvent(
@@ -557,9 +559,7 @@ def run_openexr_cell(
                 attempt_index=attempt,
                 outcome=outcome.outcome,
                 return_code=outcome.return_code,
-                observed_monotonic_seconds=min(
-                    clock.monotonic(), request.deadline_monotonic_seconds
-                ),
+                observed_monotonic_seconds=last_observed,
                 remaining_seconds_at_launch=launch.remaining_seconds,
                 cpu_seconds=outcome.cpu_seconds,
                 log_sha256=sha256_bytes(outcome.log),
@@ -578,7 +578,13 @@ def run_openexr_cell(
         break
     if attempt >= _MAX_RESTART_ATTEMPTS and clock.monotonic() < request.deadline_monotonic_seconds:
         status = "restart_limit"
-    finished = min(clock.monotonic(), request.deadline_monotonic_seconds)
+    # validate_cell_evidence requires finished == the last event's observed time
+    # exactly; a second clock read here would drift from it by real elapsed time.
+    finished = (
+        last_observed
+        if last_observed is not None
+        else min(clock.monotonic(), request.deadline_monotonic_seconds)
+    )
     freeze_elapsed = (
         finished - request.start_monotonic_seconds
         if finished < request.deadline_monotonic_seconds
