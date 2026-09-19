@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import re
 import stat
 import subprocess
 import tempfile
@@ -578,10 +579,30 @@ def finalize_config_payload_from_artifacts(
             "config_sha256": "0" * 64,
         }
     )
+    checker_sha256 = _manifest_deep_parse_checker_sha256(artifacts.coverage_build_manifest_path)
+    if checker_sha256 is not None:
+        payload["deep_parse_checker_sha256"] = checker_sha256
     payload["config_sha256"] = config_payload_sha256(payload)
     config = CampaignConfig.model_validate(payload)
     _reject_placeholder_provenance(config)
     return _JSON_OBJECT.validate_python(config.model_dump(mode="json"))
+
+
+def _manifest_deep_parse_checker_sha256(manifest_path: Path) -> str | None:
+    """Return the checker hash the built image's manifest attests, when it declares one.
+
+    The checker binary is compiled inside the image, so its hash is a property of the
+    build (a rebuild on another host yields different bytes) and must follow the
+    measured manifest rather than a value frozen in the template.
+    """
+    try:
+        manifest = _JSON_OBJECT.validate_json(manifest_path.read_bytes())
+    except ValidationError:
+        return None
+    value = manifest.get("deep_parse_checker_sha256")
+    if isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value):
+        return value
+    return None
 
 
 def collect_resource_topology_measurements(

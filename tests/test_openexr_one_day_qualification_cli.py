@@ -211,6 +211,41 @@ def test_finalize_config_payload_from_artifacts_updates_hashes_and_digest(
     assert finalized["config_sha256"] == config_payload_sha256(finalized)
 
 
+def test_finalize_config_binds_deep_parse_checker_hash_to_build_manifest(tmp_path: Path) -> None:
+    """Given a rebuilt image manifest, when config is finalized, then the checker pin follows it."""
+    # Given
+    template = _config_json("/data/dllm-agent/task7-finalize-checker")
+    artifacts = _artifact_files(tmp_path)
+    checker = sha256(b"rebuilt checker").hexdigest()
+    _ = artifacts.coverage_manifest.write_bytes(
+        b'{"deep_parse_checker_sha256":"' + checker.encode() + b'"}'
+    )
+
+    # When
+    finalized = finalize_config_payload_from_artifacts(
+        template,
+        ConfigArtifactMeasurements(
+            prompt_path=artifacts.prompt,
+            target_harness_path=artifacts.harness,
+            remote_code_path=artifacts.remote,
+            search_binary_path=artifacts.search,
+            search_image_digest="sha256:" + sha256(b"search-image").hexdigest(),
+            coverage_binary_path=artifacts.coverage,
+            coverage_image_digest="sha256:" + sha256(b"coverage-image").hexdigest(),
+            coverage_build_manifest_path=artifacts.coverage_manifest,
+            c0_source_path=artifacts.c0,
+            dictionary_path=artifacts.dictionary,
+            artifact_root=Path("/data/dllm-agent/task7-finalized-checker"),
+            config_id="openexr-v3.4.14-one-day-qualified",
+            qualification_state="qualified",
+        ),
+    )
+
+    # Then
+    assert finalized["deep_parse_checker_sha256"] == checker
+    assert finalized["config_sha256"] == config_payload_sha256(finalized)
+
+
 def test_finalize_config_hashes_decoded_c0_bytes_not_hex_source_file(tmp_path: Path) -> None:
     """Given a hex C0 source, when config is finalized, then C0 binds decoded bytes."""
     # Given
