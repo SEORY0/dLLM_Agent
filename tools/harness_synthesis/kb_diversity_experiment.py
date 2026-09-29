@@ -120,12 +120,15 @@ _EXAMPLES = (
         ),
     ),
 )
-_CONDITIONS = ("solo", "shared")
+_CONDITIONS = ("solo", "shared", "directed")
 
 
 def _kb_and_examples(
     example: UsageExample, condition: str
 ) -> tuple[ApiKnowledgeBase, tuple[UsageExample, ...]]:
+    # "directed" also shows every example -- it differs from "shared" only in the
+    # instruction _prompt appends below, isolating whether an explicit per-iteration
+    # reference (never present in "shared") is what "shared" was actually missing.
     examples = (example,) if condition == "solo" else _EXAMPLES
     headers = tuple(sorted({header for ex in examples for header in ex.headers}))
     kb = ApiKnowledgeBase(header_index=headers, namespace_note=_NAMESPACE_NOTE, declarations=())
@@ -134,7 +137,14 @@ def _kb_and_examples(
 
 def _prompt(example: UsageExample, condition: str) -> str:
     kb, examples = _kb_and_examples(example, condition)
-    return _BASE_PROMPT + "\n\n" + render_prompt_text(kb, examples=examples)
+    prompt = _BASE_PROMPT + "\n\n" + render_prompt_text(kb, examples=examples)
+    if condition == "directed":
+        prompt += (
+            f"\n\nFor this specific task, use the '{example.name}' example above as your "
+            "reference implementation: follow its structure and its API calls, not the "
+            "other examples'."
+        )
+    return prompt
 
 
 def _similarity(a: str, b: str) -> float:
@@ -149,6 +159,7 @@ def main() -> None:
     parser.add_argument("--seed-count", type=int, default=8)
     parser.add_argument("--out", required=True)
     parser.add_argument("--ledger", required=True)
+    parser.add_argument("--conditions", nargs="+", default=list(_CONDITIONS), choices=_CONDITIONS)
     args = parser.parse_args()
 
     reference = load_reference_harness(_REFERENCE_PATH)
@@ -158,7 +169,7 @@ def main() -> None:
     results: list[dict[str, object]] = []
     iteration = 0
     for example in _EXAMPLES:
-        for condition in _CONDITIONS:
+        for condition in args.conditions:
             prompt = _prompt(example, condition)
             kb_sha256 = sha256_bytes(prompt.encode())
             _, visible_examples = _kb_and_examples(example, condition)
@@ -188,6 +199,14 @@ def main() -> None:
                     if other.name != example.name
                 }
                 reference_similarity = _similarity(code, reference.source)
+                nearest_example = max(
+                    (example.name, *other_similarity),
+                    key=lambda name: self_similarity if name == example.name
+                    else other_similarity[name],
+                )
+                followed_instruction = (
+                    nearest_example == example.name if condition == "directed" else None
+                )
 
                 append(
                     ledger_path,
@@ -215,14 +234,19 @@ def main() -> None:
                         "self_similarity": self_similarity,
                         "other_similarity": other_similarity,
                         "reference_similarity": reference_similarity,
+                        "nearest_example": nearest_example,
+                        "followed_instruction": followed_instruction,
                         "code": code,
                     }
                 )
                 iteration += 1
+                followed_str = (
+                    "" if followed_instruction is None else f" followed={followed_instruction!s}"
+                )
                 print(
-                    f"{example.name:18} {condition:6} seed={seed} "
+                    f"{example.name:18} {condition:8} seed={seed} "
                     f"compiled={compile_result.compiled!s:5} self_sim={self_similarity:.2f} "
-                    f"ref_sim={reference_similarity:.2f}"
+                    f"ref_sim={reference_similarity:.2f} nearest={nearest_example}{followed_str}"
                 )
                 Path(args.out).write_text(json.dumps(results, indent=1))
 

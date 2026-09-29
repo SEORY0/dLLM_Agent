@@ -242,15 +242,34 @@ raw 텐서 스크립트, `dream_backend_smoke.py` — 프로젝트 venv에서 su
   "의도"는 프롬프트에 실제로 명시된 적이 없다 — `solo`/`shared` 모두 프롬프트 구조가
   동일하고, "이번엔 이 예시를 써라"라는 지시는 없다. 그래서 정확한 결론은 "여러 예시를
   구분 없이 한 KB에 다 보여주면, 모델이 맥락과 무관하게 예시 하나(`InputFile`)로 수렴한다"
-  이고, "모델이 의도된 예시를 못 골랐다"는 아니다 — 이 구분이 다음 실험(Task 9/10) 설계에서
-  중요하다: 프롬프트가 "이 iteration엔 이 예시를 참고하라"를 명시적으로 지시하는 조건을
-  추가해야 KB 다양성 질문에 제대로 답할 수 있다.
+  이고, "모델이 의도된 예시를 못 골랐다"는 아니다.
+
+  **Task 8 후속 (완료): `directed` 조건.** 위 구분을 바로 검증했다. `shared`와 똑같이
+  예시 3개를 전부 KB에 노출하되, 프롬프트 끝에 "이번 task는 '{example.name}' 예시를
+  참고 구현으로 써라, 다른 예시가 아니라"를 명시적으로 덧붙인다(`_kb_and_examples`는
+  `directed`도 `shared`와 동일하게 예시 3개를 전부 보여준다 — 차이는 오직 이 지시문뿐).
+  3 예시 × seed 4개 × GPU 2장 = 24회.
+
+  | example | 컴파일 | 지시 준수 | self_sim 평균 |
+  |---|---|---|---|
+  | checkOpenEXRFile | 8/8 | 8/8 | 1.000 |
+  | InputFile | 8/8 | 8/8 | 1.000 |
+  | MultiPartInputFile | 8/8 | 8/8 | 1.000 |
+
+  **결론**: `shared`의 붕괴는 모델의 능력 한계가 아니라 순수한 프롬프트 설계 문제였다.
+  반복마다 "이번엔 이 예시를 참고하라"는 지시 한 줄만 추가하면 24/24 전부 지시된 예시를
+  정확히 따르고 24/24 전부 컴파일된다 — `solo`(1.000)와 완전히 동일한 신뢰도다. 즉 **공유
+  KB에 여러 예시를 두는 것 자체는 다양성을 해치지 않는다; 어떤 예시를 쓸지 매 반복
+  명시적으로 지정하지 않는 것이 문제였다.** Task 9/10은 이 `directed` 프레이밍을
+  기본값으로 채택해야 한다("undirected shared"는 null/대조군으로만 남긴다).
+
+  원시 결과: `docs/assets/harness-kb-diversity-directed-results-20260929.json`. 원장은
+  기존 파일에 이어 append(총 120줄, `docs/assets/harness-kb-diversity-ledger-20260929.jsonl`).
 - [ ] **Task 9 — RQ1 재측정 (GPU 필요).** Task 3의 표본수로 관측 상관관계 측정, 사전등록
   임계값과 비교.
 - [ ] **Task 10 — RQ3 측정 (GPU 필요).** confidence-국소화 대 무작위 remask, 사전등록
-  임계값과 비교. Task 8이 "예시가 있으면 신뢰성 있게 컴파일된다"를 확인했으므로 baseline은
-  확보됐다 — 다만 어느 예시를 KB에 넣을지(위 발견 반영: 명시적 참조 지시 포함) 먼저 정해야
-  한다.
+  임계값과 비교. baseline은 Task 8 후속의 `directed` 프레이밍(예시별 명시적 참조 지시,
+  24/24 컴파일·24/24 지시 준수)으로 확보됐다 — `undirected shared`는 쓰지 않는다.
 - [ ] **Task 11 — 종합 보고서.** `docs/research-report.md`의 `[MEASURED]`/`[INFERRED]`/
   `[FUTURE EXPERIMENT]` 태깅 규칙을 따라 RQ1/RQ3/a안 결과를 종합. 취약점 발견이나 dLLM
   우월성을 주장하지 않는다(기존 문서들의 원칙과 동일).
