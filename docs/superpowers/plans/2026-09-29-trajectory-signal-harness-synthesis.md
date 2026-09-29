@@ -313,13 +313,43 @@ raw 텐서 스크립트, `dream_backend_smoke.py` — 프로젝트 venv에서 su
   말할 수 있다. `docs/research-report.md`의 `[MEASURED]` 태그로 종합 보고서(Task 11)에
   이 결과를 pilot의 `[INFERRED]`(재현 실패로 신뢰도 하향) 수치와 나란히 병기해야 한다.
 
-  원시 결과: `docs/assets/harness-rq1-results-20260929.json`(18개 valid trial만).
-  원장은 `docs/assets/harness-rq1-ledger-20260929.jsonl`(총 36줄 — 앞 18줄은
-  `alg_temp=0.0`으로 돌린 무효 시도, 뒤 18줄이 `alg_temp=0.5`로 재검증한 유효 결과;
-  append-only 원칙대로 무효 시도도 지우지 않고 남겼다).
+  원시 결과(N=18): `docs/assets/harness-rq1-results-20260929.json`.
+
+  **확장 재측정(N=112, 완료)**: 사용자가 "a안"(표본 늘려서 재시도)을 택해 이어서 진행했다.
+  N=18의 pilot 효과 크기(11/16 대 3/16)를 검출하는 검정력은 이미 있었지만, "그래도 뭔가
+  작은 효과는 있을 수 있다"는 여지를 좁히기 위해 더 작지만 여전히 실용적으로 의미 있는
+  효과(`p_confidence=0.33` 대 `p_random=0.167`, N=18에서 관측된 random 기저율의 약 2배)를
+  검출하도록 `power_calc.required_n(0.33, 0.167)`로 **N=112**를 계산했다(이 효과 크기
+  자체는 N=18 데이터를 보고 사후에 고른 것이라 엄밀한 사전등록은 아니고, 탐색적 2차
+  분석으로 취급해야 한다). 같은 생성 설정(`alg_temp=0.5, new_tokens=384, steps=192`)으로
+  기존 18개에 94개(GPU 2장에 47개씩)를 더해 총 112개 진짜 독립 표본(112개 코드 전부
+  서로 다름)을 확보했다.
+
+  | N=112 최종 | confidence 정답 | random 정답 |
+  |---|---|---|
+  | | 7/112 (6.2%) | 14/112 (12.5%) |
+
+  discordant n10=7, n01=14, exact two-sided sign-test **p=0.189**. 표본을 6배로
+  늘려도 유의하지 않고, 점추정은 여전히 random이 confidence를 앞선다(방향이 pilot과
+  반대). 이 정도 검정력에서도 재현되지 않는다는 것은 pilot의 11/16 대 3/16이 alg_temp=0.0
+  중복 표본에서 나온 우연한(비독립) 결과였을 가능성에 무게를 싣는다. **RQ1(top-1
+  commit confidence가 컴파일 오류 위치와 상관관계가 있다)은 이 신호·이 region 정의·이
+  실험 설계로는 기각에 가깝다** — 다만 entropy/margin 등 다른 신호나 더 정교한 region
+  정의는 시도하지 않았으므로 "top-1 confidence는 통하지 않는다"까지만 말할 수 있다.
+
+  원시 결과(N=112): `docs/assets/harness-rq1-results-n112-20260929.json`. 원장은
+  `docs/assets/harness-rq1-ledger-20260929.jsonl`(총 133줄 — 맨 앞 18줄은 `alg_temp=0.0`
+  무효 시도, 이후 전부 `alg_temp=0.5` 유효 시도; append-only 원칙대로 무효 시도도
+  지우지 않고 남겼다).
 - [ ] **Task 10 — RQ3 측정 (GPU 필요).** confidence-국소화 대 무작위 remask, 사전등록
   임계값과 비교. baseline은 Task 8 후속의 `directed` 프레이밍(예시별 명시적 참조 지시,
   24/24 컴파일·24/24 지시 준수)으로 확보됐다 — `undirected shared`는 쓰지 않는다.
+  **주의(Task 9 이후 갱신)**: RQ3는 "confidence로 고른 위치를 고치면 무작위로 고친 것보다
+  결과가 나아지는가"라는 개입 질문이고, RQ1(순수 관측 상관관계)이 기각됐다고 자동으로
+  기각되는 건 아니다 — 틀린 위치를 못 맞혀도 remask 자체(반복 수정 기회)가 무작위보다
+  나은 결과를 낼 가능성은 남아있다. 다만 RQ1의 미재현은 이 개입이 통할 사전 확률을
+  낮추는 증거이므로, Task 11 종합 보고서에서는 두 결과를 분리해서 정직하게 병기해야 한다
+  — RQ3가 양성이어도 "그러니까 confidence localization이 통한다"고 되짚어 주장하면 안 된다.
 - [ ] **Task 11 — 종합 보고서.** `docs/research-report.md`의 `[MEASURED]`/`[INFERRED]`/
   `[FUTURE EXPERIMENT]` 태깅 규칙을 따라 RQ1/RQ3/a안 결과를 종합. 취약점 발견이나 dLLM
   우월성을 주장하지 않는다(기존 문서들의 원칙과 동일).
