@@ -91,8 +91,10 @@ src/dllm_agent/harness_synthesis/
 │                            #   spec §7엔 없었지만 feasibility Result 3이 이걸 "있으면 좋은 것"
 │                            #   에서 "없으면 0%"로 바꿔놔서 core 모듈로 올린다.
 ├── remask.py               # Task 5b — 저신뢰/무작위 영역 remask (RQ3용 2-arm)
-├── harness_compile.py      # Task 5a — 볼륨 마운트 컴파일 실행
-└── fitness.py              # Task 7 — compile/target-reach/coverage 채점(§8 그대로)
+├── harness_compile.py      # Task 5a — 볼륨 마운트 컴파일 실행 (실물은 tools/openexr_runtime/harness-compile-only/)
+├── fitness.py              # Task 7 — compile/target-reach/coverage 채점(§8 그대로)
+└── audit_ledger.py         # Task 6 — [신규, spec에 없던 모듈] 반복별 harness identity
+                            #   append-only JSONL 원장(docs/harness-synthesis-audit-ledger.md)
 
 src/dllm_agent/targets/openexr/
 └── harness_reference.py    # Task 4 — 기존 poc_probe.cc 파싱(diff 비교용)
@@ -103,7 +105,8 @@ docs/harness-synthesis-audit-ledger.md        # Task 6 — 원장 스키마 설�
 configs/openexr-harness-synthesis-smoke.json  # Task 8 — MVP pilot config
 ```
 
-`api_knowledge.py`가 유일한 스펙 대비 추가 모듈이다. 나머지는 spec §7과 동일.
+`api_knowledge.py`와 `audit_ledger.py`가 스펙 대비 추가 모듈이다(각각 Task 1b, Task 6에서
+필요성이 드러났다). 나머지는 spec §7과 동일.
 
 **Task 4 실측 후 추가된 것**: `tools/harness_synthesis/`(`_dream_generate.py` — Dream venv 전용
 raw 텐서 스크립트, `dream_backend_smoke.py` — 프로젝트 venv에서 subprocess로 호출해 production
@@ -194,10 +197,16 @@ raw 텐서 스크립트, `dream_backend_smoke.py` — 프로젝트 venv에서 su
   채점(`region_confidence`), 3개 선택 정책(저confidence/무작위/컴파일오류 위치), remask 시퀀스
   구성(`remask_from_position_to_end`). 실제 backend 의존 없음(순수 함수) — Dream 연동은
   Task 4가 담당. 17개 유닛 테스트.
-- [ ] **Task 6 — 감사 원장 설계.** `docs/harness-synthesis-audit-ledger.md`: 반복마다
-  harness SHA-256 + KB 버전 + 사용 예시 id를 append-only JSONL에 기록하는 스키마.
-  `qualification.py`의 evidence-tree 패턴 참고. 스키마 유닛 테스트.
-- [ ] **Task 7 — `fitness.py`.** §8 가중합, `w_bug=0, w_diversity=0`로 시작. 유닛 테스트.
+- [x] **Task 6 — 감사 원장 설계.** `docs/harness-synthesis-audit-ledger.md` + 구현
+  `src/dllm_agent/harness_synthesis/audit_ledger.py`(`HarnessSynthesisLedgerRecord`,
+  `load`/`append`/`append_many`/`records_sha256`). 새 패턴을 만들지 않고
+  `revision/failure_registry.py`의 append-only JSONL + 배타적 파일 락 구조를 그대로 재사용—
+  evidence-tree(한 번 고정된 산출물 증명)와는 목적이 다르다(반복마다 달라지는 값의 이력).
+  동시-writer 테스트 포함 10개 유닛 테스트. 남은 결정(KB 버전 고정의 정확한 대상, evidence
+  바이트 저장 경로)은 문서에 명시하고 Task 8로 미룸.
+- [x] **Task 7 — `fitness.py`.** §8 가중합 4개 유닛 테스트. `diversity`/`bug` 가중치만 기본값
+  0(spec §8이 명시적으로 이 둘만 "측정기가 아직 없다"고 지목); `compile`/`reach`/`edge_coverage`는
+  필수 인자로 남겨 호출자가 config에서 명시하도록 강제.
 - [ ] **Task 8 — a안: KB 다양성 실험 (GPU 필요).** §5 "a안" 절 그대로 실행, 결과를
   `docs/harness-synthesis-diversity-<date>.md`로 기록.
 - [ ] **Task 9 — RQ1 재측정 (GPU 필요).** Task 3의 표본수로 관측 상관관계 측정, 사전등록
