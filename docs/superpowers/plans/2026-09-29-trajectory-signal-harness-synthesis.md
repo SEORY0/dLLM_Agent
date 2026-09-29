@@ -37,8 +37,9 @@ variance), `tools/harness_synthesis_feasibility/` (prototype scripts this plan f
 ## 1. 결론부터 — 팀 피드백으로 바뀐 프레이밍
 
 > **2026-09-29 갱신**: 이 섹션이 1차 주장으로 삼은 RQ1(trajectory confidence가 harness
-> correctness와 상관관계가 있다)은 이후 실측(Task 9, N=242 누적)에서 지지되지 않았다 —
-> §6-1 참고. 이 섹션은 계획 수립 당시의 프레이밍을 그대로 남겨둔 기록이다.
+> correctness와 상관관계가 있다)은 이후 실측(Task 9, 224개 독립 표본 누적)에서
+> 지지되지 않았다 — §6-1 참고. 이 섹션은 계획 수립 당시의 프레이밍을 그대로 남겨둔
+> 기록이다.
 
 기존 스펙(§2)의 RQ1/RQ2/RQ3는 그대로 유지한다. 바뀐 것은 **1차 주장의 위치**다.
 
@@ -358,11 +359,11 @@ raw 텐서 스크립트, `dream_backend_smoke.py` — 프로젝트 venv에서 su
   | margin | 4/112 | 11/112 | 3 | 10 | 0.092 |
 
   confidence·margin은 여전히 random보다 낮은 정답률(반대 방향, 유의하지 않음).
-  entropy는 random보다 약간 높지만(14 대 11) p=0.664로 순수 잡음 수준이다. **세 신호
-  전부 N=112에서 유의한 상관관계를 보이지 않는다** — top-1 confidence, entropy, margin
-  어느 것도 이 region 정의·이 실험 설계에서 컴파일 오류 위치를 무작위보다 잘 맞히지
-  못한다. 사용자 지시대로 (a)·(c) 모두 답이 없으므로 **(b)로 이동**: RQ1은 이 실험
-  설계로는 보류하고, 이후 작업은 RQ3(개입 질문)에 집중한다.
+  entropy는 random보다 약간 높지만(14 대 11) p=0.664로 **이 비교에서 우위의 증거가
+  없다**. 세 신호 전부 N=112에서 유의한 상관관계를 보이지 않는다 — top-1 confidence,
+  entropy, margin 어느 것도 이 region 정의·이 실험 설계에서 컴파일 오류 위치를
+  무작위보다 잘 맞히지 못한다. 사용자 지시대로 (a)·(c) 모두 답이 없으므로 **(b)로
+  이동**: RQ1은 이 실험 설계로는 보류하고, 이후 작업은 RQ3(개입 질문)에 집중한다.
 
   원시 결과: `docs/assets/harness-rq1-entropy-margin-n112-20260929.json`. 원장은
   `docs/assets/harness-rq1-ledger-20260929.jsonl`(총 247줄 — 맨 앞 18줄만 `alg_temp=0.0`
@@ -371,8 +372,13 @@ raw 텐서 스크립트, `dream_backend_smoke.py` — 프로젝트 venv에서 su
 
 ## 6-1. RQ1 최종 판정과 (b)로의 전환
 
-세 가지 표본수/신호 조합(confidence N=18, confidence N=112, entropy/margin N=112, 총
-242개 진짜 독립 표본)에서 top-1 confidence·entropy·margin 중 어느 것도 컴파일 오류
+**정정**: 이 절 초안이 "총 242개"라 잘못 적었다 — N=18은 첫 N=112(confidence, a안 확장)에
+**포함된** 부분집합이지 별도 표본이 아니다. 실제 독립 표본은 confidence N=112 + entropy/
+margin N=112 = **총 224개**다(원본 결과·원장 파일은 수정하지 않았고, 이 요약 서술만
+정정한다).
+
+두 표본수/신호 묶음(confidence N=112 — N=18을 포함, entropy/margin N=112, 총 224개 진짜
+독립 표본)에서 top-1 confidence·entropy·margin 중 어느 것도 컴파일 오류
 위치를 무작위보다 유의하게 잘 맞히지 못했다. RQ1(dLLM의 denoising confidence가 harness
 correctness와 상관관계가 있다)은 **이 신호 집합·이 region 정의·이 프롬프트 설계**로는
 지지되지 않는다. 시도하지 않은 것: (1) 더 정교한 AST 기반 region 정의(현재는 정규식
