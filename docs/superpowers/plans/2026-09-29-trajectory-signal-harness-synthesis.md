@@ -152,22 +152,27 @@ configs/openexr-harness-synthesis-smoke.json  # Task 8 — MVP pilot config
   이 저장소의 Dream 사용은 그게 전부다) + `tools/dream_runtime/setup.sh`(`.pth`를 pip install
   **전에** 써서 torch 재다운로드를 막고, 프로젝트 torch 2.11.0+cu128 위에 얹는 venv 생성).
   GPU 0에서 로드 검증 완료(VRAM 15.3 GB).
-- [ ] **Task 1b — `api_knowledge.py` 정적 KB 추출.** `fb_sim.py`의 `STATIC_KB`/`hint_for`를
-  production 모듈로 승격: 빌드 이미지에서 헤더 목록·API 선언을 추출하는 순수 함수, Docker
-  mock으로 유닛 테스트.
-- [ ] **Task 2 — `token_trace.py`.** `TokenTrace` dataclass(`step_index`, `position`,
-  `confidence`, `entropy`, `margin`, `committed`) + `permanence_step()`. fake trajectory로
-  유닛 테스트, 실제 모델 없이.
-- [ ] **Task 3 — `regions.py`.** 정규식/괄호-매칭 statement 경계 탐지 + power calculation
-  스크립트(RQ1/RQ3 표본수 산출, 관측 분산은 Task 0 수치 사용). 순수 함수 유닛 테스트.
+- [x] **Task 1b — `api_knowledge.py` 정적 KB 추출.** `fb_sim.py`의 `STATIC_KB`/`hint_for`를
+  production 모듈로 승격: 헤더 목록 추출(`extract_header_index`), 선언 추출(`find_declaration`),
+  프롬프트 렌더링(`render_prompt_text`), 컴파일 오류→힌트(`hint_for_missing_headers`,
+  `suggest_existing_headers`). Docker fake로 8개 유닛 테스트, ruff/basedpyright clean.
+- [x] **Task 2 — `token_trace.py`.** `TokenTrace` dataclass + `permanence_step()`/
+  `commit_confidence()`/`position_traces()`. 다중 remask 사이클(commit→remask→recommit)에서
+  마지막으로 "고정된" commit을 고르는 로직이 핵심 — 기존 `TrajectoryStep`은 이 패턴을 구조적으로
+  못 만든다(spec §4). fake trajectory로 10개 유닛 테스트.
+- [x] **Task 3 (경계 탐지만 완료, power calc는 별도) — `regions.py`.** 정규식 기반 statement/
+  `#include` 경계 탐지 + `region_at_line`(컴파일 오류 줄 매핑). 9개 유닛 테스트. **power
+  calculation 스크립트는 아직 작성 안 함** — Task 8 결과가 나온 뒤 그 분산으로 계산.
 - [ ] **Task 4 — `trajectory_hook.py` + `harness_reference.py`.** Dream `diffusion_generate`에
   hook 배선(GPU 스모크로 검증, 이미 `dream_smoke.py`에서 확인된 인터페이스 재사용) +
-  `poc_probe.cc` 파싱. Protocol(`TraceableGenerationBackend`) 기반 유닛 테스트 + 별도 GPU
+  `poc_probe.cc` 파싱. `TraceableGenerationBackend` Protocol 기반 유닛 테스트 + 별도 GPU
   스모크 1건.
 - [ ] **Task 5a — compile-only Docker 이미지.** `tools/openexr_runtime/harness-compile-only/`,
   볼륨 마운트로 `harness.cc` 주입. 기존 `dllm-openexr-runtime`과 독립.
-- [ ] **Task 5b — `remask.py`.** 저신뢰/무작위 영역 선택 + mask 삽입 + 재생성 호출. fake
-  backend로 유닛 테스트.
+- [x] **Task 5b — `remask.py`.** 영역-토큰 위치 매핑(`region_token_positions`), 영역 confidence
+  채점(`region_confidence`), 3개 선택 정책(저confidence/무작위/컴파일오류 위치), remask 시퀀스
+  구성(`remask_from_position_to_end`). 실제 backend 의존 없음(순수 함수) — Dream 연동은
+  Task 4가 담당. 17개 유닛 테스트.
 - [ ] **Task 6 — 감사 원장 설계.** `docs/harness-synthesis-audit-ledger.md`: 반복마다
   harness SHA-256 + KB 버전 + 사용 예시 id를 append-only JSONL에 기록하는 스키마.
   `qualification.py`의 evidence-tree 패턴 참고. 스키마 유닛 테스트.
