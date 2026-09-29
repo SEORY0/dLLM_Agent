@@ -36,6 +36,10 @@ variance), `tools/harness_synthesis_feasibility/` (prototype scripts this plan f
 
 ## 1. 결론부터 — 팀 피드백으로 바뀐 프레이밍
 
+> **2026-09-29 갱신**: 이 섹션이 1차 주장으로 삼은 RQ1(trajectory confidence가 harness
+> correctness와 상관관계가 있다)은 이후 실측(Task 9, N=242 누적)에서 지지되지 않았다 —
+> §6-1 참고. 이 섹션은 계획 수립 당시의 프레이밍을 그대로 남겨둔 기록이다.
+
 기존 스펙(§2)의 RQ1/RQ2/RQ3는 그대로 유지한다. 바뀐 것은 **1차 주장의 위치**다.
 
 - 이전 프레이밍: "모델이 harness를 스스로 합성한다"가 1차 목표였고, 타당성 시뮬레이션은
@@ -337,10 +341,46 @@ raw 텐서 스크립트, `dream_backend_smoke.py` — 프로젝트 venv에서 su
   실험 설계로는 기각에 가깝다** — 다만 entropy/margin 등 다른 신호나 더 정교한 region
   정의는 시도하지 않았으므로 "top-1 confidence는 통하지 않는다"까지만 말할 수 있다.
 
-  원시 결과(N=112): `docs/assets/harness-rq1-results-n112-20260929.json`. 원장은
-  `docs/assets/harness-rq1-ledger-20260929.jsonl`(총 133줄 — 맨 앞 18줄은 `alg_temp=0.0`
-  무효 시도, 이후 전부 `alg_temp=0.5` 유효 시도; append-only 원칙대로 무효 시도도
+  원시 결과(N=112): `docs/assets/harness-rq1-results-n112-20260929.json`.
+
+  **옵션 (c) — entropy/margin 신호(N=112, 완료, 답 없음)**: 사용자가 "c 진행 후에도 답이
+  없으면 b"를 지시해 이어서 진행했다. `token_trace.py`에 `commit_entropy`/`commit_margin`,
+  `remask.py`에 `region_entropy`/`region_margin`/`select_highest_entropy_region`/
+  `select_lowest_margin_region`을 추가(기존 confidence API는 동작 변경 없이 공유 헬퍼로
+  일반화, 91개 유닛 테스트 통과). 같은 파이프라인으로 confidence와 같은 N(112, 완전히
+  새로운 독립 표본 112개)에서 세 신호를 한 번에 측정(같은 생성을 재사용하므로 추가 GPU
+  비용 없음).
+
+  | 신호 | 정답 | random 정답 | n10 | n01 | sign-test p |
+  |---|---|---|---|---|---|
+  | confidence | 5/112 | 11/112 | 4 | 10 | 0.180 |
+  | entropy | 14/112 | 11/112 | 12 | 9 | 0.664 |
+  | margin | 4/112 | 11/112 | 3 | 10 | 0.092 |
+
+  confidence·margin은 여전히 random보다 낮은 정답률(반대 방향, 유의하지 않음).
+  entropy는 random보다 약간 높지만(14 대 11) p=0.664로 순수 잡음 수준이다. **세 신호
+  전부 N=112에서 유의한 상관관계를 보이지 않는다** — top-1 confidence, entropy, margin
+  어느 것도 이 region 정의·이 실험 설계에서 컴파일 오류 위치를 무작위보다 잘 맞히지
+  못한다. 사용자 지시대로 (a)·(c) 모두 답이 없으므로 **(b)로 이동**: RQ1은 이 실험
+  설계로는 보류하고, 이후 작업은 RQ3(개입 질문)에 집중한다.
+
+  원시 결과: `docs/assets/harness-rq1-entropy-margin-n112-20260929.json`. 원장은
+  `docs/assets/harness-rq1-ledger-20260929.jsonl`(총 247줄 — 맨 앞 18줄만 `alg_temp=0.0`
+  무효 시도, 나머지 전부 `alg_temp=0.5` 유효 시도; append-only 원칙대로 무효 시도도
   지우지 않고 남겼다).
+
+## 6-1. RQ1 최종 판정과 (b)로의 전환
+
+세 가지 표본수/신호 조합(confidence N=18, confidence N=112, entropy/margin N=112, 총
+242개 진짜 독립 표본)에서 top-1 confidence·entropy·margin 중 어느 것도 컴파일 오류
+위치를 무작위보다 유의하게 잘 맞히지 못했다. RQ1(dLLM의 denoising confidence가 harness
+correctness와 상관관계가 있다)은 **이 신호 집합·이 region 정의·이 프롬프트 설계**로는
+지지되지 않는다. 시도하지 않은 것: (1) 더 정교한 AST 기반 region 정의(현재는 정규식
+statement 단위), (2) 여러 신호의 조합(예: confidence+entropy 앙상블), (3) 다른
+prompt/온도 설정. 이들은 "RQ1이 완전히 틀렸다"가 아니라 "이 MVP 설계로는 검증되지
+않았다"는 의미로 남겨둔다. Task 10부터는 RQ3(개입 질문)에 집중하고, RQ1 미지지 사실을
+숨기거나 RQ3 결과로 소급 정당화하지 않는다(§Task 10의 기존 주의사항 참고).
+
 - [ ] **Task 10 — RQ3 측정 (GPU 필요).** confidence-국소화 대 무작위 remask, 사전등록
   임계값과 비교. baseline은 Task 8 후속의 `directed` 프레이밍(예시별 명시적 참조 지시,
   24/24 컴파일·24/24 지시 준수)으로 확보됐다 — `undirected shared`는 쓰지 않는다.
