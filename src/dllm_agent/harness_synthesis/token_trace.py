@@ -71,10 +71,35 @@ def permanence_step(traces: Sequence[TokenTrace]) -> int | None:
 
 def commit_confidence(traces: Sequence[TokenTrace]) -> float | None:
     """Return the confidence recorded at ``permanence_step``, or ``None`` if none."""
+    trace = _trace_at_permanence(traces)
+    return None if trace is None else trace.confidence
+
+
+def commit_entropy(traces: Sequence[TokenTrace]) -> float | None:
+    """Return the entropy recorded at ``permanence_step``, or ``None`` if none.
+
+    RQ1's primary signal is top-1 confidence (spec §5); entropy is a secondary
+    trajectory feature this exposes for the "does a different signal fare better"
+    follow-up (plan §5's option (c), tried after RQ1 did not replicate at N=112).
+    """
+    trace = _trace_at_permanence(traces)
+    return None if trace is None else trace.entropy
+
+
+def commit_margin(traces: Sequence[TokenTrace]) -> float | None:
+    """Return the margin (top1-top2 probability) at ``permanence_step``, or ``None``.
+
+    Same rationale as ``commit_entropy`` — a secondary signal, not RQ1's primary one.
+    """
+    trace = _trace_at_permanence(traces)
+    return None if trace is None else trace.margin
+
+
+def _trace_at_permanence(traces: Sequence[TokenTrace]) -> TokenTrace | None:
     step = permanence_step(traces)
     if step is None:
         return None
-    return next(trace.confidence for trace in traces if trace.step_index == step)
+    return next(trace for trace in traces if trace.step_index == step)
 
 
 def _step_index(trace: TokenTrace) -> int:

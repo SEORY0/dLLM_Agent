@@ -7,9 +7,13 @@ import pytest
 from dllm_agent.harness_synthesis.regions import SourceRegion
 from dllm_agent.harness_synthesis.remask import (
     region_confidence,
+    region_entropy,
+    region_margin,
     region_token_positions,
     remask_from_position_to_end,
+    select_highest_entropy_region,
     select_lowest_confidence_region,
+    select_lowest_margin_region,
     select_random_region,
     select_region_from_compiler_error,
 )
@@ -22,9 +26,17 @@ def _region(line: int, text: str, start: int, end: int) -> SourceRegion:
     return SourceRegion(line_number=line, text=text, char_start=start, char_end=end)
 
 
-def _committed(position: int, confidence: float) -> TokenTrace:
+def _committed(
+    position: int, confidence: float, entropy: float | None = None, margin: float | None = None
+) -> TokenTrace:
     return TokenTrace(
-        step_index=0, position=position, token_id=1, masked=False, confidence=confidence
+        step_index=0,
+        position=position,
+        token_id=1,
+        masked=False,
+        confidence=confidence,
+        entropy=entropy,
+        margin=margin,
     )
 
 
@@ -101,6 +113,68 @@ def test_select_lowest_confidence_region_returns_none_with_no_scoreable_region()
     region = _region(1, "gone", start=0, end=5)
 
     assert select_lowest_confidence_region([region], [(0, 5)], (_masked(0),)) is None
+
+
+def test_region_entropy_averages_commit_entropy_over_covered_positions() -> None:
+    region = _region(1, "text", start=0, end=10)
+    offsets = [(0, 5), (5, 10)]
+    traces = (
+        _committed(0, confidence=0.5, entropy=0.4),
+        _committed(1, confidence=0.5, entropy=0.8),
+    )
+
+    assert region_entropy(region, offsets, traces) == pytest.approx(0.6)
+
+
+def test_select_highest_entropy_region_picks_the_maximum() -> None:
+    low = _region(1, "low", start=0, end=5)
+    high = _region(2, "high", start=5, end=10)
+    offsets = [(0, 5), (5, 10)]
+    traces = (
+        _committed(0, confidence=0.5, entropy=0.2),
+        _committed(1, confidence=0.5, entropy=0.9),
+    )
+
+    selected = select_highest_entropy_region([low, high], offsets, traces)
+
+    assert selected is high
+
+
+def test_select_highest_entropy_region_returns_none_with_no_scoreable_region() -> None:
+    region = _region(1, "gone", start=0, end=5)
+
+    assert select_highest_entropy_region([region], [(0, 5)], (_masked(0),)) is None
+
+
+def test_region_margin_averages_commit_margin_over_covered_positions() -> None:
+    region = _region(1, "text", start=0, end=10)
+    offsets = [(0, 5), (5, 10)]
+    traces = (
+        _committed(0, confidence=0.5, margin=0.3),
+        _committed(1, confidence=0.5, margin=0.7),
+    )
+
+    assert region_margin(region, offsets, traces) == pytest.approx(0.5)
+
+
+def test_select_lowest_margin_region_picks_the_minimum() -> None:
+    uncertain = _region(1, "uncertain", start=0, end=5)
+    certain = _region(2, "certain", start=5, end=10)
+    offsets = [(0, 5), (5, 10)]
+    traces = (
+        _committed(0, confidence=0.5, margin=0.05),
+        _committed(1, confidence=0.5, margin=0.9),
+    )
+
+    selected = select_lowest_margin_region([uncertain, certain], offsets, traces)
+
+    assert selected is uncertain
+
+
+def test_select_lowest_margin_region_returns_none_with_no_scoreable_region() -> None:
+    region = _region(1, "gone", start=0, end=5)
+
+    assert select_lowest_margin_region([region], [(0, 5)], (_masked(0),)) is None
 
 
 def test_select_random_region_returns_none_for_an_empty_list() -> None:

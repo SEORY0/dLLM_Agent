@@ -6,11 +6,19 @@ token-id sequences. The backend boundary that actually drives Dream's ``diffusio
 lives in ``trajectory_hook.py`` instead, matching spec §7's module split.
 """
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from random import Random
 
 from dllm_agent.harness_synthesis.regions import SourceRegion, region_at_line
-from dllm_agent.harness_synthesis.token_trace import TokenTrace, commit_confidence, position_traces
+from dllm_agent.harness_synthesis.token_trace import (
+    TokenTrace,
+    commit_confidence,
+    commit_entropy,
+    commit_margin,
+    position_traces,
+)
+
+type _CommitFeature = Callable[[Sequence[TokenTrace]], float | None]
 
 
 def region_token_positions(
@@ -33,6 +41,32 @@ def region_token_positions(
     )
 
 
+def _region_feature(
+    region: SourceRegion,
+    token_char_offsets: Sequence[tuple[int, int]],
+    traces: Sequence[TokenTrace],
+    *,
+    feature: _CommitFeature,
+    position_offset: int = 0,
+) -> float | None:
+    """Mean commit ``feature`` over a region's token positions.
+
+    Returns ``None`` if the region has no covering tokens or any of them never
+    permanently committed (``feature`` is ``None`` for that position) — an incomplete
+    region cannot be scored.
+    """
+    positions = region_token_positions(region, token_char_offsets, position_offset=position_offset)
+    if not positions:
+        return None
+    values: list[float] = []
+    for position in positions:
+        value = feature(position_traces(traces, position))
+        if value is None:
+            return None
+        values.append(value)
+    return sum(values) / len(values)
+
+
 def region_confidence(
     region: SourceRegion,
     token_char_offsets: Sequence[tuple[int, int]],
@@ -40,22 +74,64 @@ def region_confidence(
     *,
     position_offset: int = 0,
 ) -> float | None:
-    """Mean commit confidence over a region's token positions.
+    """Mean commit confidence over a region's token positions (RQ1's primary signal)."""
+    return _region_feature(
+        region,
+        token_char_offsets,
+        traces,
+        feature=commit_confidence,
+        position_offset=position_offset,
+    )
 
-    Returns ``None`` if the region has no covering tokens or any of them never
-    permanently committed (``token_trace.commit_confidence`` is ``None`` for that
-    position) — an incomplete region cannot be scored.
-    """
-    positions = region_token_positions(region, token_char_offsets, position_offset=position_offset)
-    if not positions:
+
+def region_entropy(
+    region: SourceRegion,
+    token_char_offsets: Sequence[tuple[int, int]],
+    traces: Sequence[TokenTrace],
+    *,
+    position_offset: int = 0,
+) -> float | None:
+    """Mean commit entropy over a region's token positions (RQ1's option-(c) signal)."""
+    return _region_feature(
+        region, token_char_offsets, traces, feature=commit_entropy, position_offset=position_offset
+    )
+
+
+def region_margin(
+    region: SourceRegion,
+    token_char_offsets: Sequence[tuple[int, int]],
+    traces: Sequence[TokenTrace],
+    *,
+    position_offset: int = 0,
+) -> float | None:
+    """Mean commit margin (top1-top2) over a region's token positions."""
+    return _region_feature(
+        region, token_char_offsets, traces, feature=commit_margin, position_offset=position_offset
+    )
+
+
+def _select_extreme_region(  # noqa: PLR0913 - internal helper shared by 3 public selectors.
+    regions: Sequence[SourceRegion],
+    token_char_offsets: Sequence[tuple[int, int]],
+    traces: Sequence[TokenTrace],
+    *,
+    feature: _CommitFeature,
+    pick: Callable[[list[tuple[SourceRegion, float]]], tuple[SourceRegion, float]],
+    position_offset: int = 0,
+) -> SourceRegion | None:
+    scored = [
+        (region, value)
+        for region in regions
+        if (
+            value := _region_feature(
+                region, token_char_offsets, traces, feature=feature, position_offset=position_offset
+            )
+        )
+        is not None
+    ]
+    if not scored:
         return None
-    confidences: list[float] = []
-    for position in positions:
-        confidence = commit_confidence(position_traces(traces, position))
-        if confidence is None:
-            return None
-        confidences.append(confidence)
-    return sum(confidences) / len(confidences)
+    return pick(scored)[0]
 
 
 def select_lowest_confidence_region(
@@ -66,19 +142,53 @@ def select_lowest_confidence_region(
     position_offset: int = 0,
 ) -> SourceRegion | None:
     """Pick the region with the lowest mean commit confidence, or ``None`` if none score."""
-    scored = [
-        (region, confidence)
-        for region in regions
-        if (
-            confidence := region_confidence(
-                region, token_char_offsets, traces, position_offset=position_offset
-            )
-        )
-        is not None
-    ]
-    if not scored:
-        return None
-    return min(scored, key=lambda pair: pair[1])[0]
+    return _select_extreme_region(
+        regions,
+        token_char_offsets,
+        traces,
+        feature=commit_confidence,
+        pick=lambda scored: min(scored, key=lambda pair: pair[1]),
+        position_offset=position_offset,
+    )
+
+
+def select_highest_entropy_region(
+    regions: Sequence[SourceRegion],
+    token_char_offsets: Sequence[tuple[int, int]],
+    traces: Sequence[TokenTrace],
+    *,
+    position_offset: int = 0,
+) -> SourceRegion | None:
+    """Pick the region with the highest mean commit entropy (most uncertain), or ``None``."""
+    return _select_extreme_region(
+        regions,
+        token_char_offsets,
+        traces,
+        feature=commit_entropy,
+        pick=lambda scored: max(scored, key=lambda pair: pair[1]),
+        position_offset=position_offset,
+    )
+
+
+def select_lowest_margin_region(
+    regions: Sequence[SourceRegion],
+    token_char_offsets: Sequence[tuple[int, int]],
+    traces: Sequence[TokenTrace],
+    *,
+    position_offset: int = 0,
+) -> SourceRegion | None:
+    """Pick the region with the lowest mean commit margin, or ``None`` if none score.
+
+    Lowest margin means top1 barely beats top2 — the most uncertain region.
+    """
+    return _select_extreme_region(
+        regions,
+        token_char_offsets,
+        traces,
+        feature=commit_margin,
+        pick=lambda scored: min(scored, key=lambda pair: pair[1]),
+        position_offset=position_offset,
+    )
 
 
 def select_random_region(regions: Sequence[SourceRegion], rng: Random) -> SourceRegion | None:

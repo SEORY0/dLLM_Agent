@@ -5,6 +5,8 @@ import pytest
 from dllm_agent.harness_synthesis.token_trace import (
     TokenTrace,
     commit_confidence,
+    commit_entropy,
+    commit_margin,
     permanence_step,
     position_traces,
 )
@@ -14,8 +16,13 @@ def _masked(step: int, position: int) -> TokenTrace:
     return TokenTrace(step_index=step, position=position, token_id=99, masked=True)
 
 
-def _committed(
-    step: int, position: int, token_id: int = 1, confidence: float = 0.9
+def _committed(  # noqa: PLR0913, PLR0917 - fixture covering all three trajectory features.
+    step: int,
+    position: int,
+    token_id: int = 1,
+    confidence: float = 0.9,
+    entropy: float = 0.1,
+    margin: float = 0.5,
 ) -> TokenTrace:
     return TokenTrace(
         step_index=step,
@@ -23,8 +30,8 @@ def _committed(
         token_id=token_id,
         masked=False,
         confidence=confidence,
-        entropy=0.1,
-        margin=0.5,
+        entropy=entropy,
+        margin=margin,
     )
 
 
@@ -101,6 +108,40 @@ def test_commit_confidence_is_none_when_there_is_no_permanence_step() -> None:
     traces = (_masked(0, 0), _committed(1, 0), _masked(2, 0))
 
     assert commit_confidence(traces) is None
+
+
+def test_commit_entropy_reads_the_entropy_at_the_permanence_step() -> None:
+    traces = (
+        _masked(0, 0),
+        _committed(1, 0, entropy=1.2),
+        _masked(2, 0),
+        _committed(3, 0, entropy=0.3),
+    )
+
+    assert commit_entropy(traces) == pytest.approx(0.3)
+
+
+def test_commit_entropy_is_none_when_there_is_no_permanence_step() -> None:
+    traces = (_masked(0, 0), _committed(1, 0), _masked(2, 0))
+
+    assert commit_entropy(traces) is None
+
+
+def test_commit_margin_reads_the_margin_at_the_permanence_step() -> None:
+    traces = (
+        _masked(0, 0),
+        _committed(1, 0, margin=0.05),
+        _masked(2, 0),
+        _committed(3, 0, margin=0.8),
+    )
+
+    assert commit_margin(traces) == pytest.approx(0.8)
+
+
+def test_commit_margin_is_none_when_there_is_no_permanence_step() -> None:
+    traces = (_masked(0, 0), _committed(1, 0), _masked(2, 0))
+
+    assert commit_margin(traces) is None
 
 
 def test_masked_trace_rejects_a_confidence_value() -> None:
