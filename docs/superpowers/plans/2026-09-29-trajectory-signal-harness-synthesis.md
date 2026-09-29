@@ -105,6 +105,13 @@ configs/openexr-harness-synthesis-smoke.json  # Task 8 — MVP pilot config
 
 `api_knowledge.py`가 유일한 스펙 대비 추가 모듈이다. 나머지는 spec §7과 동일.
 
+**Task 4 실측 후 추가된 것**: `tools/harness_synthesis/`(`_dream_generate.py` — Dream venv 전용
+raw 텐서 스크립트, `dream_backend_smoke.py` — 프로젝트 venv에서 subprocess로 호출해 production
+모듈까지 재생하는 GPU 스모크). `src/dllm_agent/harness_synthesis/trajectory_hook.py`는 torch를
+전혀 import하지 않는다 — 두 venv가 서로의 패키지를 못 보는 실제 제약(§3 NO-START 게이트 1과 같은
+근본 원인) 때문에, 텐서 연산은 Dream venv 스크립트가 계산해 JSON으로 넘기고 `src/`는 대조·조립만
+한다.
+
 ## 5. RQ 운용화
 
 ### RQ1 (상관관계) — 재측정, 적정 N
@@ -163,10 +170,18 @@ configs/openexr-harness-synthesis-smoke.json  # Task 8 — MVP pilot config
 - [x] **Task 3 (경계 탐지만 완료, power calc는 별도) — `regions.py`.** 정규식 기반 statement/
   `#include` 경계 탐지 + `region_at_line`(컴파일 오류 줄 매핑). 9개 유닛 테스트. **power
   calculation 스크립트는 아직 작성 안 함** — Task 8 결과가 나온 뒤 그 분산으로 계산.
-- [ ] **Task 4 — `trajectory_hook.py` + `harness_reference.py`.** Dream `diffusion_generate`에
-  hook 배선(GPU 스모크로 검증, 이미 `dream_smoke.py`에서 확인된 인터페이스 재사용) +
-  `poc_probe.cc` 파싱. `TraceableGenerationBackend` Protocol 기반 유닛 테스트 + 별도 GPU
-  스모크 1건.
+- [x] **Task 4 — `trajectory_hook.py` + `harness_reference.py`.** `src/`는 torch를 직접
+  import하지 않는다는 이 저장소 관례(`runtime/ar_model_loader.py`) 그대로 따라, 실제 텐서 연산
+  (softmax/entropy/margin)은 `tools/harness_synthesis/_dream_generate.py`(Dream venv에서 실행,
+  `dllm_agent` import 불가 — venv 분리의 실제 대가)가 계산해 JSON으로 넘기고, `src/`의
+  `TrajectoryRecorder`는 그 결과를 `token_ids`와 대조·검증·조립만 한다(불일치 시
+  `TrajectoryRecorderError`). `tools/harness_synthesis/dream_backend_smoke.py`로 GPU 0에서
+  실제 Dream-Coder 생성 → production 모듈(`TrajectoryRecorder`/`statement_regions`/
+  `select_lowest_confidence_region`) 전체 재생 검증 완료: 256개 commit이 bookkeeping 오류 없이
+  기록됐고, KB(검증된 사용 예시 1개, `<cstdint>` 포함— 처음엔 빠뜨려서 `uint8_t` 컴파일 오류로
+  실패, OpenEXR 헤더가 표준 헤더를 항상 transitively include하진 않는다는 실제 발견) 기반
+  harness가 `harness-compile-only` 이미지로 실제 컴파일 성공까지 확인. 9개 유닛 테스트
+  (fake `CommitObservation` 기반) + 2개 `harness_reference.py` 테스트.
 - [x] **Task 5a — compile-only Docker 이미지.** `tools/openexr_runtime/harness-compile-only/`
   (`Dockerfile` + `build-harness`). `dllm-openexr-runtime`을 베이스로 재사용해 OpenEXR
   재컴파일(10~20분) 없이 harness만 volume mount로 컴파일 — `/work/harness.cc` → coverage 모드는
