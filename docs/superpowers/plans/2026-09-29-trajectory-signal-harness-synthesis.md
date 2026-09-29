@@ -466,7 +466,7 @@ substrate 자체의 불확실성(24/24 대 5/12)을 드러냈으므로, 다음 �
 추정하지 않는 순수 baseline 안정성 감사(RQ3-B0)다. 기존 스모크 결과와 위 동결 프로토콜은
 그대로 보존하고 확증 증거로 재해석하지 않는다.
 
-### RQ3-B0 — Directed Baseline Stability Audit (설계만, **미실행**)
+### RQ3-B0 — Directed Baseline Stability Audit (완료, 64/64)
 
 **목적**: confidence 대 random을 비교하지 않는다 — 오직 `directed`/reference 생성
 substrate가 RQ3 확증 실험을 지탱할 만큼 안정적인지만 본다.
@@ -545,8 +545,53 @@ ITT를 바꿀 필요는 없지만 이 감사로 컴파일률을 먼저 재는 �
 trial당 대략 60~90초로 추정 — GPU 2장에 32개씩이면 전체 약 30~50분.
 
 **구현**: `tools/harness_synthesis/rq3_b0_baseline_audit.py`(frozen docstring +
-`seed_assignments()`/`classify_failure()` 순수 함수, GPU 없이 유닛 검증 완료). **실행은
-아직 하지 않았다** — 이 설계를 검토받은 뒤에 실행한다.
+`seed_assignments()`/`classify_failure()` 순수 함수, GPU 없이 유닛 검증 완료).
+
+#### 실행 결과 (2026-09-30, GPU 2장, 64/64 완료)
+
+원시 결과 `docs/assets/harness-rq3-b0-audit-results-20260930.json`, 원장(64줄,
+`arm="b0-audit"`) `docs/assets/harness-rq3-b0-ledger-20260930.jsonl`.
+
+| | 컴파일 | Wilson 95% CI |
+|---|---|---|
+| 전체 | 21/64 = 32.8% | [22.6%, 45.0%] |
+| checkOpenEXRFile | 16/22 = 72.7% | [51.8%, 86.8%] |
+| InputFile | 4/21 = 19.0% | [7.7%, 40.0%] |
+| MultiPartInputFile | 1/21 = 4.8% | [0.8%, 22.7%] |
+
+예시 간 격차 68.0%p. hit_budget(생성 도중 budget이 다 떨어져 코드가 안 끝난 경우)은
+64개 중 **0개(0.0%)** — budget 문제가 전혀 아니다. 실패 카테고리(미컴파일 43건):
+other 15, hallucinated API/symbol 13, hallucinated header 7, syntax/incomplete
+generation 5, type/signature mismatch 3.
+
+**사후 특성화(분류는 다시 안 건드림, 원문 진단을 다시 읽어서 설명만 추가)**: "other"
+15건을 직접 읽어보니 두 가지 패턴이 taxonomy 정규식에 안 걸렸을 뿐이었다 — (a)
+`undefined reference to 'LLVMFuzzerTestOneInput'`(linker가 진입점을 못 찾음, 3건),
+(b) `variable type 'MemoryIStream' is an abstract class`/`non-virtual member
+function marked 'override' hides virtual member function`(IStream 추상 클래스의
+가상함수 시그니처를 정확히 못 맞춤). 이 (b) 패턴이 `InputFile`/`MultiPartInputFile`
+실패의 상당수를 차지한다: 두 예시는 `MemoryIStream : public IStream`을 직접
+구현해야 하는데, `tellg()`/`seekg()`의 반환형·시그니처를 조금씩 틀리거나 추상
+메서드를 다 못 채워서 "추상 클래스라 인스턴스화 불가" 오류가 반복된다.
+`checkOpenEXRFile`은 함수 호출 한 줄이라 이 문제가 없고, 실패도 대부분 단순
+헤더/API 환각이다. **즉 68%p 격차의 원인이 명확하다: 커스텀 추상 클래스 구현
+난이도.**
+
+**decision gate 판정**: **Gate 4 발동**(전체 컴파일률 32.8% < 40% **그리고**
+hit_budget 0.0% < 30%) — "`directed` baseline 자체를 재검토"가 사전에 정한 다음
+행동이다. Gate 2도 독립적으로 발동(격차 68.0%p ≥ 40%p)하지만, 미리 정한 우선순위상
+Gate 4가 더 심각해 그 행동이 적용된다. **Gate 1(표본수 재계산 후 진행)에 도달하지
+못했다** — 즉 지금 이 substrate로는 RQ3 표본수를 다시 계산해서 바로 진행하면 안
+된다.
+
+**결론과 제안**: `directed` 프레이밍 자체가 아니라 **`InputFile`/`MultiPartInputFile`
+두 예시가 요구하는 커스텀 `IStream` 구현이 모델에게 근본적으로 어렵다**는 것이
+원인으로 보인다. `checkOpenEXRFile`만 놓고 보면 72.7%(CI 51.8~86.8%)로 Gate 1
+기준(≥40%)을 넉넉히 통과한다. 다음 결정은 사용자가 해야 한다: (a) RQ3를
+`checkOpenEXRFile` 단일 예시로 좁혀서 그 substrate로 표본수를 다시 계산, (b)
+`InputFile`/`MultiPartInputFile`용 KB 예시나 프롬프트를 개선해서 재감사, (c) 이
+방향(remask 개입 실험) 자체를 재검토. Task 11 종합 보고서에는 "RQ3 substrate
+안정성은 예시에 따라 근본적으로 다르다"는 이 결과를 그대로 기록해야 한다.
 
 - [ ] **Task 11 — 종합 보고서.** `docs/research-report.md`의 `[MEASURED]`/`[INFERRED]`/
   `[FUTURE EXPERIMENT]` 태깅 규칙을 따라 RQ1/RQ3/a안 결과를 종합. 취약점 발견이나 dLLM
