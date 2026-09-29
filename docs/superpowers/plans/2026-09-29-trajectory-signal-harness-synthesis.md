@@ -145,10 +145,13 @@ configs/openexr-harness-synthesis-smoke.json  # Task 8 — MVP pilot config
 - [ ] **Task 0 (완료, 기록만)** — 타당성 시뮬레이션. 산출물:
   `tools/harness_synthesis_feasibility/`, `docs/assets/harness-feasibility-*.json`,
   `docs/harness-synthesis-feasibility-20260920.md`. 커밋 `0f49934`.
-- [ ] **Task 1 — Dream 실행 환경을 저장소에 고정.** `tools/dream_runtime/requirements.txt`
-  (transformers==4.46.2, tokenizers<0.21, numpy<2, accelerate) + `tools/dream_runtime/setup.sh`
-  (프로젝트 torch를 `.pth`로 겹치는 venv 생성, scratchpad 프로토타입을 재현 가능한 스크립트로
-  전환). README 하드웨어 절에 한 줄 추가.
+- [x] **Task 1 — Dream 실행 환경을 저장소에 고정.** `tools/dream_runtime/requirements.txt`
+  (transformers==4.46.2, tokenizers<0.21, numpy<2 — **accelerate는 뺀다**: torch를 자기
+  의존성으로 선언해서 uv가 `.pth`로 연결한 프로젝트 torch를 못 보고 새 torch+nvidia 휠을
+  받으려다 멈춘다. `AutoModel.from_pretrained(...).to("cuda")`는 accelerate 없이도 동작하고
+  이 저장소의 Dream 사용은 그게 전부다) + `tools/dream_runtime/setup.sh`(`.pth`를 pip install
+  **전에** 써서 torch 재다운로드를 막고, 프로젝트 torch 2.11.0+cu128 위에 얹는 venv 생성).
+  GPU 0에서 로드 검증 완료(VRAM 15.3 GB).
 - [ ] **Task 1b — `api_knowledge.py` 정적 KB 추출.** `fb_sim.py`의 `STATIC_KB`/`hint_for`를
   production 모듈로 승격: 빌드 이미지에서 헤더 목록·API 선언을 추출하는 순수 함수, Docker
   mock으로 유닛 테스트.
