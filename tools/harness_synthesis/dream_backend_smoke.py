@@ -15,12 +15,12 @@ often matches, but is not guaranteed to match, the first compile error line).
 
 from __future__ import annotations
 
-import json
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
 from random import Random
+
+from _replay import decode_code_block, replay, run_dream_generate
 
 from dllm_agent.harness_synthesis.api_knowledge import (
     ApiKnowledgeBase,
@@ -33,12 +33,6 @@ from dllm_agent.harness_synthesis.remask import (
     select_lowest_confidence_region,
     select_random_region,
 )
-from dllm_agent.harness_synthesis.trajectory_hook import CommitObservation, TrajectoryRecorder
-
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-_DREAM_VENV_PYTHON = _REPO_ROOT / "tools/dream_runtime/venv/bin/python"
-_DREAM_GENERATE = Path(__file__).with_name("_dream_generate.py")
-_MODEL_PATH = "/data/dllm-agent/cache-dream-coder"
 
 _USAGE_EXAMPLE = UsageExample(
     name="checkOpenEXRFile",
@@ -71,70 +65,20 @@ _PROMPT = (
 )
 
 
-def _run_dream_generate(seed: int, out_path: Path) -> dict[str, object]:
-    subprocess.run(  # noqa: S603 - fixed argv (this repo's own script + venv), shell=False.
-        [
-            str(_DREAM_VENV_PYTHON),
-            str(_DREAM_GENERATE),
-            "--model-path",
-            _MODEL_PATH,
-            "--prompt",
-            _PROMPT,
-            "--seed",
-            str(seed),
-            "--new-tokens",
-            "256",
-            "--steps",
-            "128",
-            "--out",
-            str(out_path),
-        ],
-        check=True,
-    )
-    return json.loads(out_path.read_text())
-
-
 def main() -> None:
     """Generate once for real, replay it, and report what the production modules see."""
     seed = int(sys.argv[1]) if len(sys.argv) > 1 else 4242
     with tempfile.TemporaryDirectory() as tmp:
-        payload = _run_dream_generate(seed, Path(tmp) / "dream.json")
+        payload = run_dream_generate(_PROMPT, seed, Path(tmp) / "dream.json")
 
-    mask_token_id = int(payload["mask_token_id"])  # type: ignore[arg-type]
-    recorder = TrajectoryRecorder(mask_token_id=mask_token_id)
-    events_by_step: dict[int, list[CommitObservation]] = {}
-    for event in payload["events"]:  # type: ignore[union-attr]
-        events_by_step.setdefault(event["step"], []).append(
-            CommitObservation(
-                position=event["position"],
-                token_id=event["token_id"],
-                confidence=event["confidence"],
-                entropy=event["entropy"],
-                margin=event["margin"],
-            )
-        )
-    for entry in payload["steps_log"]:  # type: ignore[union-attr]
-        step = entry["step"]
-        recorder.observe(step, entry["token_ids"], events_by_step.get(step, []))
-    print(f"real Dream trajectory replayed with no bookkeeping error: "
-          f"{len(recorder.traces)} commits recorded")
+    recorder = replay(payload)
+    print(
+        f"real Dream trajectory replayed with no bookkeeping error: "
+        f"{len(recorder.traces)} commits recorded"
+    )
 
-    prompt_length = int(payload["prompt_length"])  # type: ignore[arg-type]
-    pieces: list[str] = payload["generated_token_pieces"]  # type: ignore[assignment]
-    text, offsets = "", []
-    for piece in pieces:
-        offsets.append((len(text), len(text) + len(piece)))
-        text += piece
-    end = len(text)
-    for stop in ("```", "<|"):
-        index = text.find(stop)
-        if index != -1:
-            end = min(end, index)
-    code = text[:end]
-    code_offsets = [
-        offset for offset in offsets if offset[0] < end
-    ]  # tokens fully or partly inside the code block
-
+    prompt_length = int(payload["prompt_length"])
+    code, code_offsets = decode_code_block(payload)
     print("--- decoded harness ---")
     print(code)
 

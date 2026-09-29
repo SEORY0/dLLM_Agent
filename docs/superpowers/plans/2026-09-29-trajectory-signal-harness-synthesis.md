@@ -207,12 +207,50 @@ raw 텐서 스크립트, `dream_backend_smoke.py` — 프로젝트 venv에서 su
 - [x] **Task 7 — `fitness.py`.** §8 가중합 4개 유닛 테스트. `diversity`/`bug` 가중치만 기본값
   0(spec §8이 명시적으로 이 둘만 "측정기가 아직 없다"고 지목); `compile`/`reach`/`edge_coverage`는
   필수 인자로 남겨 호출자가 config에서 명시하도록 강제.
-- [ ] **Task 8 — a안: KB 다양성 실험 (GPU 필요).** §5 "a안" 절 그대로 실행, 결과를
-  `docs/harness-synthesis-diversity-<date>.md`로 기록.
+- [x] **Task 8 — a안: KB 다양성 실험 (GPU 0·1 사용, 완료).** 검증된 사용 예시 3개
+  (`checkOpenEXRFile`, `InputFile`+메모리 `IStream`, `MultiPartInputFile`+같은 `IStream`,
+  전부 harness-compile-only 이미지로 개별 컴파일·10초 퍼징까지 사전 검증) × 2 조건(`solo`:
+  예시 1개만 노출, `shared`: 3개 전부 노출) × seed 8개 = 48회, GPU 0·1에 24개씩 분산 실행.
+  Dream-Coder 실제 생성 → `TrajectoryRecorder` 재생 검증 → `harness-compile-only` 컴파일 →
+  `audit_ledger`에 반복마다 기록(첫 시도의 실패 레코드까지 포함해 96줄 append-only,
+  `docs/assets/harness-kb-diversity-ledger-20260929.jsonl`). 원시 결과:
+  `docs/assets/harness-kb-diversity-results-20260929.json`.
+
+  **인프라 버그 하나 발견·수정**: 처음엔 48/48 전부 컴파일 실패했는데, 원인이 두 가지였다.
+  (1) `harness-compile-only` 이미지가 이전 정리 작업 때 지워진 채였다 — `_compile.py`에
+  `_ensure_image()`를 추가해 없으면 자동 빌드하도록 고쳤다. (2) 고치고 다시 돌려도 InputFile/
+  MultiPartInputFile 예시는 여전히 0/8이었다 — `IStream` 클래스 본문이 `checkOpenEXRFile`
+  한 줄짜리 예시보다 훨씬 길어서, 기존 `new_tokens=256` 예산이 함수 서명 중간에서 생성을
+  끊어버렸다(`const uint8`에서 잘림). `new_tokens=768, steps=384`로 늘려 재실행.
+
+  **결과 (버그 수정 후, 실제 48/48)**:
+
+  | example | condition | 컴파일 | self_sim 평균 | reference_sim 평균 |
+  |---|---|---|---|---|
+  | checkOpenEXRFile | solo | 8/8 | 1.000 | 0.837 |
+  | checkOpenEXRFile | shared | 8/8 | 0.333 | 0.209 |
+  | InputFile | solo | 8/8 | 1.000 | 0.209 |
+  | InputFile | shared | 8/8 | 1.000 | 0.209 |
+  | MultiPartInputFile | solo | 8/8 | 1.000 | 0.206 |
+  | MultiPartInputFile | shared | 8/8 | 0.992 | 0.209 |
+
+  **핵심 발견**: 컴파일률은 예시 종류·조건에 관계없이 48/48로 완벽했지만(예시가 실제로
+  검증된 것이면 신뢰성 있게 컴파일된다는 게 재확인됐다), **다양성은 없다**. `shared`
+  조건에서 어느 예시를 "의도했든" 상관없이 생성물은 항상 `InputFile` 예시를 사실상 글자
+  그대로 복제한다(`checkOpenEXRFile-shared`도 `MultiPartInputFile-shared`도 코드 끝부분이
+  `InputFile`과 완전히 동일: `OPENEXR_IMF_NAMESPACE::InputFile file(stream);`). 다만 이
+  "의도"는 프롬프트에 실제로 명시된 적이 없다 — `solo`/`shared` 모두 프롬프트 구조가
+  동일하고, "이번엔 이 예시를 써라"라는 지시는 없다. 그래서 정확한 결론은 "여러 예시를
+  구분 없이 한 KB에 다 보여주면, 모델이 맥락과 무관하게 예시 하나(`InputFile`)로 수렴한다"
+  이고, "모델이 의도된 예시를 못 골랐다"는 아니다 — 이 구분이 다음 실험(Task 9/10) 설계에서
+  중요하다: 프롬프트가 "이 iteration엔 이 예시를 참고하라"를 명시적으로 지시하는 조건을
+  추가해야 KB 다양성 질문에 제대로 답할 수 있다.
 - [ ] **Task 9 — RQ1 재측정 (GPU 필요).** Task 3의 표본수로 관측 상관관계 측정, 사전등록
   임계값과 비교.
-- [ ] **Task 10 — RQ3 측정 (GPU 필요).** Task 8이 긍정적일 때만 진행. confidence-국소화 대
-  무작위 remask, 사전등록 임계값과 비교.
+- [ ] **Task 10 — RQ3 측정 (GPU 필요).** confidence-국소화 대 무작위 remask, 사전등록
+  임계값과 비교. Task 8이 "예시가 있으면 신뢰성 있게 컴파일된다"를 확인했으므로 baseline은
+  확보됐다 — 다만 어느 예시를 KB에 넣을지(위 발견 반영: 명시적 참조 지시 포함) 먼저 정해야
+  한다.
 - [ ] **Task 11 — 종합 보고서.** `docs/research-report.md`의 `[MEASURED]`/`[INFERRED]`/
   `[FUTURE EXPERIMENT]` 태깅 규칙을 따라 RQ1/RQ3/a안 결과를 종합. 취약점 발견이나 dLLM
   우월성을 주장하지 않는다(기존 문서들의 원칙과 동일).
