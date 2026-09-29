@@ -1,0 +1,38 @@
+#!/bin/sh
+# Compile a volume-mounted harness source (/work/harness.cc) against the base
+# image's pinned OpenEXR install and write the binary into /work.
+#
+#   docker run --rm -v <dir>:/work dllm-openexr-harness-compile-only <asan|coverage>
+#
+# <dir>/harness.cc must exist before the run. Output: <dir>/fuzz_target (asan mode)
+# or <dir>/coverage_target (coverage mode) -- same names build-fuzz/build-coverage
+# produce, so downstream tooling (tools/harness_synthesis_feasibility/eval_sim.py)
+# does not need a mode-specific binary name.
+set -eu
+
+MODE="${1:?usage: build-harness <asan|coverage>}"
+test -f /work/harness.cc
+
+case "$MODE" in
+  asan) INSTALL_ROOT=/opt/openexr-asan ;;
+  coverage) INSTALL_ROOT=/opt/openexr-coverage ;;
+  *)
+    echo "unknown mode: $MODE (expected asan or coverage)" >&2
+    exit 1
+    ;;
+esac
+
+umask 000
+trap 'chmod -R a+rwX "/work/build-harness-$MODE" 2>/dev/null || true' EXIT
+unset CFLAGS CXXFLAGS
+cmake \
+  -S /opt/dllm/runtime \
+  -B "/work/build-harness-$MODE" \
+  -G "Unix Makefiles" \
+  -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DDLLM_MODE="$MODE" \
+  -DOPENEXR_INSTALL_ROOT="$INSTALL_ROOT" \
+  -DDLLM_HARNESS_SOURCE=/work/harness.cc \
+  -DDLLM_OUTPUT_DIRECTORY=/work
+cmake --build "/work/build-harness-$MODE" --target dllm_harness --parallel 1 --verbose

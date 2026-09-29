@@ -167,8 +167,14 @@ configs/openexr-harness-synthesis-smoke.json  # Task 8 — MVP pilot config
   hook 배선(GPU 스모크로 검증, 이미 `dream_smoke.py`에서 확인된 인터페이스 재사용) +
   `poc_probe.cc` 파싱. `TraceableGenerationBackend` Protocol 기반 유닛 테스트 + 별도 GPU
   스모크 1건.
-- [ ] **Task 5a — compile-only Docker 이미지.** `tools/openexr_runtime/harness-compile-only/`,
-  볼륨 마운트로 `harness.cc` 주입. 기존 `dllm-openexr-runtime`과 독립.
+- [x] **Task 5a — compile-only Docker 이미지.** `tools/openexr_runtime/harness-compile-only/`
+  (`Dockerfile` + `build-harness`). `dllm-openexr-runtime`을 베이스로 재사용해 OpenEXR
+  재컴파일(10~20분) 없이 harness만 volume mount로 컴파일 — `/work/harness.cc` → coverage 모드는
+  `/work/coverage_target`, asan 모드는 `/work/fuzz_target`(기존 `build-coverage`/`build-fuzz`와
+  같은 이름, 하위 도구가 모드별 분기 없이 재사용 가능). 실측 검증: reference `poc_probe.cc` 컴파일
+  후 11초 동안 216,381 runs(19,671 exec/s); 존재하지 않는 헤더(`ImfStream.h`)는 예상한
+  `'ImfStream.h' file not found` 오류로 깨끗이 실패(`api_knowledge.hint_for_missing_headers`가
+  파싱하는 형식과 정확히 일치).
 - [x] **Task 5b — `remask.py`.** 영역-토큰 위치 매핑(`region_token_positions`), 영역 confidence
   채점(`region_confidence`), 3개 선택 정책(저confidence/무작위/컴파일오류 위치), remask 시퀀스
   구성(`remask_from_position_to_end`). 실제 backend 의존 없음(순수 함수) — Dream 연동은
