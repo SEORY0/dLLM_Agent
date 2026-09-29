@@ -459,9 +459,95 @@ GPU-분(초기 생성+remask 2회+컴파일·fuzz 3회) 단위이므로, N=469�
 
 **동결한 것(본 실험을 실제로 시작하기 전까지 바꾸지 않음)**: 위 §1-5 프로토콜 그대로,
 1차 outcome 정의(고정 fuzz 시간 edge coverage, intent-to-treat), 분석 방법(discordant-pair
-sign test, RQ1과 동일 방식), 유의수준 alpha=0.05·power=0.80. **아직 하지 않은 것**: 본
-실험 실행(N=469를 그대로 쓸지, `directed` baseline 신뢰도부터 먼저 다시 재는 게 나을지는
-사용자 결정 대기).
+sign test, RQ1과 동일 방식), 유의수준 alpha=0.05·power=0.80.
+
+**사용자 결정(2026-09-29)**: N=469 확증 실험은 시작하지 않는다. 스모크가 baseline
+substrate 자체의 불확실성(24/24 대 5/12)을 드러냈으므로, 다음 단계는 treatment effect를
+추정하지 않는 순수 baseline 안정성 감사(RQ3-B0)다. 기존 스모크 결과와 위 동결 프로토콜은
+그대로 보존하고 확증 증거로 재해석하지 않는다.
+
+### RQ3-B0 — Directed Baseline Stability Audit (설계만, **미실행**)
+
+**목적**: confidence 대 random을 비교하지 않는다 — 오직 `directed`/reference 생성
+substrate가 RQ3 확증 실험을 지탱할 만큼 안정적인지만 본다.
+
+**데이터셋**: 새 seed 64개, `checkOpenEXRFile`/`InputFile`/`MultiPartInputFile` 각각
+22/21/21개(고정 dataset에 검증된 예시가 3개뿐이라 "8 task × 8 seed"가 아니라 이렇게
+배분함 — 예시를 8개로 늘리려면 각각 독립 컴파일 검증이 필요한 별도 작업이다). seed는
+`_EXAMPLES` 순서대로, 결과를 보지 않고 사전에 순서대로 배정한다(`rq3_b0_baseline_audit.
+seed_assignments()`).
+
+**정확한 fresh-seed 규칙**: 6,000,000–6,000,063(64개, 이 감사 전용). 이번 확증 RQ3와
+겹치지 않도록 6,000,000–6,000,999 전체를 향후 RQ3 확증 실험에서 사용 금지 구간으로
+예약한다(재실행·확장 여유분 포함). 지금까지 실제로 쓰인 다른 구간과도 안 겹친다:
+`kb_diversity_experiment.py`(Task 8/8b) 3,000,000–3,000,007, `rq1_measurement.py`
+(Task 9) 4,000,000대~4,010,100대, `rq3_smoke.py`(Task 10 스모크) 5,000,000–5,000,003.
+
+**프로토콜**: RQ3 스모크의 reference arm과 완전히 동일(baseline 성공률을 올리려고
+바꾸지 않는다) — 모델, `alg="entropy", temperature=0.5, top_p=0.95, alg_temp=0.5`,
+`new_tokens=768, steps=384`(예시별로 조정하지 않음), `directed` 프롬프트,
+harness-compile-only 이미지 coverage 모드, `compile_and_fuzz(fuzz_seconds=20.0)`, GPU
+1장당 32 trial씩 2장.
+
+**trial당 기록**: example, seed, compiled, failure_category, generation_tokens_ceiling/
+generation_steps_ceiling(상수), effective_token_count(닫는 fence 전까지 실제 토큰 수),
+hit_budget(닫는 fence를 budget 안에서 못 찾음), compile_error(원문 그대로 보존), edges
+(미컴파일 시 0), wall_time_seconds. 원장에는 `arm="b0-audit"`로 별도 기록해 RQ3 확증
+데이터와 섞이지 않게 한다.
+
+**실패 분류(우선순위 순 — budget 소진을 언어 오류로 오분류하지 않도록 먼저 검사)**:
+(1) generation-budget exhaustion/truncation, (2) hallucinated header, (3) hallucinated
+API/symbol, (4) type/signature mismatch, (5) syntax/incomplete generation, (6)
+linker/build failure, (7) other. `rq3_b0_baseline_audit.classify_failure()`로 구현,
+7개 케이스 모두 유닛 확인 완료(GPU 불필요).
+
+**분석(서술적 substrate 검증만)**: 전체 컴파일률 + Wilson 95% CI, 예시별 컴파일률,
+실패 카테고리별 개수, hit_budget 비율, effective_token_count 분포, 컴파일된 것들의
+edges. confidence 대 random 비교는 하지 않는다.
+
+**decision gate(결과를 보기 전에 고정, 심각한 순서로 검사)**:
+
+| 순서 | 조건 | 다음 행동 | 근거 |
+|---|---|---|---|
+| 4 | 전체 컴파일률 < 40% **그리고** hit_budget 비율 < 30% | `directed` substrate 자체를 재검토 | budget 문제가 아닌데도 낮으면 프롬프트/예시 설계 결함일 가능성이 크다 |
+| 3 | hit_budget 비율 ≥ 30% | RQ3 전에 `new_tokens`/`steps` ceiling부터 재검토 | budget 부족이 주원인이면 모델 능력이 아니라 파라미터 설정 문제라서, ceiling만 늘려도 해결될 수 있다 |
+| 2 | 예시별 컴파일률 최댓값-최솟값 ≥ 40%p | RQ3를 예시별로 층화하거나 재설계 | 한 예시만 신뢰할 수 있고 나머지는 아니라면, 3개를 하나로 묶어 분석하는 현재 설계가 틀렸다는 뜻 |
+| 1 | 위 세 조건 모두 해당 없음(컴파일률 ≥ 40%, hit_budget < 30%, 격차 < 40%p) | RQ3 표본수를 이 감사의 관측 컴파일률로 재계산하고 진행 | substrate가 쓸 만하다고 판단, 다음은 N 재계산 |
+
+숫자 기준(40%, 30%, 40%p)은 지금 제안하는 것이며, 결과를 본 뒤 유리하게 바꾸지 않는다.
+40%는 "동전 던지기보다는 낫다"는 최소선이자 스모크의 5/12(42%)와 거의 같은 값으로 잡아
+스모크 관측치를 우연히 정당화하는 임계값이 아니게 했다. 30%는 "budget 소진이 주된
+원인이면 이건 모델 문제가 아니라 설정 문제"라는 성격 구분선이다. 40%p는 임의적이나,
+3개 예시 중 하나가 극단적으로 다르면(예: 90% 대 40%) 그 차이를 무시하고 합쳐 분석하는
+게 부적절하다는 상식적 기준이다.
+
+**표본수(N=469) 처리**: 스모크 12 trial(confidence 승 3, random 승 2, 동률 7)에서 나온
+역사적 pilot 추정치로만 보존한다 — 이 discordance/tie율 추정이 극히 적은 N에 기반해
+민감하다는 걸 명시한다. 이 감사 이후 최종 RQ3 표본수는 (a) 미리 정한 과학적으로 의미
+있는 최소 효과크기, (b) 이 감사가 준 usable/discordant trial 빈도의 방어 가능한 추정치,
+(c) 독립적인 확증 데이터셋을 써서 다시 계산해야 한다. 그 재계산 결과를 사용자가 검토하기
+전까지 최종 실험을 시작하지 않는다.
+
+**1차 endpoint는 이 단계에서 바꾸지 않는다**: 고정 fuzz 시간 edge coverage, intent-to-
+treat, 컴파일 실패 보존. 다만 RQ3 확증 실험을 위해 아래를 필수 2차 outcome으로 준비해
+둔다: 컴파일 성공, 컴파일 성공 조건부 coverage, generation tokens, generation steps,
+wall time, edges/token(또는 다른 명확한 2차 효율 지표). arm 간 실제 token/step 수를
+강제로 맞출 필요는 없다 — 허용된 resource ceiling(같은 `new_tokens`/`steps` 상한)이
+동일하기만 하면 된다.
+
+**ITT 1차 endpoint에 문제가 있는가**: 통계적으로는 문제없다(컴파일 실패를 0으로 대체하는
+설계라 실패율이 얼마든 유효하다). 다만 이 감사가 보여줄 실제 컴파일률이 검정력에 직접
+영향을 준다 — N=469가 컸던 이유 자체가 "양쪽 다 실패해서 생기는 동률"이 많았기 때문이라,
+ITT를 바꿀 필요는 없지만 이 감사로 컴파일률을 먼저 재는 게 왜 중요한지의 이유이기도 하다.
+
+**예상 GPU/실행 비용**: trial당 생성 1회(remask 없음) + compile+fuzz 1회만 필요해 RQ3
+본 실험 trial(생성 1 + remask 2 + compile+fuzz 3)보다 훨씬 싸다. 스모크 실측 기준
+trial당 대략 60~90초로 추정 — GPU 2장에 32개씩이면 전체 약 30~50분.
+
+**구현**: `tools/harness_synthesis/rq3_b0_baseline_audit.py`(frozen docstring +
+`seed_assignments()`/`classify_failure()` 순수 함수, GPU 없이 유닛 검증 완료). **실행은
+아직 하지 않았다** — 이 설계를 검토받은 뒤에 실행한다.
+
 - [ ] **Task 11 — 종합 보고서.** `docs/research-report.md`의 `[MEASURED]`/`[INFERRED]`/
   `[FUTURE EXPERIMENT]` 태깅 규칙을 따라 RQ1/RQ3/a안 결과를 종합. 취약점 발견이나 dLLM
   우월성을 주장하지 않는다(기존 문서들의 원칙과 동일).
