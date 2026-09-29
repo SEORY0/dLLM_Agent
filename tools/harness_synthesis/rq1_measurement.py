@@ -1,13 +1,17 @@
 # ruff: noqa: T201 -- deliberate console report, not a library module
-r"""Task 9 -- RQ1: does confidence localize the real compile error better than chance?
+r"""Task 9 -- RQ1: does any trajectory signal localize the real compile error?
 
-At the pre-registered N from Task 3's power calc (N=17, alpha=0.05, power=0.80, from
-the feasibility pilot's 11/16-vs-3/16 marginals).
+Confidence at the pre-registered N from Task 3's power calc (N=17, alpha=0.05,
+power=0.80, from the feasibility pilot's 11/16-vs-3/16 marginals) did not replicate
+even at N=112 (plan §Task 9). This is option (c): entropy and margin, computed on the
+exact same trials so testing them costs no extra generations, tried before falling
+back to option (b) (defer RQ1, do RQ3 only) per the user's stated order.
 
 Purely observational, no KB, no remask, no intervention (spec §9: "RQ1 상관관계는 순수
 관측 통계"). Each generation gives one paired trial when it (a) fails to compile and
-(b) the first reported error line falls inside a detected region: does
-``select_lowest_confidence_region`` pick that region, and does a matched
+(b) the first reported error line falls inside a detected region: does each of
+``select_lowest_confidence_region``/``select_highest_entropy_region``/
+``select_lowest_margin_region`` pick that region, against the same matched
 ``select_random_region`` draw? Compiling generations and errors outside any detected
 region are excluded (no error region to compare against) -- this script over-samples
 seeds until it collects the target number of *valid* pairs, not just N attempts.
@@ -35,9 +39,13 @@ from dllm_agent.core.io import sha256_bytes
 from dllm_agent.harness_synthesis.audit_ledger import HarnessSynthesisLedgerRecord, append
 from dllm_agent.harness_synthesis.regions import region_at_line, statement_regions
 from dllm_agent.harness_synthesis.remask import (
+    select_highest_entropy_region,
     select_lowest_confidence_region,
+    select_lowest_margin_region,
     select_random_region,
 )
+
+_SIGNALS = ("confidence", "entropy", "margin")
 
 _PROMPT = (
     "Write a complete libFuzzer harness in C++ for the OpenEXR library (v3.4). "
@@ -132,40 +140,57 @@ def main() -> None:
             print(f"seed={seed} error line outside any detected region (excluded)")
             continue
 
-        lowest = select_lowest_confidence_region(
-            regions, code_offsets, recorder.traces, position_offset=prompt_length
-        )
+        picks = {
+            "confidence": select_lowest_confidence_region(
+                regions, code_offsets, recorder.traces, position_offset=prompt_length
+            ),
+            "entropy": select_highest_entropy_region(
+                regions, code_offsets, recorder.traces, position_offset=prompt_length
+            ),
+            "margin": select_lowest_margin_region(
+                regions, code_offsets, recorder.traces, position_offset=prompt_length
+            ),
+        }
         random_pick = select_random_region(regions, Random(seed))  # noqa: S311
-        confidence_correct = lowest is error_region
+        correct = {signal: picks[signal] is error_region for signal in _SIGNALS}
         random_correct = random_pick is error_region
         valid += 1
         trials.append(
             {
                 "seed": seed,
                 "error_line": int(match.group(1)),
-                "confidence_correct": confidence_correct,
                 "random_correct": random_correct,
                 "code": code,
+                **{f"{signal}_correct": correct[signal] for signal in _SIGNALS},
             }
         )
         print(
             f"seed={seed} valid_trial={valid}/{args.target_n} "
-            f"confidence_correct={confidence_correct} random_correct={random_correct}"
+            + " ".join(f"{signal}={correct[signal]}" for signal in _SIGNALS)
+            + f" random={random_correct}"
         )
         Path(args.out).write_text(json.dumps(trials, indent=1))
 
-    n_10 = sum(t["confidence_correct"] and not t["random_correct"] for t in trials)
-    n_01 = sum(t["random_correct"] and not t["confidence_correct"] for t in trials)
-    p_value = sign_test_p_value(n_10, n_01)
-    print(
-        f"\n{valid} valid trials ({attempt} attempts). "
-        f"confidence-correct={sum(t['confidence_correct'] for t in trials)}/{valid} "
-        f"random-correct={sum(t['random_correct'] for t in trials)}/{valid} "
-        f"discordant n10={n_10} n01={n_01} sign-test p={p_value:.4f}"
-    )
-    Path(args.out).write_text(
-        json.dumps({"trials": trials, "n_10": n_10, "n_01": n_01, "p_value": p_value}, indent=1)
-    )
+    summary = _summarize(trials, valid)
+    print(f"\n{valid} valid trials ({attempt} attempts).")
+    Path(args.out).write_text(json.dumps({"trials": trials, "summary": summary}, indent=1))
+
+
+def _summarize(trials: list[dict[str, object]], valid: int) -> dict[str, object]:
+    """Run the sign test for each signal against random and print one line each."""
+    summary: dict[str, object] = {}
+    for signal in _SIGNALS:
+        key = f"{signal}_correct"
+        n_10 = sum(t[key] and not t["random_correct"] for t in trials)
+        n_01 = sum(t["random_correct"] and not t[key] for t in trials)
+        p_value = sign_test_p_value(n_10, n_01)
+        summary[signal] = {"n_10": n_10, "n_01": n_01, "p_value": p_value}
+        print(
+            f"{signal:10} correct={sum(t[key] for t in trials)}/{valid} "
+            f"vs random={sum(t['random_correct'] for t in trials)}/{valid} "
+            f"discordant n10={n_10} n01={n_01} sign-test p={p_value:.4f}"
+        )
+    return summary
 
 
 if __name__ == "__main__":
