@@ -11,7 +11,10 @@ from pathlib import Path
 
 IMAGE = "dllm-openexr-harness-compile-only"
 _DOCKERFILE_DIR = Path(__file__).resolve().parents[1] / "openexr_runtime/harness-compile-only"
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_SEED_CORPUS_HEX = _REPO_ROOT / "fixtures/openexr/c0-validity-preserving-zero.hex"
 _ERROR_LINE = re.compile(r"harness\.cc:\d+:\d+: (fatal )?error:")
+_COV_LINE = re.compile(r"cov: (\d+)")
 _image_ready = False
 
 
@@ -21,6 +24,21 @@ class CompileResult:
 
     compiled: bool
     error: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class FuzzResult:
+    """Compile-and-fuzz outcome for RQ3's fixed-budget coverage comparison.
+
+    ``edges`` is ``None`` when the harness did not compile -- callers doing an
+    intent-to-treat analysis (plan Task 10 protocol item 3: primary outcome defined
+    over ALL attempted trials, not just compiling ones) should treat that as 0 edges,
+    not drop the trial.
+    """
+
+    compiled: bool
+    compile_error: str | None
+    edges: int | None
 
 
 def _ensure_image() -> None:
@@ -76,3 +94,57 @@ def compile_harness(source: str, *, mode: str = "coverage", timeout: float = 90.
         ]
         error = "\n".join(line.replace("/work/", "") for line in lines[:3]) or result.stderr[-500:]
         return CompileResult(compiled=False, error=error)
+
+
+def compile_and_fuzz(
+    source: str, *, fuzz_seconds: float, seed: int, timeout: float = 180.0
+) -> FuzzResult:
+    """Compile, then fuzz for exactly ``fuzz_seconds`` and return the final edge count.
+
+    Fuzzes from the pinned C0 seed corpus. A fixed-duration run (not a fixed-executions
+    run) matches plan Task 10 item 2's "match arms on fuzzing time": every arm gets the
+    same wall-clock fuzzing budget regardless of how fast or slow its own binary
+    executes.
+    """
+    _ensure_image()
+    with tempfile.TemporaryDirectory() as tmp:
+        work = Path(tmp)
+        work.chmod(0o777)
+        (work / "harness.cc").write_text(source)
+        corpus = work / "corpus"
+        corpus.mkdir()
+        (corpus / "c0").write_bytes(bytes.fromhex(_SEED_CORPUS_HEX.read_text().strip()))
+        uid = f"{os.getuid()}:{os.getgid()}"
+        build = subprocess.run(  # noqa: S603 - fixed argv, shell=False.
+            ["docker", "run", "--rm", "-u", uid, "-v", f"{work}:/work", IMAGE, "coverage"],  # noqa: S607
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+        if build.returncode != 0 or not (work / "coverage_target").exists():
+            lines = [
+                line
+                for line in (*build.stdout.splitlines(), *build.stderr.splitlines())
+                if _ERROR_LINE.search(line)
+            ]
+            error = (
+                "\n".join(line.replace("/work/", "") for line in lines[:3])
+                or build.stderr[-500:]
+            )
+            return FuzzResult(compiled=False, compile_error=error, edges=None)
+        fuzz = subprocess.run(  # noqa: S603 - fixed argv, shell=False.
+            [  # noqa: S607
+                "docker", "run", "--rm", "--entrypoint", "/work/coverage_target",
+                "-u", uid, "-v", f"{work}:/work", "-w", "/work", IMAGE,
+                f"-max_total_time={int(fuzz_seconds)}", f"-seed={seed}",
+                "-print_final_stats=1", "-close_fd_mask=3", "/work/corpus",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=fuzz_seconds + 60,
+            check=False,
+        )
+        covered = _COV_LINE.findall(fuzz.stdout + fuzz.stderr)
+        edges = int(covered[-1]) if covered else None
+        return FuzzResult(compiled=True, compile_error=None, edges=edges)

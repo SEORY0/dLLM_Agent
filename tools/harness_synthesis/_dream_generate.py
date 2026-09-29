@@ -40,8 +40,20 @@ def main() -> None:
     # a prompt design reliably reproduces one outcome, so the determinism there was
     # incidental, not a flaw in what was measured.
     parser.add_argument("--alg-temp", type=float, default=0.0)
+    # For a remask round (RQ3): the full post-prompt continuation, as a JSON list of
+    # ints, with mask_token_id at the positions to regenerate and every other position
+    # holding the token the previous round already committed. When given, this
+    # overrides --new-tokens (set to len(continuation)) and is injected as the initial
+    # state instead of Dream's own default all-mask continuation.
+    parser.add_argument("--init-continuation-file", default=None)
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
+
+    init_continuation: list[int] | None = None
+    if args.init_continuation_file is not None:
+        with open(args.init_continuation_file) as handle:  # noqa: PTH123 - tools/ script.
+            init_continuation = json.load(handle)
+        args.new_tokens = len(init_continuation)
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_path, trust_remote_code=True)
     model = (
@@ -71,6 +83,9 @@ def main() -> None:
         step: int | None, x: torch.Tensor, logits: torch.Tensor | None
     ) -> torch.Tensor:
         nonlocal previous_masked
+        if step is None and init_continuation is not None:
+            continuation = torch.tensor([init_continuation], device=x.device, dtype=x.dtype)
+            x = torch.cat([prompt_ids, continuation], dim=1)
         token_ids = x[0].tolist()
         steps_log.append({"step": step, "token_ids": token_ids})
         masked = {position for position, token in enumerate(token_ids) if token == mask_token_id}

@@ -31,6 +31,7 @@ def run_dream_generate(  # noqa: PLR0913 - one CLI-adapter boundary, not worth s
     new_tokens: int = 256,
     steps: int = 128,
     alg_temp: float = 0.0,
+    init_continuation_file: str | None = None,
 ) -> dict[str, Any]:
     """Invoke ``_dream_generate.py`` under the Dream venv and load its JSON output.
 
@@ -38,32 +39,36 @@ def run_dream_generate(  # noqa: PLR0913 - one CLI-adapter boundary, not worth s
     reveal-order selection deterministic-argmax, so ``seed`` barely affects the
     output -- see ``_dream_generate.py``'s own note. Pass a nonzero ``alg_temp`` for
     any experiment that needs ``seed`` to produce genuinely independent draws.
+
+    ``init_continuation_file``, when given, resumes generation from an existing
+    (partially remasked) continuation instead of a fresh all-mask one -- Task 10's
+    remask round. ``new_tokens`` is ignored in that case (``_dream_generate.py``
+    derives it from the continuation's length).
     """
     env = None
     if gpu is not None:
         env = {**os.environ, "CUDA_VISIBLE_DEVICES": str(gpu)}
-    subprocess.run(  # noqa: S603 - fixed argv (this repo's own script + venv), shell=False.
-        [
-            str(DREAM_VENV_PYTHON),
-            str(DREAM_GENERATE),
-            "--model-path",
-            MODEL_PATH,
-            "--prompt",
-            prompt,
-            "--seed",
-            str(seed),
-            "--new-tokens",
-            str(new_tokens),
-            "--steps",
-            str(steps),
-            "--alg-temp",
-            str(alg_temp),
-            "--out",
-            str(out_path),
-        ],
-        check=True,
-        env=env,
-    )
+    argv = [
+        str(DREAM_VENV_PYTHON),
+        str(DREAM_GENERATE),
+        "--model-path",
+        MODEL_PATH,
+        "--prompt",
+        prompt,
+        "--seed",
+        str(seed),
+        "--new-tokens",
+        str(new_tokens),
+        "--steps",
+        str(steps),
+        "--alg-temp",
+        str(alg_temp),
+        "--out",
+        str(out_path),
+    ]
+    if init_continuation_file is not None:
+        argv.extend(["--init-continuation-file", init_continuation_file])
+    subprocess.run(argv, check=True, env=env)  # noqa: S603 - fixed argv, shell=False.
     return json.loads(out_path.read_text())
 
 

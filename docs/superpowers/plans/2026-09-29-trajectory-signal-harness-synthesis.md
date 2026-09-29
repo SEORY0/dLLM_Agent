@@ -387,15 +387,81 @@ prompt/온도 설정. 이들은 "RQ1이 완전히 틀렸다"가 아니라 "이 M
 않았다"는 의미로 남겨둔다. Task 10부터는 RQ3(개입 질문)에 집중하고, RQ1 미지지 사실을
 숨기거나 RQ3 결과로 소급 정당화하지 않는다(§Task 10의 기존 주의사항 참고).
 
-- [ ] **Task 10 — RQ3 측정 (GPU 필요).** confidence-국소화 대 무작위 remask, 사전등록
-  임계값과 비교. baseline은 Task 8 후속의 `directed` 프레이밍(예시별 명시적 참조 지시,
-  24/24 컴파일·24/24 지시 준수)으로 확보됐다 — `undirected shared`는 쓰지 않는다.
-  **주의(Task 9 이후 갱신)**: RQ3는 "confidence로 고른 위치를 고치면 무작위로 고친 것보다
-  결과가 나아지는가"라는 개입 질문이고, RQ1(순수 관측 상관관계)이 기각됐다고 자동으로
-  기각되는 건 아니다 — 틀린 위치를 못 맞혀도 remask 자체(반복 수정 기회)가 무작위보다
-  나은 결과를 낼 가능성은 남아있다. 다만 RQ1의 미재현은 이 개입이 통할 사전 확률을
-  낮추는 증거이므로, Task 11 종합 보고서에서는 두 결과를 분리해서 정직하게 병기해야 한다
-  — RQ3가 양성이어도 "그러니까 confidence localization이 통한다"고 되짚어 주장하면 안 된다.
+- [~] **Task 10 — RQ3 측정 (GPU 사용 중, 스모크 완료·본 실험 미착수).** confidence-국소화
+  대 무작위 remask, 사전등록 임계값과 비교. baseline은 Task 8 후속의 `directed` 프레이밍
+  (예시별 명시적 참조 지시)이다. **주의(Task 9 이후 갱신)**: RQ3는 "confidence로 고른
+  위치를 고치면 무작위로 고친 것보다 결과가 나아지는가"라는 개입 질문이고, RQ1(순수
+  관측 상관관계)이 기각됐다고 자동으로 기각되는 건 아니다 — 틀린 위치를 못 맞혀도 remask
+  자체(반복 수정 기회)가 무작위보다 나은 결과를 낼 가능성은 남아있다. 다만 RQ1의 미재현은
+  이 개입이 통할 사전 확률을 낮추는 증거이므로, Task 11 종합 보고서에서는 두 결과를
+  분리해서 정직하게 병기해야 한다 — RQ3가 양성이어도 "그러니까 confidence localization이
+  통한다"고 되짚어 주장하면 안 된다.
+
+### Task 10 스모크 (완료)
+
+**동결된 프로토콜**(스모크 결과를 보기 전에 `tools/harness_synthesis/rq3_smoke.py` 상단
+docstring에 확정, 결과를 본 뒤 바꾸지 않음):
+
+1. `directed` KB baseline. 매 trial마다 초기 harness 1개를 생성하고, **같은 harness**를
+   confidence-remask와 random-remask 두 arm으로 분기한다. 원본(수정 없음)은 reference arm으로
+   기록한다.
+2. arm은 eligible region(같은 harness에서 탐지된 동일 region 집합)과 regeneration
+   seed(둘 다 같은 seed — "어느 region을 고쳤는가"만 유일한 차이가 되게)로 맞춘다.
+   `remask_from_position_to_end`는 시작 위치부터 끝까지 전부 remask하므로 더 이른 위치를
+   고르면 무조건 더 많은 토큰을 고치게 된다 — 강제로 동일하게 만들지 않고(끝까지 remask해야
+   줄 길이가 늘거나 줄 수 있다는 기존 설계 이유 유지), 대신 매 trial마다 실제 remask된
+   토큰 수와 재생성 step 수를 arm별로 기록해 감사 가능하게 한다.
+3. 1차 outcome은 **시도한 모든 trial**(컴파일 실패 포함) 위에서 정의: 고정 fuzz 시간 아래
+   edge coverage(컴파일 실패 시 edges=0으로 처리, intent-to-treat). 컴파일 성공률은 별도
+   보고. 컴파일 조건부 edge는 2차. reference 대비 delta가 핵심 비교, origin 예시별로 층화.
+4. `alg_temp=0.5` 전 구간, 매 trial 코드를 sha256으로 append-only 원장에 기록.
+5. 스모크는 확증 데이터로 안 쓴다 — 메커니즘·비용 대칭성·outcome 변동성·fitness 측정
+   가능성만 검증하고, 그 관측 분산으로 본 실험 표본수를 계산한 뒤 성공 기준과 분석 계획을
+   먼저 고정한다.
+
+**스모크 실행**: GPU 2장, 예시 3개 × seed 4개 = 12 trial(fuzz 20초). 원시 결과
+`docs/assets/harness-rq3-smoke-results-20260929.json`, 원장(36줄, trial당 3 arm)
+`docs/assets/harness-rq3-smoke-ledger-20260929.jsonl`.
+
+**스모크 발견 1 — `directed` baseline이 실제로는 훨씬 덜 안정적이다.** Task 8b는 (같은
+프롬프트·같은 토큰 예산으로) seed 3000000~3000007에서 24/24 컴파일을 얻었다. 이번 스모크는
+**다른** seed(5000000~5000003대)에서 reference arm(수정 없음, `directed` 그대로) 컴파일이
+**5/12(42%)**에 그쳤다. 실패 양상은 다양하다: 환각 헤더(`'ImfMultiPartInputFile' file not
+found`), 환각 API(`no member named 'checkOpenEXRFile' in namespace 'Imf'`), 미완성
+클래스(`expected '}'`, budget 소진으로 문장이 안 끝남). **Task 8b의 24/24는 8개 seed
+표본의 우연**이었을 가능성이 높다 — `directed`의 실제 신뢰도는 100%가 아니라 훨씬 낮고
+seed에 따라 크게 흔들린다. 이건 RQ3의 baseline 자체가 노이즈가 크다는 뜻이라, 나중에
+`directed` 자체의 컴파일률을 더 큰 N으로 재확인할 필요가 있다(이 계획에는 아직 없음).
+
+**스모크 발견 2 — arm 간 비용 비대칭이 실제로 크다(감사 항목 2 확인됨).** 예: `MultiPartInputFile`
+seed=5000001에서 confidence arm은 493 토큰/246 step, random arm은 756 토큰/378 step —
+약 1.5배 차이. `InputFile` seed=5000000: confidence 646/323 대 random 752/376. 강제로
+맞추지 않기로 한 설계 그대로지만, 실제로 상당한 비대칭이 있다는 걸 확인했다 — 본 실험
+분석에서 이 비용을 공변량으로 보고하거나 최소한 병기해야 한다.
+
+**스모크 발견 3 — 흥미로운 개별 사례, 결론은 아님.** `InputFile` seed=5000003: reference와
+random 둘 다 컴파일 실패(0 edges)였는데 confidence arm만 컴파일에 성공해 1135 edges를
+얻었다(delta +1135). 반대 방향 사례는 없었다. n=1이라 잡음일 수도 있다 — 본 실험이
+있어야 재현되는지 알 수 있다.
+
+**1차 outcome 집계(12 trial, ties=양쪽 delta 동률인 경우, 대부분 양쪽 다 컴파일 실패한
+"양쪽 0" 동률)**: confidence가 random보다 나은 trial 3개, random이 나은 trial 2개, 동률
+7개(그중 상당수가 "reference도 arm도 다 컴파일 실패"인 정보량 없는 동률). 컴파일률 자체는
+reference 5/12, confidence 7/12, random 5/12로 세 arm이 비슷하다.
+
+**본 실험 표본수 계산**: RQ1과 같은 방식(McNemar paired-proportions, `power_calc.
+required_n_from_discordant_pairs`)을 "confidence가 이겼다/random이 이겼다" 이산 승패에
+적용한다(`pi_10=3/12≈0.25`, `pi_01=2/12≈0.167` — 스모크 자체에서 관측된, 아주 작은
+차이). 결과: **N=469**. 표본이 이렇게 커진 이유는 (a) 관측된 승률 차이가 원래 작고, (b)
+컴파일 실패로 인한 동률이 많아 유효 표본을 희석하기 때문이다. trial당 대략
+GPU-분(초기 생성+remask 2회+컴파일·fuzz 3회) 단위이므로, N=469는 GPU 2장으로도 상당한
+시간이 든다 — 실행 전에 사용자 확인이 필요하다.
+
+**동결한 것(본 실험을 실제로 시작하기 전까지 바꾸지 않음)**: 위 §1-5 프로토콜 그대로,
+1차 outcome 정의(고정 fuzz 시간 edge coverage, intent-to-treat), 분석 방법(discordant-pair
+sign test, RQ1과 동일 방식), 유의수준 alpha=0.05·power=0.80. **아직 하지 않은 것**: 본
+실험 실행(N=469를 그대로 쓸지, `directed` baseline 신뢰도부터 먼저 다시 재는 게 나을지는
+사용자 결정 대기).
 - [ ] **Task 11 — 종합 보고서.** `docs/research-report.md`의 `[MEASURED]`/`[INFERRED]`/
   `[FUTURE EXPERIMENT]` 태깅 규칙을 따라 RQ1/RQ3/a안 결과를 종합. 취약점 발견이나 dLLM
   우월성을 주장하지 않는다(기존 문서들의 원칙과 동일).
