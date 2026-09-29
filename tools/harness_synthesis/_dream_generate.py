@@ -29,6 +29,17 @@ def main() -> None:
     parser.add_argument("--seed", type=int, required=True)
     parser.add_argument("--new-tokens", type=int, default=256)
     parser.add_argument("--steps", type=int, default=128)
+    # alg_temp=0.0 (the default below) makes Dream's reveal-order selection an
+    # argmax/topk, not a torch.multinomial draw -- the seed then never actually enters
+    # token selection, and different --seed values mostly reproduce the same output
+    # (observed: RQ1 measurement, only floating-point-kernel jitter breaks the tie
+    # occasionally). A nonzero alg_temp routes reveal-order through
+    # torch.multinomial(..., generator seeded by --seed), giving genuine independent
+    # draws -- required for any experiment (like RQ1) that assumes N seeds are N
+    # independent samples. Task 8/8b's conclusions don't need this: they asked whether
+    # a prompt design reliably reproduces one outcome, so the determinism there was
+    # incidental, not a flaw in what was measured.
+    parser.add_argument("--alg-temp", type=float, default=0.0)
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
 
@@ -93,7 +104,7 @@ def main() -> None:
         temperature=0.5,
         top_p=0.95,
         alg="entropy",
-        alg_temp=0.0,
+        alg_temp=args.alg_temp,
         return_dict_in_generate=True,
         generation_tokens_hook_func=tokens_hook,
     )

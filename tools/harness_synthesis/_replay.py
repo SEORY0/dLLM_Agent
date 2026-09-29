@@ -30,8 +30,15 @@ def run_dream_generate(  # noqa: PLR0913 - one CLI-adapter boundary, not worth s
     gpu: int | None = None,
     new_tokens: int = 256,
     steps: int = 128,
+    alg_temp: float = 0.0,
 ) -> dict[str, Any]:
-    """Invoke ``_dream_generate.py`` under the Dream venv and load its JSON output."""
+    """Invoke ``_dream_generate.py`` under the Dream venv and load its JSON output.
+
+    ``alg_temp=0.0`` (the default, matching every prior call site) makes Dream's
+    reveal-order selection deterministic-argmax, so ``seed`` barely affects the
+    output -- see ``_dream_generate.py``'s own note. Pass a nonzero ``alg_temp`` for
+    any experiment that needs ``seed`` to produce genuinely independent draws.
+    """
     env = None
     if gpu is not None:
         env = {**os.environ, "CUDA_VISIBLE_DEVICES": str(gpu)}
@@ -49,6 +56,8 @@ def run_dream_generate(  # noqa: PLR0913 - one CLI-adapter boundary, not worth s
             str(new_tokens),
             "--steps",
             str(steps),
+            "--alg-temp",
+            str(alg_temp),
             "--out",
             str(out_path),
         ],

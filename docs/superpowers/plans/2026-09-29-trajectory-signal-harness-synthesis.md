@@ -170,9 +170,14 @@ raw 텐서 스크립트, `dream_backend_smoke.py` — 프로젝트 venv에서 su
   `commit_confidence()`/`position_traces()`. 다중 remask 사이클(commit→remask→recommit)에서
   마지막으로 "고정된" commit을 고르는 로직이 핵심 — 기존 `TrajectoryStep`은 이 패턴을 구조적으로
   못 만든다(spec §4). fake trajectory로 10개 유닛 테스트.
-- [x] **Task 3 (경계 탐지만 완료, power calc는 별도) — `regions.py`.** 정규식 기반 statement/
-  `#include` 경계 탐지 + `region_at_line`(컴파일 오류 줄 매핑). 9개 유닛 테스트. **power
-  calculation 스크립트는 아직 작성 안 함** — Task 8 결과가 나온 뒤 그 분산으로 계산.
+- [x] **Task 3 — `regions.py` + `power_calc.py`.** 정규식 기반 statement/`#include` 경계
+  탐지 + `region_at_line`(컴파일 오류 줄 매핑), 9개 유닛 테스트. Power calc:
+  `power_calc.required_n_from_discordant_pairs`(Connor 1987 McNemar 공식, 교과서 예시
+  `pi_10=0.5, pi_01=0.1 → n=27` 그대로 재현) + `required_n`(마진 확률만으로 계산하는 편의
+  함수, 두 detector 간 독립을 가정 — feasibility pilot이 정확한 pairing을 보존하지 않아서
+  마진 확률(11/16, 3/16)만 남아있기 때문. 두 detector가 양의 상관관계일 실제 상황에서는
+  이 가정이 필요 N을 과대추정하는 쪽으로만 틀린다). 계산된 N: **17**(alpha=0.05,
+  power=0.80). 7개 유닛 테스트.
 - [x] **Task 4 — `trajectory_hook.py` + `harness_reference.py`.** `src/`는 torch를 직접
   import하지 않는다는 이 저장소 관례(`runtime/ar_model_loader.py`) 그대로 따라, 실제 텐서 연산
   (softmax/entropy/margin)은 `tools/harness_synthesis/_dream_generate.py`(Dream venv에서 실행,
@@ -265,8 +270,53 @@ raw 텐서 스크립트, `dream_backend_smoke.py` — 프로젝트 venv에서 su
 
   원시 결과: `docs/assets/harness-kb-diversity-directed-results-20260929.json`. 원장은
   기존 파일에 이어 append(총 120줄, `docs/assets/harness-kb-diversity-ledger-20260929.jsonl`).
-- [ ] **Task 9 — RQ1 재측정 (GPU 필요).** Task 3의 표본수로 관측 상관관계 측정, 사전등록
-  임계값과 비교.
+
+  **사후 주의(Task 9에서 발견)**: 이 실험은 전부 `alg_temp=0.0`으로 돌았다 — 즉 seed가
+  거의 결과를 안 바꾼다(아래 Task 9 참고). 하지만 여기서 측정한 것("이 프롬프트가 컴파일
+  가능/지시 준수를 안정적으로 재현하는가")은 애초에 표본 간 독립성을 요구하지 않으므로
+  결론은 그대로 유효하다 — 다만 "8 seed"는 통계적 의미의 8개 독립 시행이 아니라 "8번
+  반복해도 항상 같은 결과"에 더 가깝다는 점은 밝혀둔다.
+- [x] **Task 9 — RQ1 재측정 (GPU 0·1 사용, 완료. 결과: pilot 미재현).** `tools/harness_synthesis/rq1_measurement.py`,
+  KB 없이 프롬프트만으로 생성 → 컴파일 실패 시 첫 오류 줄이 속한 region을 정답으로 삼아
+  (1) `select_lowest_confidence_region`이 맞히는가, (2) 매칭된 `select_random_region` 추첨이
+  맞히는가를 페어로 기록. 목표 N=17(Task 3), GPU 2장에 9개씩 분산 = 18 valid trial.
+
+  **방법론 버그 발견·수정(진행 중 실제로 겪음)**: 첫 시도는 `alg_temp=0.0`(이전 모든
+  실험과 동일한 설정)으로 돌렸는데, GPU0의 9개 시도 중 distinct 코드가 4개, GPU1은
+  5개뿐이었다 — seed를 바꿔도 대부분 똑같은 출력이 나왔다는 뜻. 원인을 추적하니
+  Dream의 `alg_temp=0.0`은 reveal 순서 선택을 `torch.topk`(결정론적)로 만들고, 토큰
+  선택 자체도 `sample_tokens()`가 `probs.max(dim=-1)`(argmax)를 쓰기 때문에 `seed`가
+  실제로 출력에 거의 영향을 못 준다 — 순수 torch RNG 자체는 seed에 정상 반응함을
+  별도로 확인했다(`torch.manual_seed`는 정상 동작, 문제는 Dream의 디코딩 알고리즘
+  자체가 이 설정에서 결정론적이라는 것). `_dream_generate.py`에 `--alg-temp` 옵션을
+  노출해 RQ1에서만 `alg_temp=0.5`로 재실행(`torch.multinomial`을 타게 만들어 seed가
+  실제로 결과를 바꾸게 함) — 재검증 결과 18/18 전부 서로 다른 코드.
+
+  **이 발견이 미치는 영향**: 원래 feasibility pilot(11/16 대 3/16, Result 1)도 같은
+  `alg_temp=0.0` 설정으로 돌렸었다 — 즉 그 16개 샘플도 진짜 16개의 독립 표본이 아니었을
+  가능성이 높다(정확히 몇 개가 중복이었는지는 그 실행에서 개별 코드를 보존하지 않아
+  사후에 확인 불가). Task 8/8b의 결론("이 프롬프트가 X를 안정적으로 재현하는가")은
+  독립 표본을 요구하지 않으므로 영향 없지만, RQ1처럼 표본 간 변동 자체가 신호인
+  실험에서는 `alg_temp=0.0`이 근본적으로 잘못된 선택이었다.
+
+  **최종 결과 (재검증된 18개 진짜 독립 표본)**:
+
+  | | confidence 정답 | random 정답 |
+  |---|---|---|
+  | 18개 중 | 1/18 (5.6%) | 3/18 (16.7%) |
+
+  discordant n10(confidence만 맞음)=1, n01(random만 맞음)=3, exact two-sided sign-test
+  p=0.625. **pilot의 방향(confidence > random)이 재현되지 않았다** — 점추정은 오히려
+  반대 방향이고, 유의하지도 않다. N=18은 pilot 크기의 효과(11/16 대 3/16)를 검출하도록
+  설계된 표본수라, 그보다 작은 실제 효과가 있어도 이 실험은 그것을 검출할 검정력이 없다
+  — "효과 없음을 증명"이 아니라 "pilot이 시사한 크기의 효과는 재현되지 않았다"까지만
+  말할 수 있다. `docs/research-report.md`의 `[MEASURED]` 태그로 종합 보고서(Task 11)에
+  이 결과를 pilot의 `[INFERRED]`(재현 실패로 신뢰도 하향) 수치와 나란히 병기해야 한다.
+
+  원시 결과: `docs/assets/harness-rq1-results-20260929.json`(18개 valid trial만).
+  원장은 `docs/assets/harness-rq1-ledger-20260929.jsonl`(총 36줄 — 앞 18줄은
+  `alg_temp=0.0`으로 돌린 무효 시도, 뒤 18줄이 `alg_temp=0.5`로 재검증한 유효 결과;
+  append-only 원칙대로 무효 시도도 지우지 않고 남겼다).
 - [ ] **Task 10 — RQ3 측정 (GPU 필요).** confidence-국소화 대 무작위 remask, 사전등록
   임계값과 비교. baseline은 Task 8 후속의 `directed` 프레이밍(예시별 명시적 참조 지시,
   24/24 컴파일·24/24 지시 준수)으로 확보됐다 — `undirected shared`는 쓰지 않는다.
