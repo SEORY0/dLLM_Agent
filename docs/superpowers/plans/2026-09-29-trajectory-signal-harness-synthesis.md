@@ -584,14 +584,88 @@ Gate 4가 더 심각해 그 행동이 적용된다. **Gate 1(표본수 재계산
 못했다** — 즉 지금 이 substrate로는 RQ3 표본수를 다시 계산해서 바로 진행하면 안
 된다.
 
-**결론과 제안**: `directed` 프레이밍 자체가 아니라 **`InputFile`/`MultiPartInputFile`
-두 예시가 요구하는 커스텀 `IStream` 구현이 모델에게 근본적으로 어렵다**는 것이
-원인으로 보인다. `checkOpenEXRFile`만 놓고 보면 72.7%(CI 51.8~86.8%)로 Gate 1
-기준(≥40%)을 넉넉히 통과한다. 다음 결정은 사용자가 해야 한다: (a) RQ3를
-`checkOpenEXRFile` 단일 예시로 좁혀서 그 substrate로 표본수를 다시 계산, (b)
-`InputFile`/`MultiPartInputFile`용 KB 예시나 프롬프트를 개선해서 재감사, (c) 이
-방향(remask 개입 실험) 자체를 재검토. Task 11 종합 보고서에는 "RQ3 substrate
-안정성은 예시에 따라 근본적으로 다르다"는 이 결과를 그대로 기록해야 한다.
+**결론과 제안(완화된 표현)**: `directed` 프레이밍 전체가 아니라 **`InputFile`/
+`MultiPartInputFile` 두 예시가 요구하는 커스텀 `IStream` 구현 난이도가 유력한 주요
+원인으로 보인다**(n=21씩이고 "other" 15건 중 일부만 직접 읽어본 것이라 단정하지는
+않는다). `checkOpenEXRFile`만 놓고 보면 72.7%(CI 51.8~86.8%)로 Gate 1 기준(≥40%)을
+넉넉히 통과한다.
+
+### RQ3-B0v2 — 1회 한정 KB/프롬프트 개선 재감사 (완료, **gate 통과 실패**)
+
+사용자가 옵션 (b)(KB/프롬프트 개선, 1회 한정)를 선택해 진행했다. 기존 v1 결과·원장·
+동결 프로토콜은 전혀 건드리지 않았고, 개선판은 `kb_v2_directed_prompt.py` +
+`rq3_b0_baseline_audit_v2.py`로 완전히 별도 파일에 기록했다.
+
+**바꾼 것(딱 1가지 종류)**: 예시 코드(`MemoryIStream` 클래스, API 호출) 자체는 v1과
+바이트 단위로 동일하게 유지했다 — 실제 설치된 헤더로 이미 계약대로 맞다고 재확인했기
+때문이다(`/opt/openexr-coverage/include/OpenEXR/ImfIO.h`를 다시 열어 `grep
+"virtual|= 0"`로 확인: `IStream`은 `read`/`tellg`/`seekg` 세 개만 pure virtual이고
+나머지(`isMemoryMapped`, `clear`, `size`, `isStatelessRead` 등)는 기본 구현이 있어
+오버라이드할 필요가 없다 — 기존 예시는 이미 정확했다). 바꾼 건 프롬프트 텍스트뿐이다:
+(1) 위 3개 시그니처를 명시하는 "IStream 계약" 문단 추가, (2) libFuzzer 진입점 시그니처
+계약 명시, (3) "이 예시를 글자 그대로 베껴라, 시그니처를 하나도 바꾸지 마라"는 명시적
+지시 추가. **고정 IStream을 코드로 강제 주입하지는 않았다** — 그건 "harness를 모델이
+쓴다"는 과제 범위 자체를 바꾸는 것이라 임의로 적용하지 않고 이 문서에 옵션으로만
+남긴다(아래 "다음 결정" 참고).
+
+**재감사 기준(실행 전 고정, v1과 동일 임계값 재사용 — 결과 보고 새로 안 만듦)**: Gate
+4(컴파일률<40% 그리고 hit_budget<30% → substrate 재검토), Gate 2(격차≥40%p →
+재설계), Gate 1(전부 해당 없음 → pilot 진행). 새 seed 8,000,000–8,000,063(64개,
+8,000,000–8,000,999 전체를 이후 RQ3 확증 실험에서 사용 금지 구간으로 예약).
+`checkOpenEXRFile` 8개는 회귀
+확인용 대조군(프롬프트가 이 예시에도 약간 바뀌었으므로), `InputFile`/
+`MultiPartInputFile` 각 28개.
+
+| | 컴파일 | Wilson 95% CI | v1과 비교 |
+|---|---|---|---|
+| checkOpenEXRFile (대조군, n=8) | 8/8 = 100.0% | [67.6%, 100%] | v1 72.7%, 회귀 없음(CI 겹침) |
+| InputFile (n=28) | 3/28 = 10.7% | [3.7%, 27.2%] | v1 19.0% — 개선 안 됨(CI 겹쳐서 유의한 악화는 아님) |
+| MultiPartInputFile (n=28) | 3/28 = 10.7% | [3.7%, 27.2%] | v1 4.8% — 명목상 소폭 상승, CI 겹침 |
+
+hit_budget은 v1과 동일하게 0/64(0.0%) — 여전히 budget 문제가 아니다. 격차는 오히려
+**89.3%p**로 v1(68.0%p)보다 커졌다(주로 `checkOpenEXRFile`의 8/8 소표본 상한 효과).
+
+**decision gate 판정**: **Gate 4 다시 발동**(InputFile·MultiPartInputFile 둘 다
+<40% 그리고 hit_budget<30%). 사전에 정한 대로, **결과를 보고 기준을 다시 조정하지
+않는다** — 즉 이 1회 개선 시도는 실패로 판정하고 v3는 만들지 않는다.
+
+**실패 사례 재확인(분류기는 안 건드리고 원문만 다시 읽음)**: v2에서 새로 나타난 오류
+패턴 — `only virtual member functions can be marked 'override'`, `expected class
+name` — 는 "글자 그대로 베껴라"는 지시가 오히려 클래스 선언부를 미묘하게 망가뜨리는
+경우가 늘었을 가능성을 보여준다(추측이며 확정은 아니다 — 프롬프트가 더 길어진 것
+자체가 요인일 수도 있다). 이 1회 시도로는 원인을 더 좁히지 못했다.
+
+**결론**: 프롬프트 문구를 더 명시적으로 만드는 것만으로는 `InputFile`/
+`MultiPartInputFile`을 고치지 못했다. 다음 결정은 사용자 몫이다: (a) RQ3를
+`checkOpenEXRFile` 단일 substrate로 좁혀서 표본수 재계산(v1·v2 양쪽에서 안정적으로
+검증됨), (b) 고정 IStream을 코드로 주입하는 방식으로 과제 범위를 바꿔서 재시도(별도
+승인 필요), (c) `InputFile`/`MultiPartInputFile`을 RQ3에서 완전히 제외. **gate가
+통과하지 못했으므로 소규모 paired remask pilot은 진행하지 않았다** — 사용자 지시대로
+"재감사 통과 시에만" 진행하는 단계였다.
+
+원시 결과 `docs/assets/harness-rq3-b0v2-audit-results-20260930.json`, 원장(64줄,
+`arm="b0v2-audit"`) `docs/assets/harness-rq3-b0v2-ledger-20260930.jsonl`.
+
+### coverage 측정 변동성 확인 (사용자 요청)
+
+B0 v1의 `checkOpenEXRFile` 성공 16건 중 **9건이 완전히 동일한 소스 코드**였고(모델이
+예시를 그대로 베낀 경우), 그 9건의 edge coverage는 **1795~1932**(스프레드 137,
+평균 대비 약 7.6%)로 달랐다 — 컴파일된 바이너리가 똑같은데도 fuzz 결과가 흔들린다는
+뜻이라 별도로 확인했다.
+
+그중 하나를 고정해 같은 바이너리를 다른 libFuzzer `-seed`로 10회, 그리고 seed=1을
+2회 더 반복 fuzz(전부 `fuzz_seconds=20`)했다:
+- seed 1~10: 1861, 1922, 1848, 1836, 1871, 1823, 1832, 1829, 1831, 1811 (스프레드 111)
+- seed=1을 3번(원래 1회 + 반복 2회): 1861, **1861, 1830** — **같은 seed조차 정확히
+  재현되지 않는다.**
+
+**원인**: `-max_total_time=20`(벽시계 기준 예산)을 쓰고 있어서, 실행 횟수 자체가
+시스템 타이밍에 따라 흔들린다 — `-seed`가 같아도 몇 번 실행됐는지가 매번 다르다.
+**결론**: 동일 코드라도 이 측정 방식에서는 ±100 edge(평균 대비 ~5~7%) 정도의
+순수 측정 잡음이 있다. RQ3의 confidence 대 random 비교가 감지해야 할 실제 효과가
+이 잡음보다 작으면 단일 fuzz 실행만으로는 구분이 안 된다 — pilot을 설계한다면 arm당
+여러 번 fuzz해서 평균을 내거나, `-runs=`(고정 실행 횟수)로 바꿔서 이 잡음원 자체를
+없애는 걸 고려해야 한다. 원시 수치는 `docs/assets/harness-rq3-coverage-variance-check-20260930.json`.
 
 - [ ] **Task 11 — 종합 보고서.** `docs/research-report.md`의 `[MEASURED]`/`[INFERRED]`/
   `[FUTURE EXPERIMENT]` 태깅 규칙을 따라 RQ1/RQ3/a안 결과를 종합. 취약점 발견이나 dLLM
