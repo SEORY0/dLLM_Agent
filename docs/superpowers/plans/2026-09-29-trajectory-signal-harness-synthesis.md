@@ -899,9 +899,12 @@ n=12(비동률 9)로는 애초에 작은 효과를 감지할 힘이 없으므로
 **N=469 본 확증 실험은 계속 보류.** 추가 프롬프트 튜닝도 진행하지 않았다 — 사용자
 지시대로 이번 라운드는 감사 + 재설계 + 소규모 pilot 보고까지만.
 
-- [ ] **Task 11 — 종합 보고서.** `docs/research-report.md`의 `[MEASURED]`/`[INFERRED]`/
-  `[FUTURE EXPERIMENT]` 태깅 규칙을 따라 RQ1/RQ3/a안 결과를 종합. 취약점 발견이나 dLLM
-  우월성을 주장하지 않는다(기존 문서들의 원칙과 동일).
+- [x] **Task 11 — 종합 보고서.** 범위 조정: `docs/research-report.md`는 PrimeVul/CyberGym
+  기반의 별도 취약점-에이전트 연구 트랙(H1–H5 factorial, jsoncons/OpenEXR native
+  tournament)을 다루는 문서이고 이 harness-synthesis RQ1/RQ3와는 서로 다른 연구
+  질문·데이터라, 거기에 종합하면 두 트랙이 섞인다. 대신 아래 §8에 이 문서 자체 안에서
+  전체 파이프라인·정정된 표본수·판정 근거·한계를 종합했다. 취약점 발견이나 dLLM
+  우월성은 주장하지 않는다(기존 문서들의 원칙과 동일).
 
 ## 7. 이 계획이 하지 않는 것
 
@@ -909,3 +912,75 @@ n=12(비동률 9)로는 애초에 작은 효과를 감지할 힘이 없으므로
 - RL 기반 remask 정책, 다중 타겟, 4개 모델 전부 지원, 풀 AST 파서는 spec §5 그대로 기각.
 - "모델이 harness를 완전히 새로 발명한다"는 주장은 하지 않는다 — Task 8이 보여주는 것은
   최선의 경우에도 "검증된 예시를 다양하게 변형"이다.
+
+## 8. 종합 결론과 RQ3 종료 (2026-09-30)
+
+**범위**: 이 절은 confidence 기반 remask 개입(RQ3)과 그 전제였던 RQ1(confidence
+localization) 연구를 **종료**한다. dLLM 기반 퍼징 에이전트 프로젝트 전체를 종료하는
+것이 아니다 — `docs/README.md`의 다른 트랙(온라인 포트폴리오 revision, jsoncons/OpenEXR
+native tournament, 결정론적 replay QA)은 이 문서와 무관하게 계속된다.
+
+### 8-1. 전체 파이프라인 재구성 (분기점부터 HEAD까지)
+
+각 단계의 목적·주요 변경·핵심 수치·판단 근거·한계. 원시 결과와 동결 프로토콜은
+모두 원래 위치에 그대로 보존했고, 이 절은 그것들을 다시 쓰는 것이 아니라 종합만 한다.
+
+| # | 단계 | 목적 | 핵심 수치 | 한계 |
+|---|---|---|---|---|
+| 0 | 문헌 조사 + feasibility 시뮬레이션 (`tools/harness_synthesis_feasibility/`) | 실제 GPU를 쓰기 전에, "compile-error feedback + 공유 지식베이스" 아이디어가 시뮬레이션 수준에서 말이 되는지 확인 | 시뮬레이션 상에서 confidence 조건이 두드러짐(실제 모델 아님) | 실제 Dream-Coder 출력이 아니라 손으로 구성한 시뮬레이션 — 이후 모든 단계의 전제가 아니라 "해볼 가치가 있는지"의 사전 점검일 뿐 |
+| 1 | Dream 런타임 격리 + 핵심 모듈 (Task 1–7: `token_trace`/`regions`/`remask`/`api_knowledge`, compile-only 이미지, `TrajectoryRecorder`, ledger) | 실제 Dream-Coder-7B를 GPU에서 돌리고, 그 결과를 torch 비의존 순수 모듈로 재생(replay)할 수 있는 프로덕션 경로 구축 | 실제 GPU smoke 통과 | 이 자체는 결과가 아니라 인프라 — RQ1/RQ3의 전제 조건 |
+| 2 | KB 다양성 실험 (Task 8/8b) | "모델이 검증된 예시를 KB로 주면 harness를 재현하는가" 확인 | `solo`/`shared` 조건에서 붕괴 관찰, `directed`(명시적 참조 지시) 조건에서 회복 | 단순 예시(`checkOpenEXRFile`)에서만 확인, 복잡한 예시는 이후 단계(B0/B0v2)에서 계속 실패로 드러남 |
+| 3 | RQ1 측정 (Task 3/9, option c) | confidence(및 entropy/margin)가 컴파일 오류 위치를 무작위보다 잘 짚는지 | 1차 N=18(파일럿, `alg_temp=0.0`이라 seed 간 독립성 결함 발견) → 재측정 N=112(confidence) → N=112(entropy/margin, 겹치지 않는 새 seed) = **독립 표본 총 224건**. 3개 신호 모두 무작위 대비 우위의 증거 없음 | 표본이 국소적(단일 헤더/단일 오류 유형), 오류 위치 정의가 statement 단위로 거칠음. **정정**: 이전 보고의 N=242는 계산 오류였고 실제로는 224 |
+| 4 | RQ3 스모크 (Task 10) | RQ1이 기각된 상태에서, remask 개입 자체(위치가 아니라 "고치는 행위")가 coverage를 바꾸는지 아주 작은 규모로 먼저 확인 | 12 trial, directed KB 기반. confidence 승 3/random 승 2/동률 7 — 방향성 자체보다 **동률이 압도적으로 많다는 것**(양쪽 다 컴파일 실패)이 더 중요한 관찰이었음 | 표본이 매우 작음; 이 결과에서 사전에 필요한 표본수를 역산하면 N=469(§8-2)가 나오지만, 그 전에 baseline이 안정적인지부터 의심하게 됨 |
+| 5 | RQ3-B0 baseline 안정성 감사 (완료, 64/64) | 본 실험 전에 "directed KB 기반이 충분히 안정적으로 컴파일되는가"만 서술적으로 확인(confidence-vs-random 비교 아님) | 컴파일률 32.8%(Wilson CI), budget-hit 0% — 사전 동결한 4단계 gate 중 **Gate 4(불안정) 발동** | `InputFile`/`MultiPartInputFile`의 `MemoryIStream` 구현 난이도가 원인으로 좁혀짐(예시별 실패 원인 분해로 확인) |
+| 6 | RQ3-B0v2 (완료, 재감사 실패) | KB/프롬프트를 한 차례만 명시적으로 개선(실제 이미지로 재검증한 IStream 계약 명시)한 뒤 재감사 | 새 seed 64건, 컴파일률 소폭 변화했으나 **Gate 4 재발동** | 프롬프트 문구 개선만으로는 부족 — "직접 전체 harness를 베끼게 하는" 접근 자체의 한계로 판단, 사용자가 과제 범위 변경(고정 scaffold)을 승인 |
+| 7 | RQ3-v3 고정 scaffold (완료, feasibility PASS) | 과제를 "전체 harness 생성"에서 "고정된 scaffold 위 1~4문장 본문 생성"으로 재정의해 IStream 구현 난이도를 구조적으로 제거 | feasibility 24/24: 추출 성공 100%, 다중 영역 66.7%, 본문 다양성 100% → PASS | 이 단계 자체는 "생성이 안정적으로 끝나는가"만 보는 것으로, confidence 비교가 아님 |
+| 8 | RQ3-v3 region 기반 pilot (완료, 표기 오류 정정됨) | 고정 scaffold 위에서 confidence-remask vs random-remask 소규모 비교 | 12 trial(같은 영역 5, 다른 영역 7 — **최초 보고 "8+3=11"은 계산 오류였고 이번에 정정**), 컴파일 reference 2/12, confidence 5/12, random 3/12 | **위치 선택과 수정량(remask 비용)이 설계상 분리되지 않음** — `region_count=2`인 9건 전부에서 confidence가 항상 더 뒤쪽(항상 더 싼) 문장을 골랐기 때문에, 컴파일률 차이가 "위치를 잘 짚어서"인지 "더 적게 고쳐서"인지 이 데이터만으로 가릴 수 없음(§RQ3-v3 절에서 상세 표·감사 포함) |
+| 9 | RQ3-v3-window 재설계 (완료) | 위치 선택과 수정량을 분리하기 위해, 고정 길이(8 토큰) window 후보로 재설계 | 12 trial(새 seed), 24/24 팔에서 window 밖 보존·scaffold 보존을 코드로 검증. 컴파일 reference 10/12, **confidence 7/12, random 9/12**(우위가 사라짐, 방향도 반대). ITT paired 부호검정 승5/패4/동률3, **p=1.0** | n=12로는 애초에 작은 효과를 감지할 힘이 없음 — "효과 없음의 증명"이 아니라 "이 표본에서 방향성의 증거가 전혀 없음" |
+
+### 8-2. 표본수 관련 정정
+
+- **N=469는 폐기된 과거 추정치다.** RQ3 스모크(12 trial, directed KB 기반)의 승/패/동률
+  비율에서 McNemar 공식으로 역산한 수치이며, 그 직후 B0 감사가 baseline 자체의
+  불안정성(Gate 4)을 드러내 **한 번도 사용되지 않았다**. 이후 B0v2·v3(고정 scaffold,
+  region 기반·window 기반)로 설계가 두 번 바뀌었으므로, N=469는 지금의 설계·모집단과
+  무관한 수치다. 앞으로 이 개입을 다시 검토한다면 표본수는 그때의 설계로 새로 계산해야
+  하며, N=469를 재사용하거나 참고 기준으로 삼지 않는다.
+- RQ1의 표본수는 224(N=18+N=112+N=112가 아니라 N=18이 첫 N=112에 포함되므로
+  18을 포함한 112 + 새 112 = 224)로 이미 정정되어 있다(§6-1).
+- RQ3-v3 pilot(region 기반, window 기반) 각각 n=12는 사전 검정력 계산 없이 고정한
+  탐색적 규모다 — 이 크기에서 "효과 없음"을 통계적으로 확정할 수 없고, 그렇게 서술하지
+  않는다.
+
+### 8-3. 결론 — 구분해서 읽을 것
+
+- **관측 (dLLM 실행 가능성)**: Dream-Coder-7B로 OpenEXR 퍼징 하네스(전체 또는 고정
+  scaffold 위 본문)를 생성하고, 실제로 컴파일·libFuzzer 실행까지 반복적으로 수행할 수
+  있다는 것은 여러 단계에 걸쳐 실제 GPU에서 확인됐다(수백 건의 생성·컴파일 시도,
+  성공·실패 모두 원장에 기록).
+- **결과 (RQ1/RQ3 판정)**: 지금까지 테스트한 조건(이 모델, 이 프롬프트·scaffold, confidence/
+  entropy/margin 신호 정의, RQ1의 224 표본과 RQ3의 여러 소규모 pilot)에서, confidence 기반
+  위치 선택/remask가 무작위보다 낫다는 **우위가 확인되지 않았다**. 이는 "confidence
+  신호에 효과가 없다"는 확정된 결론이 아니라 — 표본이 대체로 작고 일부는 검정력 계산
+  없이 진행된 탐색 단계였으므로 — "이 실험들에서 우위의 증거를 찾지 못했다"는 서술이다.
+- **미판정 (dLLM 대 AR)**: dLLM과 자기회귀(AR) 모델 사이의 퍼징 성능·버그 발견·계산
+  비용 우위는 이 연구에서 다루지 않았다 — 비교 대상이 되는 AR 실행 자체가 이 파이프라인
+  안에서 설계·수행된 적이 없다. 이 질문은 여전히 미판정으로 남는다.
+
+**쓰지 않을 표현**: "confidence 신호는 효과가 없다"(확정형), "dLLM은 퍼징을 못한다",
+"수정량(remask 비용) 차이 때문에 기존의 컴파일률 우위가 생겼다"(§8-1 8단계의 컴파일률
+차이는 위치·비용이 얽혀 있어 원인을 가를 수 없다고만 말할 수 있고, "비용 때문"이라고
+원인을 확정할 근거는 없다) — 이 문서와 이후 요약 어디서도 이런 데이터보다 강한 표현은
+쓰지 않는다.
+
+### 8-4. 종료 범위
+
+- confidence 기반 위치 선택/remask에 대한 추가 프롬프트 튜닝, 추가 pilot, N=469 또는
+  새로 계산한 어떤 N의 확증 실험도 진행하지 않는다.
+- `tools/harness_synthesis/`의 모든 스크립트와 `src/dllm_agent/harness_synthesis/`의
+  모든 모듈, 원시 결과·원장(`docs/assets/harness-*`)은 삭제하지 않고 그대로 보존한다 —
+  향후 다른 신호나 다른 설계로 이 질문을 다시 열 때의 출발점이자, 이번 탐색의 감사
+  기록이다.
+- dLLM 기반 퍼징 에이전트 프로젝트 자체, 그리고 `docs/README.md`에 기록된 다른
+  트랙들(온라인 포트폴리오 revision, native tournament, 결정론적 replay QA, AR-parent
+  control sampler 등)은 이 종료의 대상이 아니다.

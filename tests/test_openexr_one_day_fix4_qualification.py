@@ -30,6 +30,7 @@ from dllm_agent.experiments.openexr_one_day.qualification import (
     QualificationFact,
     QualificationGateName,
     collect_read_only_cache_measurements,
+    nvidia_gpu_topology_argv,
     write_qualification_fact,
 )
 from dllm_agent.experiments.openexr_one_day.qualification_collectors import (
@@ -532,11 +533,11 @@ def _measurements(  # noqa: C901, PLR0911, PLR0912
                 "lscpu_stderr": "",
                 "lscpu_stdout_sha256": sha256_bytes(lscpu_stdout.encode()),
                 "lscpu_stderr_sha256": sha256_bytes(b""),
-                "nvidia_smi_argv": [
-                    "nvidia-smi",
-                    "--query-gpu=index,uuid,pci.bus_id",
-                    "--format=csv,noheader,nounits",
-                ],
+                "nvidia_smi_argv": list(
+                    nvidia_gpu_topology_argv(
+                        tuple(record.index for record in config.resource_map.gpu_records)
+                    )
+                ),
                 "nvidia_smi_exit_code": 0,
                 "nvidia_smi_stdout": nvidia_stdout,
                 "nvidia_smi_stderr": "",

@@ -1138,7 +1138,11 @@ def _resource_topology_matches(  # noqa: PLR0911
     try:
         if tuple(_sequence_value(measurements, "lscpu_argv")) != _LSCPU_TOPOLOGY_ARGV:
             return False
-        expected_physical_indices = tuple(record.index for record in expected.gpu_records)
+        expected_physical_indices = (
+            tuple(record.index for record in expected.gpu_records)
+            if expected.gpu_records
+            else tuple(range(len(expected.model_cores)))
+        )
         expected_argv = nvidia_gpu_topology_argv(expected_physical_indices)
         if tuple(_sequence_value(measurements, "nvidia_smi_argv")) != expected_argv:
             return False
