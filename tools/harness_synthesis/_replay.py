@@ -32,8 +32,9 @@ def run_dream_generate(  # noqa: PLR0913 - one CLI-adapter boundary, not worth s
     steps: int = 128,
     alg_temp: float = 0.0,
     init_continuation_file: str | None = None,
+    prefill_suffix: str = "",
 ) -> dict[str, Any]:
-    """Invoke ``_dream_generate.py`` under the Dream venv and load its JSON output.
+    r"""Invoke ``_dream_generate.py`` under the Dream venv and load its JSON output.
 
     ``alg_temp=0.0`` (the default, matching every prior call site) makes Dream's
     reveal-order selection deterministic-argmax, so ``seed`` barely affects the
@@ -44,6 +45,11 @@ def run_dream_generate(  # noqa: PLR0913 - one CLI-adapter boundary, not worth s
     (partially remasked) continuation instead of a fresh all-mask one -- Task 10's
     remask round. ``new_tokens`` is ignored in that case (``_dream_generate.py``
     derives it from the continuation's length).
+
+    ``prefill_suffix``, when given, is fixed prompt text appended after the
+    ``"```cpp\\n"`` prefill -- never generated. RQ3's v3 fixed-scaffold experiment uses
+    this to put the scaffold text before the model-written body directly into the
+    prompt, instead of asking the model to reproduce it.
     """
     env = None
     if gpu is not None:
@@ -68,6 +74,8 @@ def run_dream_generate(  # noqa: PLR0913 - one CLI-adapter boundary, not worth s
     ]
     if init_continuation_file is not None:
         argv.extend(["--init-continuation-file", init_continuation_file])
+    if prefill_suffix:
+        argv.extend(["--prefill-suffix", prefill_suffix])
     subprocess.run(argv, check=True, env=env)  # noqa: S603 - fixed argv, shell=False.
     return json.loads(out_path.read_text())
 

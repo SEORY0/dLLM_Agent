@@ -21,8 +21,7 @@ import torch
 from transformers import AutoModel, AutoTokenizer
 
 
-def main() -> None:
-    """Generate once, recording every step's token snapshot and new commits."""
+def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model-path", required=True)
     parser.add_argument("--prompt", required=True)
@@ -40,6 +39,13 @@ def main() -> None:
     # a prompt design reliably reproduces one outcome, so the determinism there was
     # incidental, not a flaw in what was measured.
     parser.add_argument("--alg-temp", type=float, default=0.0)
+    # Fixed text appended after the "```cpp\n" prefill, never generated -- part of
+    # the prompt's fixed prefix like the prefill itself. RQ3's v3 fixed-scaffold
+    # experiment uses this to put the scaffold's includes/class/entry-point text
+    # (everything up to where the model-written body goes) into the prompt directly,
+    # instead of asking the model to reproduce it (which v1/v2 both showed it does
+    # unreliably even when explicitly instructed to copy verbatim).
+    parser.add_argument("--prefill-suffix", default="")
     # For a remask round (RQ3): the full post-prompt continuation, as a JSON list of
     # ints, with mask_token_id at the positions to regenerate and every other position
     # holding the token the previous round already committed. When given, this
@@ -47,7 +53,12 @@ def main() -> None:
     # state instead of Dream's own default all-mask continuation.
     parser.add_argument("--init-continuation-file", default=None)
     parser.add_argument("--out", required=True)
-    args = parser.parse_args()
+    return parser
+
+
+def main() -> None:
+    """Generate once, recording every step's token snapshot and new commits."""
+    args = _build_parser().parse_args()
 
     init_continuation: list[int] | None = None
     if args.init_continuation_file is not None:
@@ -71,7 +82,8 @@ def main() -> None:
         return_dict=True,
         add_generation_prompt=True,
     ).input_ids
-    prefill_ids = tokenizer("```cpp\n", return_tensors="pt", add_special_tokens=False).input_ids
+    prefill_text = "```cpp\n" + args.prefill_suffix
+    prefill_ids = tokenizer(prefill_text, return_tensors="pt", add_special_tokens=False).input_ids
     prompt_ids = torch.cat([chat_ids, prefill_ids], dim=1).cuda()
     prompt_length = int(prompt_ids.shape[1])
 

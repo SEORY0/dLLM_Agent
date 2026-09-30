@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 import re
 import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 IMAGE = "dllm-openexr-harness-compile-only"
 _DOCKERFILE_DIR = Path(__file__).resolve().parents[1] / "openexr_runtime/harness-compile-only"
@@ -96,17 +101,60 @@ def compile_harness(source: str, *, mode: str = "coverage", timeout: float = 90.
         return CompileResult(compiled=False, error=error)
 
 
-def compile_and_fuzz(
-    source: str, *, fuzz_seconds: float, seed: int, timeout: float = 180.0
-) -> FuzzResult:
-    """Compile, then fuzz for exactly ``fuzz_seconds`` and return the final edge count.
-
-    Fuzzes from the pinned C0 seed corpus. A fixed-duration run (not a fixed-executions
-    run) matches plan Task 10 item 2's "match arms on fuzzing time": every arm gets the
-    same wall-clock fuzzing budget regardless of how fast or slow its own binary
-    executes.
-    """
+def _build_coverage_binary(work: Path, *, timeout: float) -> str | None:
+    """Build ``work/coverage_target`` from ``work/harness.cc``; return an error, or None."""
     _ensure_image()
+    uid = f"{os.getuid()}:{os.getgid()}"
+    build = subprocess.run(  # noqa: S603 - fixed argv, shell=False.
+        ["docker", "run", "--rm", "-u", uid, "-v", f"{work}:/work", IMAGE, "coverage"],  # noqa: S607
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        check=False,
+    )
+    if build.returncode == 0 and (work / "coverage_target").exists():
+        return None
+    lines = [
+        line
+        for line in (*build.stdout.splitlines(), *build.stderr.splitlines())
+        if _ERROR_LINE.search(line)
+    ]
+    return "\n".join(line.replace("/work/", "") for line in lines[:3]) or build.stderr[-500:]
+
+
+def fuzz_once(binary_dir: Path, *, fuzz_seconds: float, seed: int) -> int | None:
+    """Fuzz an already-built ``binary_dir/coverage_target`` once; return edges or ``None``.
+
+    Lets a caller reuse one compiled binary across several fuzz replicates (a fixed
+    seed bundle, plan Task 10's "replicate to estimate variance" item) without
+    recompiling for each one.
+    """
+    uid = f"{os.getuid()}:{os.getgid()}"
+    fuzz = subprocess.run(  # noqa: S603 - fixed argv, shell=False.
+        [  # noqa: S607
+            "docker", "run", "--rm", "--entrypoint", "/work/coverage_target",
+            "-u", uid, "-v", f"{binary_dir}:/work", "-w", "/work", IMAGE,
+            f"-max_total_time={int(fuzz_seconds)}", f"-seed={seed}",
+            "-print_final_stats=1", "-close_fd_mask=3", "/work/corpus",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=fuzz_seconds + 60,
+        check=False,
+    )
+    covered = _COV_LINE.findall(fuzz.stdout + fuzz.stderr)
+    return int(covered[-1]) if covered else None
+
+
+@contextlib.contextmanager
+def compile_for_repeated_fuzzing(
+    source: str, *, timeout: float = 180.0
+) -> Iterator[tuple[Path | None, str | None]]:
+    """Compile once; yield ``(binary_dir, None)`` on success or ``(None, error)``.
+
+    ``binary_dir`` is valid for repeated ``fuzz_once`` calls until the context exits,
+    when it is removed.
+    """
     with tempfile.TemporaryDirectory() as tmp:
         work = Path(tmp)
         work.chmod(0o777)
@@ -114,37 +162,24 @@ def compile_and_fuzz(
         corpus = work / "corpus"
         corpus.mkdir()
         (corpus / "c0").write_bytes(bytes.fromhex(_SEED_CORPUS_HEX.read_text().strip()))
-        uid = f"{os.getuid()}:{os.getgid()}"
-        build = subprocess.run(  # noqa: S603 - fixed argv, shell=False.
-            ["docker", "run", "--rm", "-u", uid, "-v", f"{work}:/work", IMAGE, "coverage"],  # noqa: S607
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            check=False,
-        )
-        if build.returncode != 0 or not (work / "coverage_target").exists():
-            lines = [
-                line
-                for line in (*build.stdout.splitlines(), *build.stderr.splitlines())
-                if _ERROR_LINE.search(line)
-            ]
-            error = (
-                "\n".join(line.replace("/work/", "") for line in lines[:3])
-                or build.stderr[-500:]
-            )
+        error = _build_coverage_binary(work, timeout=timeout)
+        yield (None, error) if error is not None else (work, None)
+
+
+def compile_and_fuzz(
+    source: str, *, fuzz_seconds: float, seed: int, timeout: float = 180.0
+) -> FuzzResult:
+    """Compile, then fuzz once for exactly ``fuzz_seconds``; return the edge count.
+
+    Fuzzes from the pinned C0 seed corpus. A fixed-duration run (not a fixed-executions
+    run) matches plan Task 10 item 2's "match arms on fuzzing time": every arm gets the
+    same wall-clock fuzzing budget regardless of how fast or slow its own binary
+    executes. For repeated fuzz replicates of the same binary, use
+    ``compile_for_repeated_fuzzing`` + ``fuzz_once`` instead of calling this in a loop
+    (which would recompile every time).
+    """
+    with compile_for_repeated_fuzzing(source, timeout=timeout) as (binary_dir, error):
+        if binary_dir is None:
             return FuzzResult(compiled=False, compile_error=error, edges=None)
-        fuzz = subprocess.run(  # noqa: S603 - fixed argv, shell=False.
-            [  # noqa: S607
-                "docker", "run", "--rm", "--entrypoint", "/work/coverage_target",
-                "-u", uid, "-v", f"{work}:/work", "-w", "/work", IMAGE,
-                f"-max_total_time={int(fuzz_seconds)}", f"-seed={seed}",
-                "-print_final_stats=1", "-close_fd_mask=3", "/work/corpus",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=fuzz_seconds + 60,
-            check=False,
-        )
-        covered = _COV_LINE.findall(fuzz.stdout + fuzz.stderr)
-        edges = int(covered[-1]) if covered else None
+        edges = fuzz_once(binary_dir, fuzz_seconds=fuzz_seconds, seed=seed)
         return FuzzResult(compiled=True, compile_error=None, edges=edges)

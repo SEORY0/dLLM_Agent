@@ -675,6 +675,105 @@ B0 v1의 `checkOpenEXRFile` 성공 16건 중 **9건이 완전히 동일한 소�
 측정해 변동을 직접 추정하거나, `-runs=`(고정 실행 횟수)를 보조 분석으로 병행하는 걸
 고려해야 한다. 원시 수치는 `docs/assets/harness-rq3-coverage-variance-check-20260930.json`.
 
+### RQ3-v3 — 고정 scaffold 방식으로 과제 범위 변경 (사용자 승인, 완료: feasibility PASS + 소규모 pilot)
+
+**과제 재정의**: v1/v2는 모델에게 "전체 harness를 작성"하도록 시켰고, 그 안에는 손으로
+검증 가능하지만 자주 훼손되는 `MemoryIStream` 클래스 구현이 포함되어 있었다 —
+`InputFile`/`MultiPartInputFile`의 gate 미통과 원인이 IStream 구현 난이도로
+좁혀졌다(B0v2 절 참고). v3는 사용자 승인을 받아 과제를 바꾼다: includes, 검증된
+`MemoryIStream` 클래스(B0v2에서 실제 ImfIO.h로 재검증된 것과 동일 소스,
+`kb_diversity_experiment._MEMORY_ISTREAM`에서 그대로 재사용), libFuzzer 진입점, `try {`
+까지를 고정 Python 문자열로 취급하고, 모델은 try 블록 안의 1~4문장(API 호출 본문)만
+생성·수정한다. 고정 영역은 Dream의 `--prefill-suffix`로 프리필에 붙여서 애초에 모델이
+생성하는 텍스트에 포함되지 않으므로 — "베끼라고 지시했는데 훼손됨"이 아니라 구조적으로
+훼손이 불가능하다. 구현: `tools/harness_synthesis/kb_v3_fixed_scaffold.py`
+(`scaffold_prefix`/`scaffold_suffix`/`assemble`/`body_prompt`/`extract_body` — 중괄호
+깊이 0 스캔으로 모델이 생성한 본문의 끝을 찾음). 기존 v1/v2 결과·동결 프로토콜·B0/B0v2
+감사 기록은 전부 보존, 변경 없음 — v3는 별도 실험 버전.
+
+**scaffold 자체의 독립 컴파일 검증**: `placeholder_harness()`(본문에 `(void)0;`만 채운
+버전)로 scaffold가 그 자체로 컴파일됨을 확인. 고정 영역은 애초에 모델 생성 대상이 아니므로
+"생성 중 변경되지 않았는지 확인"은 구성상 자명하다 — 모델이 볼 수 있는 텍스트는
+`body_prompt()` 지시문과 `prefill_suffix`(자기 자신이 방금 만든 고정 텍스트)뿐이고,
+Dream 쪽 스크립트는 `prefill_suffix` 뒤에서부터만 새 토큰을 생성·remask한다.
+
+**Feasibility 체크 (동결 프로토콜, `rq3_v3_feasibility.py`)** — 목적: 본문 생성이
+안정적으로 끝나는지(rambling 없이), 그리고 remask 후보가 될 만한 서로 다른 영역이
+충분히 생기는지 확인하는 go/no-go 체크. `InputFile`/`MultiPartInputFile` 각 12개,
+seed 9,000,000–9,000,023(9,000,000–9,000,999대 예약, 향후 RQ3 확증 실험에서 제외),
+`new_tokens=60, steps=30, alg_temp=0.5`, `fuzz_seconds=10`(짧게, feasibility용).
+사전 동결 gate(순서대로 확인, 결과를 본 뒤 기준을 바꾸지 않음): ①추출 성공률<70%→중단
+②완료된 본문 중 region_count≥2 비율<50%→중단 ③서로 다른 본문 텍스트 3개 미만→중단
+④위 모두 통과→소규모 paired pilot으로 진행.
+
+**Feasibility 결과 (2026-09-30, 24/24 완료)**:
+- 추출 성공: **24/24 = 100%** (gate ① 여유 있게 통과)
+- 완료된 본문 중 region_count≥2: **16/24 = 66.7%** (gate ② 통과)
+- 서로 다른 본문 텍스트: **24/24 = 100%** (gate ③ 여유 있게 통과)
+- 참고 지표(gate 대상 아님): 24건 중 9건 컴파일 성공(37.5%) — v1/v2보다 높지만 이 단계는
+  본문 다양성·완결성만 보려는 것이므로 본 비교로 해석하지 않는다.
+- **판정: PASS → 소규모 paired pilot 진행.** 원시 결과
+  `docs/assets/harness-rq3-v3-feasibility-results-20260930.json`, 원장(24줄,
+  `arm="v3-feasibility"`) `docs/assets/harness-rq3-v3-feasibility-ledger-20260930.jsonl`.
+
+**소규모 paired pilot (동결 프로토콜, `rq3_v3_pilot.py`)** — 설계: 트라이얼마다 본문을
+1회 생성하고, 같은 본문을 confidence-remask 팔과 random-remask 팔로 분기(같은 감지된
+영역 후보, 같은 재생성 seed — remask 시작 위치만 다름, v1 스모크와 동일한 매칭 방식),
+원본 본문은 reference 팔로 그대로 둔다. remask는 본문 자체(고정 scaffold는 대상이
+될 수 없음)에만 적용. 주 지표는 v1과 동일하게 고정 시간 fuzz coverage, intent-to-treat
+(컴파일 실패 시 0 edges로 집계, 제외하지 않음). v1과의 차이: coverage 측정 변동성
+확인에서 드러난 잡음을 사후 캐비앗으로 남기지 않고 직접 추정하기 위해, 각 팔을 같은
+libFuzzer seed 묶음(1, 2, 3), 각 `fuzz_seconds=20`으로 반복 fuzz하고 평균/최소/최대를
+기록. 고정 실행 횟수(`-runs=100000`) 1회는 보조 지표로만 병행. 데이터셋: 예시당 6
+seed(`InputFile`, `MultiPartInputFile`) = 12 트라이얼, seed 10,000,000–10,000,011
+(10,000,000–10,000,999대 예약). 팔별 `tokens_remasked`/`steps`(비용)를 강제로 맞추지
+않고 그대로 기록 — 이것이 사후에 핵심 교란요인으로 드러난다(아래).
+
+**Pilot 결과 (2026-09-30, 12/12 완료)**:
+
+| | reference | confidence | random |
+|---|---|---|---|
+| 컴파일 성공 | 2/12 | 5/12 | 3/12 |
+
+confidence 팔의 컴파일 성공률이 표면적으로는 가장 높다. 하지만 비용(`tokens_remasked`)을
+함께 보면 교란요인이 명확하게 드러난다: confidence와 random이 **서로 다른 영역을
+고른 8개 트라이얼 전부**에서, confidence가 고른 영역은 예외 없이 random보다 remask
+범위가 작았다(예: 35 vs 60, 37 vs 60, 28 vs 60, 36 vs 60 토큰 — 8건 중 8건).
+즉 `select_lowest_confidence_region`은 이 1~4문장짜리 본문에서 체계적으로 본문 끝
+쪽(재생성 범위가 짧은, 더 쉬운) 영역을 고르는 경향을 보였다 — confidence-remask
+컴파일 성공 3건(reference·random 모두 실패, confidence만 성공: seed 10000007,
+10000009) 전부 이 "더 쉬운 작업" 케이스에 속한다. 따라서 이 컴파일률 차이는
+"confidence가 더 나은 위치를 짚어서"가 아니라 "confidence가 더 짧고 쉬운 재생성
+과제를 받아서"일 가능성을 배제할 수 없다 — 오히려 그쪽이 더 그럴듯한 설명이다.
+
+같은 영역을 고른(비용이 같거나 거의 같은) 3개 트라이얼(seed 10000002, 10000010: 완전
+동일 영역/비용; seed 10000005는 confidence가 더 쌌는데도 아래처럼 뒤짐)로 좁혀서 보면
+"둘 다 컴파일 성공"한 짝 3건의 coverage 차이(confidence − random)는 **-37, -45, +19**
+(edges) — 평균 약 -21, B0v2 coverage 변동성 확인에서 관측된 측정 잡음 범위(111~137
+edges)보다 작다. 즉 **비용을 맞춘 비교에서는 confidence가 random보다 낫다는 증거가
+없다** — RQ1의 null 결과와 일관된다.
+
+**결론**: 이 pilot은 두 가지를 보여준다. (1) confidence-remask의 표면적 컴파일률
+우위는 실재하지만 remask 비용(수정 범위) 차이로 상당 부분 설명 가능한 교란된 신호다 —
+"confidence가 똑똑하게 고른다"는 증거로 보고할 수 없다. (2) 비용을 맞춘 좁은 비교
+(n=3 쌍)에서는 coverage 차이가 측정 잡음보다 작다. n=12(특히 비용이 맞는 쌍은 n=3)는
+어느 쪽으로도 결론을 낼 수 있는 크기가 아니다.
+
+**표본수 관련**: 사용자 지시대로 B0의 컴파일률이 아니라 pilot 자체의 paired 변동에서
+표본수를 제안하려 했으나, "비용이 맞는" 쌍이 n=3뿐이라 표준편차 추정 자체가 신뢰할 수
+없다(3개 값에서 나온 분산은 우연에 크게 좌우됨). 억지로 숫자를 내는 대신 다음 단계를
+제안한다: **본 확증 실험 이전에, 영역 선택 규칙을 비용이 맞도록 재설계(같은 remask
+길이가 되도록 후보를 제한하거나, 비용을 회귀 분석에서 통제하는 방식)하거나, 최소한
+"비용을 맞춘 부분집합"만으로 변동을 추정할 수 있을 만큼(대략 20~30쌍) 좀 더 pilot
+데이터를 모아야 신뢰할 수 있는 표본수 계산이 가능하다.** 이는 새로운 대규모 확증
+실험이 아니라 pilot 규모를 조금 늘리는 것이며, 사용자 검토 없이 진행하지 않는다.
+
+원시 결과 `docs/assets/harness-rq3-v3-pilot-results-20260930.json`, 원장(36줄,
+`arm="{example}-{arm}"`) `docs/assets/harness-rq3-v3-pilot-ledger-20260930.jsonl`.
+
+**N=469 본 확증 실험은 계속 보류.** 추가 프롬프트 튜닝도 진행하지 않았다 — 사용자
+지시대로 이번 라운드는 feasibility + 소규모 pilot 보고까지만.
+
 - [ ] **Task 11 — 종합 보고서.** `docs/research-report.md`의 `[MEASURED]`/`[INFERRED]`/
   `[FUTURE EXPERIMENT]` 태깅 규칙을 따라 RQ1/RQ3/a안 결과를 종합. 취약점 발견이나 dLLM
   우월성을 주장하지 않는다(기존 문서들의 원칙과 동일).
