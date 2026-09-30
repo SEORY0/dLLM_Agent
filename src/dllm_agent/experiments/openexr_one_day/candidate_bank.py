@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import threading
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final, NamedTuple, override
 
@@ -92,6 +93,58 @@ class ArmBankBinding(NamedTuple):
     arm: ModelArm
     revise_delegate: RevisionSampler
     corpus_root: Path
+
+
+_worker_lock_registry_guard = threading.Lock()
+_worker_locks_by_id: dict[int, threading.Lock] = {}
+
+
+def _lock_for_worker(worker: object) -> threading.Lock:
+    """Return one shared lock per underlying worker identity, created once."""
+    key = id(worker)
+    with _worker_lock_registry_guard:
+        lock = _worker_locks_by_id.get(key)
+        if lock is None:
+            lock = threading.Lock()
+            _worker_locks_by_id[key] = lock
+        return lock
+
+
+@dataclass(frozen=True, slots=True)
+class SerializingRevisionSampler:
+    """Distinct per-arm delegate that serializes calls into a shared worker.
+
+    On a workstation with fewer GPUs than model arms, multiple arms bind the
+    same underlying resident worker. build_frozen_bank_adapters requires each
+    arm's delegate to be a distinct object (guards against accidental binding
+    bugs), and nothing in this pipeline currently calls a model arm's
+    delegate concurrently with another arm sharing its worker (model calls
+    all happen in the sequential corpus-prep phase, before the concurrent
+    Docker-search phase, which never touches the model) -- but this wrapper
+    also serializes access via a lock keyed to the real underlying worker, as
+    defense-in-depth against a future caller introducing concurrent access.
+    """
+
+    _delegate: RevisionSampler
+    _lock: threading.Lock
+
+    def initial(self, request: InitialParticleRequest) -> RevisionResult:  # noqa: D102
+        with self._lock:
+            return self._delegate.initial(request)
+
+    def revise(self, request: RevisionRequest) -> RevisionResult:  # noqa: D102
+        with self._lock:
+            return self._delegate.revise(request)
+
+
+def private_worker_delegate(worker: RevisionSampler) -> RevisionSampler:
+    """Wrap a resident worker so each model arm gets its own delegate object.
+
+    Safe to call once per arm even when multiple arms share one physical
+    worker (fewer GPUs than model arms): every wrapper for the same
+    underlying worker shares one lock, so calls into it are serialized.
+    """
+    return SerializingRevisionSampler(worker, _lock_for_worker(worker))
 
 
 @dataclass(frozen=True, slots=True)

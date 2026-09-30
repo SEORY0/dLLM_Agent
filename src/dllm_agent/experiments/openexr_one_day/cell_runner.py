@@ -7,6 +7,7 @@ Module-size opt-out ``# noqa: SIZE_OK``: the task forbids another production hel
 
 from __future__ import annotations
 
+import os
 import resource
 import subprocess
 import threading
@@ -235,7 +236,7 @@ class SearchChildProcess(Protocol):
         self,
         input: bytes | None = None,  # noqa: A002
         timeout: float | None = None,
-    ) -> tuple[bytes, bytes]: ...
+    ) -> tuple[bytes, bytes | None]: ...
     def terminate(self) -> None: ...
     def kill(self) -> None: ...
 
@@ -397,14 +398,14 @@ class DockerSearchProcess:
                 self._condition.notify_all()
 
     def _finish(
-        self, streams: tuple[bytes, bytes], *, forced_deadline: bool
+        self, streams: tuple[bytes | None, bytes | None], *, forced_deadline: bool
     ) -> SearchAttemptResult:
         return_code = self._child.returncode
         if return_code is None:
             raise CellEvidenceError(reason="docker search ended without a return code")
-        log = streams[0] + streams[1]
-        if len(log) > _MAX_LOG_BYTES:
-            raise CellEvidenceError(reason="docker search log exceeds evidence limit")
+        # _start_search merges stderr into stdout (stderr=STDOUT), so a real
+        # Popen.communicate() returns (stdout, None); fakes return both streams.
+        log = _bounded_log((streams[0] or b"") + (streams[1] or b""))
         artifacts = _harvest_attempt(self._request, log)
         _persist_bytes(
             self._request.log_root / f"attempt-{self._request.attempt_index:06d}.log", log
@@ -523,6 +524,7 @@ def run_openexr_cell(
         )
     cpu_seconds = 0.0
     attempt = 0
+    last_observed: float | None = None
     status: Literal["completed", "failed", "deadline", "restart_limit"] = "failed"
     while (
         clock.monotonic() < request.deadline_monotonic_seconds and attempt < _MAX_RESTART_ATTEMPTS
@@ -548,6 +550,7 @@ def run_openexr_cell(
                 outcome = process.terminate()
         cpu_seconds += outcome.cpu_seconds
         artifact_evidence = _record_artifacts(request, outcome, attempt, manifest_hash)
+        last_observed = min(clock.monotonic(), request.deadline_monotonic_seconds)
         _append_cell_event(
             request,
             CellEvent(
@@ -555,9 +558,7 @@ def run_openexr_cell(
                 attempt_index=attempt,
                 outcome=outcome.outcome,
                 return_code=outcome.return_code,
-                observed_monotonic_seconds=min(
-                    clock.monotonic(), request.deadline_monotonic_seconds
-                ),
+                observed_monotonic_seconds=last_observed,
                 remaining_seconds_at_launch=launch.remaining_seconds,
                 cpu_seconds=outcome.cpu_seconds,
                 log_sha256=sha256_bytes(outcome.log),
@@ -576,7 +577,13 @@ def run_openexr_cell(
         break
     if attempt >= _MAX_RESTART_ATTEMPTS and clock.monotonic() < request.deadline_monotonic_seconds:
         status = "restart_limit"
-    finished = min(clock.monotonic(), request.deadline_monotonic_seconds)
+    # validate_cell_evidence requires finished == the last event's observed time
+    # exactly; a second clock read here would drift from it by real elapsed time.
+    finished = (
+        last_observed
+        if last_observed is not None
+        else min(clock.monotonic(), request.deadline_monotonic_seconds)
+    )
     freeze_elapsed = (
         finished - request.start_monotonic_seconds
         if finished < request.deadline_monotonic_seconds
@@ -688,30 +695,58 @@ def validate_cell_evidence(request: CellRunRequest) -> CellResult:
         freeze_valid = not frozen
     else:
         freeze_valid = bool(frozen) and all(row.source_elapsed_seconds == freeze for row in frozen)
-    if (
-        result.manifest_sha256 != manifest_hash
-        or result.event_stream_sha256 != event_hash
-        or result.corpus_index_stream_sha256 != corpus_hash
-        or result.crash_stream_sha256 != crash_hash
-        or result.attempt_count != len(events)
-        or result.status != _expected_cell_status(request, final_event, len(events))
-        or result.finished_monotonic_seconds != expected_finished
-        or result.coverage_freeze_elapsed_seconds != expected_freeze
-        or result.search_accounting.cpu_seconds != sum(event.cpu_seconds for event in events)
-        or result.crash_occurrence_count != len(occurrences)
-        or result.corpus_index_scheduled_seconds != request.schedule_seconds
-        or tuple(row.scheduled_elapsed_seconds for row in rows) != request.schedule_seconds
-        or result.search_accounting.wall_seconds
-        != result.finished_monotonic_seconds - result.started_monotonic_seconds
-        or any(
-            observed < request.start_monotonic_seconds
-            or observed > request.deadline_monotonic_seconds
-            for observed in event_times
-        )
-        or any(first > second for first, second in pairwise(event_times))
-        or not freeze_valid
-    ):
-        raise CellEvidenceError(reason="cell evidence artifacts conflict")
+    checks = (
+        ("manifest_sha256", result.manifest_sha256 != manifest_hash),
+        ("event_stream_sha256", result.event_stream_sha256 != event_hash),
+        ("corpus_index_stream_sha256", result.corpus_index_stream_sha256 != corpus_hash),
+        ("crash_stream_sha256", result.crash_stream_sha256 != crash_hash),
+        ("attempt_count", result.attempt_count != len(events)),
+        (
+            "status",
+            result.status != _expected_cell_status(request, final_event, len(events)),
+        ),
+        ("finished_monotonic_seconds", result.finished_monotonic_seconds != expected_finished),
+        (
+            "coverage_freeze_elapsed_seconds",
+            result.coverage_freeze_elapsed_seconds != expected_freeze,
+        ),
+        (
+            "search_cpu_seconds",
+            result.search_accounting.cpu_seconds != sum(event.cpu_seconds for event in events),
+        ),
+        ("crash_occurrence_count", result.crash_occurrence_count != len(occurrences)),
+        (
+            "corpus_index_scheduled_seconds",
+            result.corpus_index_scheduled_seconds != request.schedule_seconds,
+        ),
+        (
+            "corpus_rows_schedule",
+            tuple(row.scheduled_elapsed_seconds for row in rows) != request.schedule_seconds,
+        ),
+        (
+            "wall_seconds",
+            result.search_accounting.wall_seconds
+            != result.finished_monotonic_seconds - result.started_monotonic_seconds,
+        ),
+        (
+            "event_time_outside_cell_window",
+            any(
+                observed < request.start_monotonic_seconds
+                or observed > request.deadline_monotonic_seconds
+                for observed in event_times
+            ),
+        ),
+        (
+            "event_times_not_monotonic",
+            any(first > second for first, second in pairwise(event_times)),
+        ),
+        ("freeze_rows", not freeze_valid),
+    )
+    if conflicts := [name for name, failed in checks if failed]:
+        # Name the failing checks: a bare "conflict" cost several live-run round
+        # trips to localize (the tests only match the stable prefix).
+        detail = ", ".join(conflicts)
+        raise CellEvidenceError(reason=f"cell evidence artifacts conflict: {detail}")
     return result
 
 
@@ -750,7 +785,7 @@ def load_crash_occurrences(request: CellRunRequest) -> tuple[CrashOccurrenceReco
 def build_long_probe_argv(request: SearchLaunchRequest) -> tuple[str, ...]:
     attempt = request.attempt_root.relative_to(request.artifact_root).as_posix()
     # fmt: off
-    return ("docker", "run", "--rm", "--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges=true", "--pids-limit", "128", "--cpuset-cpus", str(request.cpu_index), "--memory", f"{request.rss_limit_mb}m", "--tmpfs", _TMPFS, "--env", f"ASAN_OPTIONS={_ASAN_OPTIONS}", "--env", f"UBSAN_OPTIONS={_UBSAN_OPTIONS}", "-v", f"{request.artifact_root}:/work:rw", "-v", f"{request.dictionary_path}:/work/openexr.dict:ro", "-w", "/work", "--pull", "never", request.build.image_digest, "/opt/dllm/bin/poc_probe-asan", "/work/corpus", f"-artifact_prefix=/work/{attempt}/", "-dict=/work/openexr.dict", "-use_value_profile=1", f"-max_total_time={int(request.remaining_seconds)}", f"-timeout={request.target_timeout_seconds}", f"-rss_limit_mb={request.rss_limit_mb}", f"-max_len={request.max_input_length}", f"-seed={request.fuzzer_seed}", "-print_final_stats=1")  # noqa: E501
+    return ("docker", "run", "--rm", "--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges=true", "--pids-limit", "128", "--user", f"{os.getuid()}:{os.getgid()}", "--cpuset-cpus", str(request.cpu_index), "--memory", f"{request.rss_limit_mb}m", "--tmpfs", _TMPFS, "--env", f"ASAN_OPTIONS={_ASAN_OPTIONS}", "--env", f"UBSAN_OPTIONS={_UBSAN_OPTIONS}", "-v", f"{request.artifact_root}:/work:rw", "-v", f"{request.dictionary_path.resolve()}:/work/openexr.dict:ro", "-w", "/work", "--pull", "never", request.build.image_digest, "/opt/dllm/bin/poc_probe-asan", "/work/corpus", f"-artifact_prefix=/work/{attempt}/", "-dict=/work/openexr.dict", "-use_value_profile=1", "-verbosity=0", "-close_fd_mask=2", f"-max_total_time={int(request.remaining_seconds)}", f"-timeout={request.target_timeout_seconds}", f"-rss_limit_mb={request.rss_limit_mb}", f"-max_len={request.max_input_length}", f"-seed={request.fuzzer_seed}", "-print_final_stats=1")  # noqa: E501
     # fmt: on
 
 
@@ -1043,6 +1078,28 @@ def _start_search(argv: tuple[str, ...]) -> SearchChildProcess:
 def _children_cpu_seconds() -> float:
     usage = resource.getrusage(resource.RUSAGE_CHILDREN)
     return usage.ru_utime + usage.ru_stime
+
+
+_LOG_HEAD_BYTES: Final = 1_048_576
+
+
+def _bounded_log(raw: bytes) -> bytes:
+    """Bound one attempt's log to the evidence cap without discarding the attempt.
+
+    An over-long log used to abort the whole cell, which both loses the run and
+    destroys the evidence of what was so chatty; a 3-hour cell will always exceed
+    any fixed cap. Keep the head (seed/config lines) and the tail (where sanitizer
+    reports and the final stats live -- what _artifact_kind classifies on) and say
+    exactly how much was elided. The stored bytes are what gets hashed.
+    """
+    if len(raw) <= _MAX_LOG_BYTES:
+        return raw
+    marker_template = "\n[dllm: {elided:012d} bytes of libFuzzer output elided]\n"
+    marker_len = len(marker_template.format(elided=0).encode())
+    tail_len = _MAX_LOG_BYTES - _LOG_HEAD_BYTES - marker_len
+    elided = len(raw) - _LOG_HEAD_BYTES - tail_len
+    marker = marker_template.format(elided=elided).encode()
+    return raw[:_LOG_HEAD_BYTES] + marker + raw[-tail_len:]
 
 
 def _harvest_attempt(request: SearchLaunchRequest, log: bytes) -> tuple[SearchArtifact, ...]:

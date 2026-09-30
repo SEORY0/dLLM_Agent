@@ -1,0 +1,188 @@
+{
+  "artifact_root": "/data/dllm-agent/openexr-one-day-1gpu-draft",
+  "c0_sha256": "ae9d361e47cc503dc91b827f4956fdf8ca16ffb3804ecdfcf83dd627f8a64f96",
+  "c0_source_path": "fixtures/openexr/c0-validity-preserving-zero.hex",
+  "candidate_steps": 8,
+  "config_id": "openexr-v3.4.14-one-day-1gpu-draft",
+  "config_sha256": "74211287cc07495ee067d64e57ebb46e8c345465897249e5c319b9c67c99bc05",
+  "coverage_binary_sha256": "8888888888888888888888888888888888888888888888888888888888888888",
+  "coverage_build_manifest_sha256": "9999999999999999999999999999999999999999999999999999999999999999",
+  "coverage_image_digest": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+  "deep_parse_checker_sha256": "621ca050c5b65d5537885288d9f42bb7bcee8d9d038d5ee4782e75b6e01372ba",
+  "dictionary_path": "configs/openexr-v3.4.14.dict",
+  "dictionary_sha256": "9419f2003be8f41d286360ea3dec3f8fa967244111eecec0fd292db0ae6fed93",
+  "main_start_monotonic_seconds": 70000.0,
+  "max_input_length": 1048576,
+  "model_cache_dir": "/data/dllm-agent/cache",
+  "model_revision": "10cdaf9b486f1cf0273ad968459dbe2d21a1482a",
+  "prompt_path": "prompts/openexr-system.md",
+  "prompt_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+  "proof_duration_seconds": 30,
+  "proof_seed_base": 9000000,
+  "qualification_evidence_path": "qualification.json",
+  "qualification_state": "draft",
+  "remote_code_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+  "resource_map": {
+    "core_numa_nodes": {
+      "0": 0,
+      "1": 0,
+      "10": 0,
+      "11": 0,
+      "12": 0,
+      "13": 0,
+      "14": 0,
+      "15": 0,
+      "16": 0,
+      "17": 0,
+      "18": 0,
+      "19": 0,
+      "2": 0,
+      "20": 0,
+      "21": 0,
+      "22": 0,
+      "23": 0,
+      "24": 0,
+      "25": 0,
+      "26": 0,
+      "27": 0,
+      "28": 0,
+      "29": 0,
+      "3": 0,
+      "30": 0,
+      "31": 0,
+      "32": 0,
+      "33": 0,
+      "34": 0,
+      "35": 0,
+      "36": 0,
+      "37": 0,
+      "38": 0,
+      "39": 0,
+      "4": 0,
+      "40": 0,
+      "41": 0,
+      "42": 0,
+      "43": 0,
+      "44": 0,
+      "45": 0,
+      "46": 0,
+      "47": 0,
+      "48": 0,
+      "49": 0,
+      "5": 0,
+      "50": 0,
+      "51": 0,
+      "52": 0,
+      "53": 0,
+      "54": 0,
+      "55": 0,
+      "56": 0,
+      "57": 0,
+      "58": 0,
+      "59": 0,
+      "6": 0,
+      "60": 0,
+      "61": 0,
+      "62": 0,
+      "63": 0,
+      "64": 0,
+      "65": 0,
+      "66": 0,
+      "67": 0,
+      "68": 0,
+      "69": 0,
+      "7": 0,
+      "70": 0,
+      "71": 0,
+      "72": 0,
+      "73": 0,
+      "74": 0,
+      "75": 0,
+      "76": 0,
+      "8": 0,
+      "9": 0
+    },
+    "gpu_numa_nodes": [
+      0
+    ],
+    "gpu_records": [
+      {
+        "index": 1,
+        "numa_node": 0,
+        "uuid": "GPU-1824bc0e-afda-4c3f-454b-71e779e4db34"
+      }
+    ],
+    "model_cores": [
+      {
+        "core_id": 0,
+        "sibling_core_id": 64
+      }
+    ],
+    "monitor_cores": [
+      {
+        "core_id": 12,
+        "sibling_core_id": 76
+      }
+    ],
+    "proof_cores": [
+      {
+        "core_id": 11,
+        "sibling_core_id": 75
+      }
+    ],
+    "search_cores": [
+      {
+        "core_id": 1,
+        "sibling_core_id": 65
+      },
+      {
+        "core_id": 2,
+        "sibling_core_id": 66
+      },
+      {
+        "core_id": 3,
+        "sibling_core_id": 67
+      },
+      {
+        "core_id": 4,
+        "sibling_core_id": 68
+      },
+      {
+        "core_id": 5,
+        "sibling_core_id": 69
+      },
+      {
+        "core_id": 6,
+        "sibling_core_id": 70
+      },
+      {
+        "core_id": 7,
+        "sibling_core_id": 71
+      },
+      {
+        "core_id": 8,
+        "sibling_core_id": 72
+      },
+      {
+        "core_id": 9,
+        "sibling_core_id": 73
+      },
+      {
+        "core_id": 10,
+        "sibling_core_id": 74
+      }
+    ]
+  },
+  "rss_limit_mb": 2048,
+  "runtime_python": "/home/jackb/workspace/dLLM_Agent/.venv/bin/python3",
+  "sanitizers": [
+    "address",
+    "undefined"
+  ],
+  "schema_version": "dllm-openexr-one-day-config/v1",
+  "search_binary_sha256": "6666666666666666666666666666666666666666666666666666666666666666",
+  "search_image_digest": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+  "target_commit": "777d231a179de1711d2a942810d9559216ab3f4c",
+  "target_harness_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+  "target_timeout_seconds": 10
+}

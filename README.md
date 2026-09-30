@@ -159,6 +159,19 @@ missing target의 exit code 2를 포함합니다. 검증 결과는 저장된 과
   증거로 재사용하지 않는다.
 - 모든 메인 문서는 Markdown/Mermaid로 유지하고, PDF/DOCX 생성물은 관리하지 않는다.
 
+## 하드웨어 요구사항
+
+- 모델(`Stable-DiffCoder-8B-Instruct`, BF16)은 단일 24GB급 GPU에서 검증됐다
+  (RTX 3090, allocated 16.50GB) — RTX 6000 PRO Blackwell 48GB 한 장으로 충분하다.
+- one-day campaign의 `ResourceMap.model_cores`/GPU 개수는 이제 설정 가능하며
+  (`build_campaign_schedule(..., gpu_count=len(config.resource_map.model_cores))`),
+  1 GPU 워크스테이션에서는 4개 model arm이 GPU 0을 time-multiplex한다.
+  `configs/openexr-v3.4.14-one-day-1gpu.json`이 1-GPU pilot 시작점이다.
+  GPU가 여러 장이면 `resource_map.model_cores`/`gpu_numa_nodes` 길이를 늘리면 된다.
+- Blackwell(sm_120)은 CUDA 12.8+ / Torch ≥2.7 런타임이 필요하다 — 저장소에 torch
+  버전 pin은 없으므로(연구 기록의 2.5.1+cu121은 RTX 3090 feasibility 점검 당시
+  환경일 뿐) 실제 워크스테이션에 맞는 버전을 새로 설치해야 한다.
+
 ## 구현 경계
 
 중간 denoising state는 분석 데이터일 뿐 도구를 호출할 수 없습니다. typed action은

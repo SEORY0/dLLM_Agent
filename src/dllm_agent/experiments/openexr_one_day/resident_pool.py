@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING, NamedTuple, Protocol, Self, override
 
 from tools.stable_diffcoder_generation import ReadOnlyCacheError, qualify_read_only_cache
 
+from dllm_agent.experiments.openexr_one_day.models import GpuIndex
+
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
@@ -18,7 +20,7 @@ if TYPE_CHECKING:
 
     from tools.runtime.selective_revision_json import ReadyRecord
 
-    from dllm_agent.experiments.openexr_one_day.models import CellSchedule, GpuIndex
+    from dllm_agent.experiments.openexr_one_day.models import CellSchedule
 
 GIBIBYTE = 1024**3
 
@@ -97,10 +99,25 @@ class LoadIntervalMonitor(Protocol):
 
 @dataclass(frozen=True, slots=True)
 class ResidentWorkerBinding:
-    """One physical GPU and its long-lived worker client."""
+    """One physical GPU and its long-lived worker client.
+
+    ``gpu_index`` is the logical pool slot (0-based, matches schedule.py's
+    cell.gpu_index for worker_for() lookup). ``physical_gpu_index`` is the
+    real CUDA/nvidia-smi device index this worker actually binds to -- they
+    differ whenever the workstation's usable GPUs aren't 0..N-1 (e.g. running
+    a 1-GPU config pinned to physical GPU 1 on a 2-GPU box). Defaults to
+    ``gpu_index`` when unset, preserving the historical contiguous-from-0
+    behavior.
+    """
 
     gpu_index: GpuIndex
     worker: ResidentWorker
+    physical_gpu_index: int | None = None
+
+    @property
+    def resolved_physical_gpu_index(self) -> int:
+        """Return the real device index telemetry/validation must query."""
+        return int(self.gpu_index) if self.physical_gpu_index is None else self.physical_gpu_index
 
 
 @dataclass(frozen=True, slots=True)
@@ -130,7 +147,7 @@ class PollingLoadMonitor:
             while not finished.wait(self.interval_seconds):
                 record(
                     telemetry_probe.capture(
-                        binding.gpu_index,
+                        GpuIndex(binding.resolved_physical_gpu_index),
                         binding.worker.process_id_if_started,
                     )
                 )
@@ -139,7 +156,7 @@ class PollingLoadMonitor:
             finally:
                 record(
                     telemetry_probe.capture(
-                        binding.gpu_index,
+                        GpuIndex(binding.resolved_physical_gpu_index),
                         binding.worker.process_id_if_started,
                     )
                 )
@@ -189,7 +206,9 @@ class ResidentWorkerPool:
         telemetry: list[WorkerLoadTelemetry] = []
         with ExitStack() as closer:
             for binding in bindings:
-                before = self.telemetry_probe.capture(binding.gpu_index, None)
+                before = self.telemetry_probe.capture(
+                    GpuIndex(binding.resolved_physical_gpu_index), None
+                )
                 _gate_preload(before, self.limits)
                 samples = [before]
                 _ = closer.callback(binding.worker.close)
@@ -246,8 +265,8 @@ def _validated_bindings(
     bindings: tuple[ResidentWorkerBinding, ...],
 ) -> tuple[ResidentWorkerBinding, ...]:
     ordered = tuple(sorted(bindings, key=lambda binding: int(binding.gpu_index)))
-    if tuple(int(binding.gpu_index) for binding in ordered) != tuple(range(8)):
-        raise ResidentPoolError(reason="resident pool requires physical GPUs 0 through 7")
+    if tuple(int(binding.gpu_index) for binding in ordered) != tuple(range(len(ordered))):
+        raise ResidentPoolError(reason="resident pool requires contiguous physical GPUs from 0")
     cache_paths = {binding.worker.cache_dir.resolve() for binding in ordered}
     if len(cache_paths) != 1:
         raise ResidentPoolError(reason="resident workers must share one cache path")
@@ -257,7 +276,7 @@ def _validated_bindings(
     except ReadOnlyCacheError as error:
         raise ResidentPoolError(reason=str(error)) from error
     for binding in ordered:
-        if binding.worker.device != f"cuda:{int(binding.gpu_index)}":
+        if binding.worker.device != f"cuda:{binding.resolved_physical_gpu_index}":
             raise ResidentPoolError(reason="worker must be keyed by its physical GPU")
         if not binding.worker.read_only_cache:
             raise ResidentPoolError(reason="campaign worker cache mode must be read-only")

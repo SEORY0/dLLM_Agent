@@ -40,6 +40,7 @@ class SeededProofRequest:
     snapshot_sha256: str
     duration_seconds: int
     proof_seed: int
+    search_image_digest: str
 
 
 class ScriptedProofRunner:
@@ -283,6 +284,7 @@ def test_exact_input_sha_mismatch_fails_before_execution() -> None:
         snapshot_sha256=sha256_bytes(b"different"),
         duration_seconds=1,
         proof_seed=OPENEXR_PROOF_SEED,
+        search_image_digest=OPENEXR_PROOF_IMAGE_DIGEST,
     )
 
     # When / Then
@@ -348,12 +350,14 @@ def _request(
     *,
     probe_sanitizer_observed: bool = False,
     seed: int = OPENEXR_PROOF_SEED,
+    image_digest: str = OPENEXR_PROOF_IMAGE_DIGEST,
 ) -> SeededProofRequest:
     return SeededProofRequest(
         snapshot=snapshot,
         snapshot_sha256=sha256_bytes(snapshot),
         duration_seconds=1 if not probe_sanitizer_observed else 2,
         proof_seed=seed,
+        search_image_digest=image_digest,
     )
 
 

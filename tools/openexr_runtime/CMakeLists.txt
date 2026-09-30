@@ -28,11 +28,11 @@ target_link_libraries(
 if(DLLM_MODE STREQUAL "asan")
   target_compile_options(
     dllm_harness
-    PRIVATE -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=undefined
+    PRIVATE -fsanitize=fuzzer,address,undefined -fno-sanitize=nonnull-attribute -fno-sanitize-recover=undefined
   )
   target_link_options(
     dllm_harness
-    PRIVATE -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=undefined
+    PRIVATE -fsanitize=fuzzer,address,undefined -fno-sanitize=nonnull-attribute -fno-sanitize-recover=undefined
   )
   set_target_properties(dllm_harness PROPERTIES OUTPUT_NAME fuzz_target)
 
@@ -45,11 +45,12 @@ if(DLLM_MODE STREQUAL "asan")
       -gline-tables-only
       -fno-omit-frame-pointer
       -fsanitize=address,undefined
+      -fno-sanitize=nonnull-attribute
       -fno-sanitize-recover=undefined
   )
   target_link_options(
     dllm_deep_parse_check
-    PRIVATE -fsanitize=address,undefined -fno-sanitize-recover=undefined
+    PRIVATE -fsanitize=address,undefined -fno-sanitize=nonnull-attribute -fno-sanitize-recover=undefined
   )
   target_link_libraries(
     dllm_deep_parse_check

@@ -1,0 +1,1035 @@
+{
+ "trials": [
+  {
+   "seed": 4009000,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/EXRInput.h>\n#include <OpenEXR/EXR.h>\n#include <fuzzer.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Feed the fuzz bytes into the OpenEXR parsing APIs\n    std::ofstream outFile(\"fuzzed_image.exr\");\n    if (outFile) {\n        outFile.write(data, size);\n        outFile.close();\n        // Optionally read the file\n        // Delete the output file\n    }\n    \n    // Return 0 to indicate the input didn't crash the OpenEXR parsing APIs\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009001,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR.h>\n#include <iostream>\n#include <fstream>\n#include <cstring>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Define the input and output filenames for the OpenEXR file to be fuzzed\n    const char* inputFile = \"input.exr\";\n    const char* outputFile = \"fuzz.exr\";\n\n    // Open the input file in binary read mode to read the OpenEXR file data\n    std::ifstream inputFile(inputFile, std::ios::in | std::ios::binary);\n    if (!inputFile) {\n        std::cerr << \"Failed to open input file: \" << inputFile << \" \" << std::error() << std::endl;\n        return 1;\n    }\n\n    // Open the output file in binary write mode to write the fuzz data\n    std::ofstream outputFile(outputFile, std::ios::out | std::ios::binary);\n    if (!outputFile) {\n        std::cerr << \"Failed to open output file: \" << outputFile << \" \" << std::error() << std::endl;\n        return 1;\n    }\n\n    // Write the fuzz data to the output file\n    outputFile.write(reinterpret_cast<const char*>(data), size);\n\n    // Close the files before reading the OpenEXR header\n    outputFile.close();\n    inputFile.close();\n\n    // Attempt to read the OpenEXR header\n    OpenEXR::Header* header = OpenEXR::InputFile(outputFile, true);\n    if (!header) {\n        std::cerr << \"Failed to read EXR file: \" << std::error() << std::endl;\n        return 1;\n    }\n\n    // Close the header and the input file\n    header->close();\n    inputFile.close();\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009002,
+   "error_line": 4,
+   "random_correct": false,
+   "code": "#include <iostream>\n#include <vector>\n#include <memory>\n#include <OpenEXR(EXR.h>\n#include <OpenEXR(Input.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Convert the input data to a string buffer\n    std::string inputData(data, size);\n    \n    OpenEXR::EXR::Input inputData(inputData);\n\n    // Open the OpenEXR file using the provided in-memory input\n    std::unique_ptr<OpenEXR::EXRInput> openExrInput;\n    \n    try {\n        OpenEXR::EXR::Header header = OpenEXR::EXR::readHeader();\n        openExrInput = new OpenEXR::EXRInput(inputData, header);\n    } catch (const OpenEXR::Exception& e) {\n        std::cerr << \"Failed to open EXR file: \" << e.msg() << std::endl;\n        return -1;\n    }\n\n    // Read the Rgba data\n    try {\n        std::vector<OpenEXR::EXR::Rgba> pixels;\n        std::vector<OpenEXR::EXR::Rgba> buffer;\n        buffer.resize(sizeof(const OpenEXR::EXR::Rgba), OpenEXR::EXR::Rgba());\n        \n        OpenEXR::EXR::readRgba(buffer, header);\n    } catch (const Open::EXR::Exception& e) {\n        std::cerr << \"Failed to read header: \" << e.msg() << std::endl;\n        return false;\n    } catch (const OpenEXR::Exception& e) {\n        std::cerr << \"Failed to read Rgba data: \" << e.msg() << std::endl;\n        return false;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": true,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009003,
+   "error_line": 1,
+   "random_correct": true,
+   "code": "#include <OpenEXR/Imf.h>\n#include <OpenEXR/ImfInputStream.h>\n#include <iostream>\n\nextern \"C\" {\n    // LLVM Fuzzer\n    int LLVMFuzzerTestOneInput(const uint8_t* const data, size_t size) {\n        // Create a stream from the input data for the OpenEXR file\n        OpenEXR::EXRInputStream inputStream(reinterpret_cast<const uint32_t*>(data), size);\n\n        // Open the OpenEXR file\n        EXRFile* file = OpenEXR::EXRFile::open(inputStream, \"output.exr\");\n        if (!file) {\n            std::cerr << \"Failed to open\" << std::endl;\n            return 0;\n        }\n\n        // Create an input from the OpenEXR file\n        OpenEXR::EXRInputFile input(&file, &input);\n\n        // Check if the OpenEXR file is valid\n        if (!inputStream.isValid()) {\n            std::cerr << \"Invalid OpenEXR file\" << std::endl;\n            return 0;\n        }\n\n        // Read the OpenEXR header\n        OpenEXR::OpenEXRHeader header;\n        if (!inputStream.header(header)) {\n            std::cerr << \"Failed to read OpenEXR header\" << std::endl;\n            return 0;\n        }\n\n        // Create an EXR object for inspecting the OpenEXR file\n        OpenEXR::EXR* ex = OpenEXR::EXR::read(inputStream, header);\n        if (!ex) {\n            std::cerr << \"Failed to read the OpenEXR file\" << std::endl;\n            return 0;\n        }\n\n        // Create an object to store the OpenEXR image\n        OpenEXR::OpenEXRImage image;\n\n        // Read and store the image",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009004,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/ImrImage.h>\n#include <OpenEXR/EXRInput.h>\n#include <iostream>\n#include <cstring>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size > 0) {\n        try {\n            // Your fuzzing logic here\n        } catch (const std::exception& e) {\n            std::cerr << std::string(e.what()) << std::endl;\n        }\n    }\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009005,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/EXR.h>\n#include <OpenEXR/InputImage.h>\n#include <cstring>\n#include <iostream>\n\nextern \"C\"\nint LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) {\n        return 0; // Empty input, skip processing\n    }\n\n    OpenEXR::EXRHeader exrHeader;\n    OpenEXR::EXRFile* exrFile = nullptr;\n\n    try {\n        // Parse the header from the data\n        exrHeader = OpenEXR::EXRHeader(data, data + size);\n    } catch (const std::exception& e) {\n        std::cerr << \"Failed to parse header: \" << e.what() << std::endl;\n        return -1;\n    }\n\n    // Create an EXR file\n    try {\n        exrFile = new OpenEXR::EXRFile(\"\", exrHeader);\n    } catch (const std::exception& e) {\n        std::cerr << \"Failed to create EXRFile: \" << e.what() << std::endl;\n        return -1;\n    }\n\n    // Read header\n    try {\n        OpenEXR::EXRHeader header;\n        exrFile->readHeader(header);\n    } catch (const std::exception& e) {\n        std::cerr << \"Error reading header: \" << e.what() << std::endl;\n        return -1;\n    }\n\n    // Read image\n    try {\n        OpenEXR::InputImage image = OpenEXR::InputImage(header, \"\");\n        exrFile->readImage(image);\n    } catch (const std::exception& e) {\n        std::cerr << \"Error reading image: \" << e.what() << std::endl;\n        return -1;\n    }\n\n    // Clean",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009006,
+   "error_line": 4,
+   "random_correct": false,
+   "code": "#include <iostream>\n#include <fstream>\n#include <vector>\n#include <ImfEXR.h>\n#include <ImfHeader.h>\n#include <ImfChannel.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) {\n        return 0;\n    }\n\n    Imf::MemoryInputStream stream;\n    try {\n        stream.open(std::string(reinterpret_cast<const<char*>(data)), std::ios::binary);\n    } catch (Imf::Exception& e) {\n        std::cerr << \"Failed to open stream: \" << e.what() << std::endl;\n        return 0;\n    }\n\n    Imr::EXRHeader header;\n    try {\n        header.readHeader(stream);\n        std::cout << \"Header read successfully: \" << header.toString() << std::endl;\n    } catch (Imr::Exception& e) {\n        std::cerr << \"Failed to read EXR header: \" << e.what() << std::endl;\n        return 0;\n    } catch (Imf::Exception& e) {\n        std::cerr << \"Unexpected error while reading EXR header: \" << e.what() << std::endl;\n        return 0;\n    }\n\n    try {\n        header.validate();\n    } catch (Imr::Exception& e) {\n        std::cerr << \"Failed to validate EXR header: \" << e.what() << std::endl;\n        return 0;\n    } catch (Imf::Exception& e) {\n        std::cerr << \"Unexpected error while validating EXR header: \" << e.what() << std::endl;\n        return 0;\n    }\n\n    std::vector<Imf::Channel> channels;\n    try {\n        header.channels(channels, Imf::Channel::RGB);\n        std",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009007,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXRFile.h>\n#include <OpenEXRConfig.h>\n#include <OpenEXRFileIO.h>\n#include <iostream>\n\nextern \"C\" LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Initialize the OpenEXR library\n    OpenEXR::initialize();\n\n    // Create an OpenEXRFileIO to handle OpenEXR files\n    OpenEXRFileIO openexr;\n\n    // Attempt to open the OpenEXR file\n    if (OpenEXRFile *file = openexr.open(data, OpenEXRFile::READ)) {\n        // Perform operations on the OpenEXR file here\n        // For demonstration, we just read the file data\n        for (size_t i = 0; i < size; ++i) {\n            file->readByte(data[i]);\n        }\n\n        // Close the file after operations\n        delete file;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": true,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009008,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/Reader.h>\n#include <OpenEXR/Channel.h>\n#include <cstring>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) return 0;\n\n    const char* inputData = static_cast<const char*>(data);\n    size_t height(size);\n\n    try {\n        openexr::Image::Width width();\n        openexr::Image::Height();\n        openexr::Image::Header header(width, height);\n        openexr::Image::Reader reader(\n            inputData,\n            width,\n            height,\n            openexr::Image::Channel::Type::Type::LINEAR,\n            openexr::Image::ChannelType::Type::LINEAR,\n            0, openexr::Image::Channel::ChannelType::FLOAT,\n            openexr::Image::ChannelType::Type::LINEAR,\n            0,\n            openexr::Image::Channel::Type::FLOAT,\n            openexr::Image::Channel::Type::Type::LINEAR,\n            openexr::Image::ChannelType::Type::LINEAR,\n            openexr::Image::Channel::Type::Type::FLOAT,\n            openexr::Image::Channel(),\n            openexr::Image::ChannelType::Type::LINEAR,\n            openexr::Image::ChannelType::Type::LINEAR,\n            openexr::Image::Channel::Type::Type::FLOAT,\n            openexr::Image::ChannelType(),\n            openexr::Image::ChannelType()\n        );\n\n        reader.close();\n    } catch (const std::exception& e) {\n        std::cerr << \"Exception: \" << e.what() << std::endl;\n        return 1;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009009,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/RcFile.h>\n#include <OpenEXR/File.h>\n#include <iostream>\n#include <sstream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const unsigned uint8_t* data, size_t size) {\n    if (size == 0) {\n        return 0;\n    }\n    \n    std::istringstream stream(data, size);\n\n    // OpenEXR::RcFileIterator\n    try {\n        OpenEXR::RcFile::Iterator iter = OpenEXR::RcFile::Iterator(stream, OpenEXR::RcFile());\n        catch (const OpenEXR::Exception& e) {}\n        iter.close();\n        } catch (const OpenEXR::Exception::Error& e) {} {\n        return 0;\n    }\n\n    // OpenEXR::RcFileIterator\n    try {\n        OpenEXR::RcFile::Iterator iter = OpenEXR::RcFile::Iterator(stream, OpenEXR::RcFile());\n        } catch (const OpenEXR::Exception::Error& e) {\n            return 0;\n        }\n        iter.close();\n    } catch (const OpenEXR::Exception::Error& e) {\n        return 0;\n    }\n\n    // OpenEXR::RcFile\n    try {\n        OpenEXR::RcFile rcFile = OpenEXR::RcFile(stream);\n        rcFile.close();\n    } catch (const OpenEXR::Exception::Error& e) {\n        return 0;\n    }\n\n    // OpenEXR::RcFile constructor\n    try {\n        OpenEXR::RcFile rcFile = OpenEXR::RcFile(stream, 0);\n    } catch (const OpenEXR::Exception::Error& e) {\n        return 0;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009010,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/Config.h>\n#include <OpenEXR/Header.h>\n#include <OpenEXR/Image.h>\n#include <OpenEXR/EXRConfig.h>\n#include <OpenEXR/InputFile.h>\n#include <OpenEXR/OutputFile.h>\n#include <OpenEXR/TabFile.h>\n#include <OpenEXR/EXRFile.h>\n#include <OpenEXR/InputFile.h>\n#include <OpenEXR/OutputFile.h>\n#include <OpenEXR/Exception.h>\n#include <iostream>\n\nusing namespace std;\nusing namespace OpenEXR;\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Check if the input size is at least the size of an OpenEXR header\n    if (size < 128) {\n        return 0;\n    }\n\n    // Try to parse and read the OpenEXR header\n    try {\n        Header inputHeader((char*)data);\n    } catch (const Exception& e) {\n        return 0;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009011,
+   "error_line": 9,
+   "random_correct": false,
+   "code": "#include <iostream>\n#include <OpenEXRConfig.h>\n#include <ImfImage.h>\n#include <ImfHeader.h>\n#include <sstream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Convert the input data to an OpenEXR memory stream\n    stdstream<OpenEXR::CharStream> inputStream(std::reinterpret_cast<OpenEXR::Char*>(data), size);\n\n    try {\n        // Parse the OpenEXR header\n        OpenEXR::Header imageHeader;\n        OpenEXR::HeaderParser::parse(imageHeader, inputStream);\n        \n        // Create an input image object with the parsed header\n        OpenEXR::InputImage inputImage(imageHeader);\n        \n        // Use the image object to ensure it is constructed\n        inputImage;\n    } catch (const std::exception& e) {\n        // Handle any thrown exceptions\n        e;\n    }\n    \n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009012,
+   "error_line": 3,
+   "random_correct": false,
+   "code": "#include <iostream>\n#include <ImfInputFile.h>\n#include <ImfImath.h>\n#include <ImathMath.h>\n#include <ImathFunBuffer.h>\n\nusing namespace OpenEXR;\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Convert the input data into an Imath::Buffer\n    Imath::Buffer buffer((const char*)data, size);\n    Imath::Mode mode;\n    Imath::Header header;\n\n    try {\n    // Open the buffer as an OpenEXR file\n    if (InputFile::isValidInputFile(buffer, header, InputFile::Mode::READ)) \n        {\n            InputFile file;\n            file.open(&buffer, header, mode);\n            file.close();\n        }\n    } catch (ImfInvalidInputException& e) {\n        // If an invalid input exception is thrown, we simply return 0\n        return 0;\n    }\n\n    // If no exception is thrown, we also return 0\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009013,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR.h>\n#include <Imath.h>\n#include <Imath.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    OpenEXR::EXRHeader header;\n    OpenEXR::InputEXR file;\n\n    try {\n        OpenEXR::EXRHeader header(data);\n        OpenEXR::InputEXR file(header);\n        OpenEXR::EXR::Header::versionType();\n        OpenEXR::EXR::Header::widthType();\n        OpenEXR::EXR::Header::heightType();\n        OpenEXR::EXR::Header::widthType();\n        OpenEXR::EXR::Header::heightType();\n        OpenEXR::EXR::Header::versionType();\n        OpenEXR::EXR::Header::widthTypeType();\n        OpenEXR::EXR::Header::heightTypeType();\n        OpenEXR::EXR::Header::bitsPerSampleType();\n        OpenEXR::EXR::Header::samplesPerPixelType();\n        OpenEXR::EXR::Header::bitsPerPerSampleType();\n        OpenEXR::EXR::Header::versionType();\n        OpenEXR::EXR::Header::width();\n        OpenEXR::EXR::Header::height();\n        OpenEXR::EXR::Header::bitsPerPerSampleType();\n        OpenEXR::EXR::Header::version();\n        OpenEXR::EXR::Header::versionType();\n        OpenEXR::EXR::Header::versionTypeType();\n        OpenEXR::EXR::Header::widthTypeType();\n        OpenEXR::EXR::Header::heightTypeType();\n        OpenEXR::EXR::Header::colorSpaceType();\n        OpenEXR::EXR",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009014,
+   "error_line": 1,
+   "random_correct": true,
+   "code": "#include <Imf.h>\n#include <ImfHeader.h>\n#include <ImfException.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    try {\n        // Check if the size is sufficient to parse an OpenEXR header\n        if (size < OpenEXR::Header::size()) {\n            return 0;\n        }\n\n        // Attempt to parse the OpenEXR header\n        try {\n            OpenEXR::Header header((const char*)data);\n            } catch (const IException& e) {\n                std::cerr << \"IException caught: \" << e.what() << std::endl;\n            }\n        } catch (const OpenEXRException& e) {\n            std::cerr << \"OpenEXRException caught: \" << e.what() << std::endl;\n        }\n    } catch (const std::exception& e) {\n        std::cerr << \"Standard exception caught: \" << e.what() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": true,
+   "entropy_correct": false,
+   "margin_correct": true
+  },
+  {
+   "seed": 4009015,
+   "error_line": 4,
+   "random_correct": false,
+   "code": "#include <iostream>\n#include <sstream>\n#include <vector>\n#include <OpenEXR.h>\n#include <OpenEXROutputFile.h>\n#include <OpenEXRInputFile.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Convert the input data into a byte stream\n    std::istringstream inputStream(data, size);\n\n    try {\n        // Create an OpenEXR header stream from the input stream\n        OpenEXR::EXRInput::HeaderStream inputHeader(inputStream);\n\n        // Read the OpenEXR header\n        OpenEXR::EXRInput::Header header;\n        OpenEXR::EXRInput::readHeader(&inputHeader, header);\n\n        // Accessing the channel data from OpenEXRInputFile\n        OpenEXR::EXRInput::InputChannel channel = OpenEXR::EXRInput::default;\n\n        // Accessing the image data from OpenEXRInputFile\n        OpenEXR::EXRInput::ImageChannel imageChannel = OpenEXR::EXRInput::default;\n\n        // Accessing the methods of OpenEXR::EXROutput\n        OpenEXR::EXROutput::Header = OpenEXR::EXROutput::default;\n        OpenEXR::EXROutput::ChannelType channelType = OpenEXR::EXROutput::default;\n        OpenEXR::EXROutput::ChannelType = OpenEXR::EXROutput::default;\n        OpenEXR::EXROutput::ChannelType = OpenEXR::EXROutput::default = OpenEXR::EXROutput::ChannelType::default;\n        OpenEXR::EXROutput::ChannelType& = OpenEXR::EXROutput::default = OpenEXR::EXROutput::ChannelType::default;\n        OpenEXR::",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009016,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXRFile.h>\n#include <OpenEXRInput.h>\n#include <stdint.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Check if the input data size is suitable for OpenEXR\n    if (size == 0) {\n        return 0;\n    }\n\n    // Create an OpenEXR input object\n    OpenEXR::EXRInput EXR((const unsigned char*)data, size);\n\n    // Parse the input as an OpenEXR file\n    OpenEXR::EXRFile exrFile(EXR);\n\n    // Check if the file was successfully opened\n    if (!exrFile.isFileOpen()) {\n        std::cerr << \"Failed to open EXR file.\\n\";\n        return -1;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009017,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/Image.h>\n#include <stdint.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) {\n        return 0;\n    }\n\n    std::string fuzzData((const char*)data, size);\n\n    try {\n        // Try reading the image from the fuzzed input data\n        OpenEXR::ImageInput exrImage(fuzzData);\n\n        // Close the image input\n        exrImage.close();\n    } catch (const std::exception& e) {\n        // Handle exceptions\n        (void) e.what();\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009018,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <Imath.h>\n#include <ImfInputFile.h>\n#include <ImfHeader.h>\n#include <Imf.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Attempting to create a file from the input data\n    std::ifstream file;\n    file.write(reinterpret_cast<char(data), size), std::ios::binary);\n\n    // Check if the file opened\n    if (!file.is_open()) {\n        std::cerr << \"File open failed\\n\";\n        return 0; // Indicate an error\n    }\n\n    // Attempting to open the file for reading\n    auto file = Imf::InputFile(file, Imf::InputFile::READ);\n    if (!file) {\n        std::cerr << \"Open failed\\n\";\n        return 0; // Indicate an error\n    }\n\n    // Attempting to read the header from the file\n    auto header = Imf::Header();\n    header = file.readHeader(header);\n    if (!header) {\n        std::cerr << \"Failed to read header\\n\";\n        return 0; // Indicate an error\n    }\n\n    // Attempting to create an image file\n    auto imageFile = Imf::ImageFile(\"\", Imf::ImageFile::WRITE);\n\n    // Attempting to create an image object from the header\n    auto image = Imf::RgbaInputImage(header, imageFile);\n    if (!image) {\n        std::cerr << \"Failed to create image\\n\";\n        return 0; // Indicate an error\n    }\n\n    // Attempt to close the image and image file\n    image.close();\n    imageFile.close();\n\n    // Attempting to close the input file\n    file.close();\n\n    return 0; // Indicate no error\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009019,
+   "error_line": 4,
+   "random_correct": false,
+   "code": "// libFuzzer harness code for fuzzing with the OpenEXR library (v3.4)\n\n#include <OpenEXRConfig.h>\n#include <OpenEXRUtil.h>\n#include <ImathVec.h>\n#include <Imath.h>\n#include <iostream>\n#include <sstream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size, uint8_t*, const char*, size_t) {\n    // Convert the fuzz data into an OpenEXR::ImageReader input stream\n    std::istringstream fuzzDataStream = std::istringstream(data, data + size);\n    OpenEXR::ImageReader reader = OpenEXR::ImageReader(fuzzDataStream);\n    \n    // Try to open the image and immediately close to ensure the stream is properly properly\n    if (reader.open()) {\n        reader.close();\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": true,
+   "entropy_correct": true,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009020,
+   "error_line": 1,
+   "random_correct": true,
+   "code": "#include <OpenEXRFile.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const ::uint8_t* data, size_t size) {\n    // Feed the fuzz bytes into OpenEXR parsing APIs\n    OpenEXRFile file(nullptr, data, size, OpenEXRFile::READ);\n    if (file.isOpen()) {\n        // Perform additional operations if needed\n        file.close();\n    } else {\n        // Handle the failure case if needed\n    }\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": true,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009021,
+   "error_line": 7,
+   "random_correct": false,
+   "code": "#include <ImfImage.h>\n#include <ImfHeader.h>\n#include <ImfRgbaFile.h>\n#include <iostream>\n\n// Use the OpenEXR namespace for easier access\nusing namespace OpenEXR;\n\nextern \"C\" int\nLLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Create a string stream from the fuzzed data\n    std::stringbuf fuzzData(reinterpret_cast<char*>(data), size);\n\n    // Define the file name and mode for the OpenEXR file\n    std::string fileName = \"test\";\n\n    // Create an RgbaFile object to read the OpenEXR file\n    ImfRgbaFile rgbaFile;\n\n    try {\n        // Attempt to open the OpenEXR file\n        rgbaFile.open(fileName, ImfRgbaFile::readMode, fuzzData);\n    } catch (const OpenEXR::Exception& e) {\n        // If there's an exception, return 0 to indicate a valid input\n        return 0;\n    }\n\n    // Return 0 for a valid OpenEXR file\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009022,
+   "error_line": 2,
+   "random_correct": false,
+   "code": "#include <OpenEXRConfig.h>\n#include <ImfFile.h>\n#include <ImfInput.h>\n#include <Imf.h>\n#include <iostream>\n\nextern \"C\" {\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Check if the input size is not zero\n    if (size == 0) {\n        std::cerr << \"Invalid input size\" << std::endl;\n        return 0;\n    }\n\n    // Create a temporary buffer\n    char* buffer = static_cast<char*>(malloc(size);\n    if (!buffer) {\n        std::cerr << \"Failed to allocate memory for buffer\" << std::endl;\n        return 0;\n    }\n\n    // Copy input data\n    memcpy(buffer, size);\n    if (!buffer) {\n        std::cerr << \"Failed to copy data\" << std::endl;\n        return 0;\n    }\n\n    // Create a stream for the OpenEXR file\n    Imf::Stream* stream = createStream(buffer);\n    if (!stream) {\n        std::cerr << \"Failed to create stream\" << std::endl;\n        return 0;\n    }\n\n    // Attempt to open the OpenEXR file\n    Imf::File* file = open(stream);\n    if (!file) {\n        std::cerr << \"Error opening OpenEXR file\" << std::endl;\n        return 0;\n    }\n\n    // Ensure the file is valid\n    if (!file) {\n        std::cerr << \"File is not valid\" << std::endl;\n        return 0;\n    }\n\n    // Access the header\n    Imf::Header* header = file->header();\n    if (!header) {\n        std::cerr << \"Failed to retrieve header\" << std::endl;\n        return 0;\n    }\n\n   ",
+   "confidence_correct": true,
+   "entropy_correct": true,
+   "margin_correct": true
+  },
+  {
+   "seed": 4009023,
+   "error_line": 6,
+   "random_correct": true,
+   "code": "#include <ImfImage.h>\n#include <stdint.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Create an EXR file from the fuzz data\n    OpenEXR::ImfFile image(\"fuzz.exr\", true, false);\n\n    // Write the fuzz data to the file\n    image.writeRaw(data, size);\n\n    // Close the EXR file\n    image.close();\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009024,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR.h>\n#include <iostreamEXR.h>\n#include <iosfwd>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Create an input stream to read the OpenEXR data\n    std::istringstream input((const char*)data, size);\n\n    try {\n        // Open the OpenEXR file\n        EXRInputFile inputFile(inputStream);\n    } catch (std::exception& e) {\n        std::cerr << \"Exception occurred during input: \" << e.what() << std::endl;\n    }\n\n    // Return 0 to indicate that the input was successfully processed\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009025,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/User.h>\n#include <OpenEXR/EXRInput.h>\n#include <cstring>\n#include <iostream>\n#include <vector>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, std::size_t size) {\n    // Create a string from the bytes of the fuzz input\n    std::string input_string(reinterpret_cast<const char*>(data), size);\n\n    // Define the filename for the EXR file\n    std::string filename(\"tested.exr\");\n\n    // Open the EXR file\n    OpenEXR::EXRInput file;\n    file.open(filename.data());\n\n    if (file.error() != OpenEXR::ERROR_NONE) {\n        std::cerr << \"Failed to open file: \" << file.error() << std::endl;\n    } else {\n        // Read the EXR file\n        try {\n            file.readFile(filename, OpenEXR::InputHeader());\n        } catch (const OpenEXR::Exception& e) {\n            std::cerr << \"Error reading EXR file: \" << e.what() << std::endl;\n        }\n\n        // Close the EXR file\n        file.close();\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009026,
+   "error_line": 2,
+   "random_correct": false,
+   "code": "#include <OpenEXRConfig.h>\n#include <OpenEXR/EXR.h>\n#include <OpenEXR/EXRInput.h>\n#include <ImEXR.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    try {\n        // Create an input stream object with the input data and its size\n        std::MemoryInputStream inputStream((const unsigned char*)data, size);\n        \n        // Create an EXRInput object using the input stream\n        OpenEXR::EXRInput input(inputStream);\n        \n        // Read the image header from the the EXR input stream\n        const OpenEXR::EXRHeader& header = input.readHeader();\n        \n        // Print the header size for debugging purposes\n        std::cout << \"ImageHeader size: \" << header.size() << std::endl;\n        \n        // If the header parsing read without exceptions, return 0 to indicate the test passed\n        return 0;\n    } catch (const std::exception& e) {\n        std::cerr << \"Exception caught: \" << e.what() << std::endl;\n        return 0;\n    }\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009027,
+   "error_line": 3,
+   "random_correct": false,
+   "code": "#include <ImfInputFile.h>\n#include <ImfHeader.h>\n#include <ImfPixelFile.h>\n#include <Imath.h>\n#include <stdio.h>\n#include <iostream>\n#include <fstream>\n#include <sstream>\n#include <vector>\n\nusing namespace OpenEXR;\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    std::istringstream stream(data);\n    \n    try {\n        // Create an OpenEXR input file\n        IInputFile inputFile;\n        inputFile(stream);\n\n        // Read the header\n        const Header& header = inputFile.getHeader();\n\n        // Close the file (not necessary for fuzzing)\n        inputFile.close();\n    } catch (const std::exception& e) {\n        std::cerr << \"Caught an exception: \" << e.what() << stdendl;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009028,
+   "error_line": 3,
+   "random_correct": false,
+   "code": "#include <iostream>\n#include <ImfImage.h>\n#include <OpenEXRInput.h>\n#include <OpenEXROutput.h>\n#include <Imath.h>\n\nusing namespace OpenEXR;\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* fuzzData, size_t size) {\n    if (size == 0) {\n        return 0;\n    }\n\n    // Convert the fuzz data to a std::string\n    std::string image (fuzzData, size);\n\n    // Attempt to read the OpenEXR file\n    try {\n        OpenEXR::MultiImageInput image(image);\n    } catch (IOError& e) {\n        std::cerr << \"Failed to read the OpenEXR file: IOError \" << e.what() << std::endl;\n        return -1;\n    } catch (OpenEXRException& e) {\n        std::cerr << \"Failed to read the OpenEXR file: \" << e.what() << std::endl;\n        return -1;\n    }\n\n    // Perform additional operations on the image if needed\n\n    // Attempt to close the OpenEXR file\n    try {\n        image.close();\n    } catch (IOError& ioEx) {\n        std::cerr << \"Failed to close the OpenEXR file: IOError \" << ioEx.what() << std::endl;\n        return -1;\n    } catch (OpenEXRException oEx) {\n        std::cerr << \"Failed to close the OpenEXR file: OpenEXRException \" << oEx.what() << std::endl;\n        return -1;\n    }\n\n    std::cout << \"Successfully processed the OpenEXR file.\" << std::endl;\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009029,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/OpenEXR.h>\n#include <OpenEXR/IOS.h>\n#include <OpenEXR/EXR.h>\n#include <OpenEXR/Stream.h>\n\nusing namespace OpenEXR;\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) {\n        return 0;\n    }\n\n    // Convert the input data to a stream\n    std::istringstream is;\n    is.write(reinterpret_cast<const char*>(data), static_cast<int>(size));\n\n    // Create a stream from the input stream\n    EXR::MemoryStream stream(is);\n    EXR::EXRInput input;\n    input.open(&stream, std::ios_base);\n\n    try {\n        EXR::EXRHeader header;\n        \n        // Read the header\n        // try {\n        //     header = input.readEXRHeader();\n        // }\n        // catch (EXR::EXRInput::Exception& e) {\n        // throw;\n        // }\n\n        header = input.readHeader();\n\n        // Read the image\n        // try {\n        //     input.readImage(header);\n        // }\n        // catch (EXR::EXRInput::Exception& e) {\n        //     throw;\n        // }\n\n        // Read pixels if needed\n        // try {\n        //     input.readPixels(0, 0);\n        // }\n        // catch (.) {\n        // throw;\n        // }\n        \n        // Close the input\n        // input.close();\n\n    } catch (std::exception& e) {\n        // Handle exceptions\n        // std::cerr << \"Exception: \"  << e.what() << std::endl;\n        // throw;\n        // catch (EXR::BaseException& e) {\n        // throw;\n        }\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009030,
+   "error_line": 8,
+   "random_correct": false,
+   "code": "#include <iostream>\n#include <vector>\n#include <string>\n#include <OpenEXRConfig.h>\n#include <ImfImage.h>\n#include <ImfRgbaFile.h>\n\nusing namespace OpenEXR;\n\nbool fuzzOpenEXR(const std::string& filename) {\n    // Open the OpenEXR file\n    ImfRgbaFile file(filename, ImfRwFile::OpenForRead);\n\n    if (!file.isGood()) {\n        std::cerr << \"Failed to open OpenEXR\" << std::endl;\n        return false;\n    }\n\n    auto header = file.header();\n    if (!header) {\n        std::cerr << \"Invalid OpenEXR header\" << std::endl;\n        return false;\n    }\n\n    // Read the image data\n    ImfImageLevel image(header);\n    if (file.readHeader(image)) {\n        file.readImage(image);\n    } else {\n        std::cerr << \"Failed to read image data\" << std::endl;\n    }\n\n    return 0;\n}\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Convert the data to a string\n    std::string filename(string((char*)data, size));\n\n    if (!filename.endsWith(\".exr\")) {\n        std::cerr << \"Invalid file extension\" << std::endl;\n        return 0;\n    }\n\n    if (fuzzOpenEXR(filename)) {\n        std::cerr << \"Failed to fuzz OpenEXR\" << std::endl;\n        return 0;\n    }\n\n    return 0;\n}\n\nint main() {\n    // Ensure the OpenEXR library is loaded\n    if (!OpenEXR::loadLibrary(\"openexr\")) {\n        std::cerr << \"Error: OpenEXR library not found\" << std::endl;\n        return 1;\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009031,
+   "error_line": 4,
+   "random_correct": false,
+   "code": "#include <iostream>\n#include <fstream>\n#include <vector>\n#include <Imf.h>\n#include <ImfHeader.h>\n#include <ImfImage.h>\n\nusing namespace OpenEXR;\nusing namespace std;\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Function to read input data and call OpenEXR parsing APIs\n    int readAndParseEXR(const uint8_t* data, size_t size) {\n    // Create a temporary file for the .EXR file\n    std::ofstream outFile(\"temp_image.exr\", ios_base::out | ios_base::binary);\n    outFile.write(data, size);\n    outFile.close();\n\n    // Create an ImfFile object with the path to the .EXR file\n    ImfImageData imageData(\"temp_image.exr\");\n\n    // Open the image file in read mode\n    ImageFileInput imageFile(imageData);\n\n    if (!imageFile.isOpen()) {\n        std::cerr << \"Error opening image file.\" << std::endl;\n        return -1;\n    }\n\n    // Get channel names from the image file\n    std::vector<std::string> channelNames = imageData.channelNames();\n\n    // Process the channels. Here, for simplicity, we just print their names.\n    for (const std::string& channel : channelNames) {\n        std::cout << \"Channel \" << channel << \": \" << imageData.channelType(channel) << std::endl;\n    }\n\n    // Close the image file\n    imageFile.close();\n\n    return 0;\n    }\n\n    // Pass the fuzzed data to readAndParseEXR\n    if (size > 0) {\n        readAndParseEXR(data, size);\n    }\n    else {\n        std::cerr << \"Input data is empty.\\n\";\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009032,
+   "error_line": 3,
+   "random_correct": false,
+   "code": "#include <iostream>\n#include <vector>\n#include <Eigen/EXR.h>\n#include <OpenEXR/ImageInput.h>\n#include <OpenEXR/MStream.h>\n#include <OpenEXR/Exception.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    try {\n        // Convert the uint8_t array to std::string\n        std::string inputData(data, data + size);\n\n        // Create a memory stream\n        OpenEXR::MemoryStream* stream = OpenEXR::MemoryStream::openStream(inputData);\n        if (!stream) {\n            std::cerr << \"Invalid memory stream\" << std::endl;\n            return;\n        }\n\n        // Open the image input from the memory stream\n        OpenEXR::ImageInput::Ptr imageInputPtr = OpenEXR::ImageInput.open(stream);\n\n        // Retrieve the image header\n        OpenEXR::Header& header = imageInputPtr->getHeader();\n\n        // Print the image's width and height\n        std::cout << \"Width: \" << header.width() << \", Height: \" << header.height() << std::endl;\n\n        // Retrieve and print the number of channels\n        for (int i = 0; i < header.channels(); ++i) {\n            std::cout << \"Channel at index: \" << i << std::endl;\n        }\n    }\n    catch (const Exception& e) {\n        std::cerr << \"Exception: \" << e.what() << '\\n';\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": true,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009033,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <ImfFile.h>\n#include <OpenEXR/Header.h>\n#include <OpenEXR/XRational.h>\n#include <ImfInputFile.h>\n#include <ImfAttributeSet.h>\n#include <ImfFloatFile.h>\n#include <ImfHalfFile.h>\n#include <ImfIntFile.h>\n#include <ImfMatrixFile.h>\n#include <ImfOutputFile.h>\n#include <ImfStringFile.h>\n#include <ImfUIntFile.h>\n#include <ImfUIntVectorFile.h>\n#include <iostream>\n#include <vector>\n#include <stdexcept>\n#include <cstring>\n\nusing std::string;\nusing namespace OpenEXR;\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) return 0;\n\n    // Create a memory buffer to hold the input data\n    std::vector<char> buffer;\n    buffer.push_back(data, size);\n\n    // Create an OpenEXR file with the input buffer\n    try {\n        OpenEXR::OutputFile file(\"output\", OpenEXR::Header(buffer));\n    } catch (const std::exception&) {\n        return 0;\n    }\n\n    // Try reading an OpenEXR file\n    try {\n        OpenEXR::InputFile file(\"output.exr\");\n    } catch (const std::exception&) {\n        return 0;\n    }\n\n    // Try writing an OpenEXR file\n    try {\n        OpenEXR::OutputFile file(\"testout\", OpenEXR::Header(buffer));\n    } catch (const std::exception&) {\n        return 0;\n    }\n\n    // Try reading an OpenEXR file\n    try {\n        OpenEXR::InputFile file(\"testout\");\n    } catch (const std::exception&) {\n        return 0;\n    }\n\n    //",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009034,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXRFile.h>\n#include <OpenEXRHeader.h>\n#include <OpenEXRImage.h>\n#include <iostream>\n#include <fuzzer_utils.h>\n\nint parseOpenEXR(const uint8_t* data, size_t size) {\n    // Create an input stream from the input data\n    openexr::MemoryInputStream inputStream(data, size);\n\n    // Create a context for OpenEXR\n    openexr::EXRContext;\n\n    // Create an EXRInputFile to read the input file\n    openexr::EXRInputFile inputFile(inputStream, context);\n\n    // Read the header of the file\n    openexr::EXRHeader header = inputfile.header();\n\n    // Process the header, for example checking dimensions\n\n    // Create an EXRImage from the header\n    openexr::EXRImage image(header);\n\n    // Close the input file\n    inputFile.close();\n\n    return 0;\n}\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Ensure the input data is large enough to be an OpenEXR file\n    if (size < 20) {\n        return 0;\n    }\n\n    // Parse the OpenEXR file data\n    parseOpenEXR(data, size);\n    catch(std::exception& e) {\n        std::cerr << \"Exception \" << e.what() << std::endl;\n        // Handle exceptions as needed\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009035,
+   "error_line": 6,
+   "random_correct": true,
+   "code": "#include <OpenEXRConfig.h>\n#include <ImfHeader.h>\n#include <iostream>\n#include <vector>\n\nusing namespace OPENEXR_NAMESPACE;\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Convert the fuzz input into a vector and call OpenEXR parsing API\n    std::vector<unsigned char> inputData(data, data + size);\n    ImfHeader header(inputData, inputData.size());\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009036,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR.h>\n#include <libfuzzer.h>\n#include <Imath.h>\n#include <Imath.h>\n#include <Imath.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) {\n        std::cerr << \"Fuzzing input is empty.\" << std::endl;\n        return 0;\n    }\n\n    try {\n    // Open OpenEXR file from the data\n    // OpenEXR::EXRInput fileInput(size, (char*)data);\n    // Read header;\n    // Read the file header\n    // Use OpenEXR::EXRInput\n    #include <OpenEXR/OpenEXR.h>\n    #include <iostream>\n    <iostream>\n\n    try {\n        OpenEXR::EXRInput fileInput(size, (char*)data);\n        OpenEXR::EXRInput* headerInput = OpenEXR::EXRInput::createHeader(fileInput);\n        delete headerInput;\n    } catch (const OpenEXR::EXRException& e){\n        std::cerr << \"Error in OpenEXR file: \" << e.msg() << std::endl;\n        return 0;\n    } catch (const OpenEXR::EXRException& e) {\n        std::cerr << \"Error in OpenEXR: \" << e.msg() << std::endl;\n    } catch (const OpenEXR::EXRException& e) {\n        std::cerr << \"Error in OpenEXR: \" << e.msg() << std::endl;\n    } catch (Exception&) {\n        return 0;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009037,
+   "error_line": 2,
+   "random_correct": false,
+   "code": "#include <iostream>\n#include <EXR/EXR.h>\n#include <EXR/EXRImage.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Write the input data to a file to parse with OpenEXR\n    std::ofstream file(\"fuzz.exr\", std::ios::binary);\n    if (file.is_open()) {\n        file.write(reinterpret_cast<static_cast<const char*>(data), size);\n        // OpenEXR will handle the parsing of the file\n        file.close();\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009038,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR.h>\n#include <ImfFile.h>\n#include <ImfHeader.h>\n#include <ImfException.h>\n#include <vector>\n#include <iostream>\n#include <fstream>\n#include <sstream>\n#include <cstring>\n\nusing namespace std;\nusing namespace OpenImaging::Imf;\nusing namespace OpenEXR::Internal;\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* fuzzData, size_t size) {\n    // Convert the fuzz data to a string\n    std::string input(fuzzData, size);\n\n    try {\n        // Parse the file header\n        EXRHeader header(input);\n    } catch (ImfException& e) {\n        std::cerr << \"Header exception: \" << e.what() << std::endl;\n        return 1;\n    }\n\n    try {\n        // Open the file\n        EXRFile file(header, ImfFileMode::READ);\n    } catch (ImfException& e) {\n        std::cerr << \"Open exception: \" << e.what() << std::endl;\n        return 1;\n    }\n\n    try {\n        // Read headers\n        file.header();\n    } catch (ImfException& e) {\n        std::cerr << \"Exception during reading: \" << e.what() << std::endl;\n        return 1;\n    }\n    \n    try {\n        // Close the file to ensure all resources are released\n        file.close();\n    } catch (ImfException& e) {\n        std::cerr << \"Exception during close: \" << e.what() << std::endl;\n        return 1;\n    }\n\n    // Return 0 on success\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009039,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR.h>\n#include <ImfRgbaFileOutput.h>\n#include <ImfRgbaFileInput.h>\n#include <iostream>\n#include <cstddef>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Create an OpenEXR file output\n    OpenEXR::FileOutput file = OpenEXR::FileOutput(\"fuzzed.exr\", \"w\");\n    file.open();\n\n    // Create an output stream for writing RGBA data\n    OpenEXR::OutputRgba out(file, 1, size, OpenEXR::Rgbaf(1.0, 1.0, 1.0, 1));\n\n    // Write the fuzz data to the output stream\n    out.write(data, size);\n\n    // Close the output and file\n    out.close();\n    file.close();\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009040,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <EXR.h>\n#include <ImEXRFile.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Create an input file for the OpenEXR file\n    OpenEXR::EXRInputFile file;\n\n    // Open the file with the fuzz data\n    file.open(data, size);\n\n    // Close the file\n    file.header();\n    file.close();\n\n    // Return 0 to indicate success\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": true,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009041,
+   "error_line": 6,
+   "random_correct": false,
+   "code": "#include <iostream>\n#include <fstream>\n#include <vector>\n\n// Include necessary headers from the OpenEXR library\n#include <EXRInputFile.h>\n#include <EXROutputFile.h>\n#include < half.h>\n\nusing namespace OpenEXR;\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Create a file to write the data\n    const char* filename = \"fuzz.exr\";\n    std::ofstream outfile(filename, std::outbinary);\n    outfile.write(reinterpret_cast<char*>(data));\n    if (!outfile) {\n        std::cerr << \"Failed to write data to file: \" << filename << std::endl;\n        return 1;\n    }\n\n    // Open the file to read the data\n    std::ifstream infile(filename, std::inbinary);\n    if (!infile) {\n        std::cerr << \"Failed to open file\" << std::endl;\n        return 1;\n    }\n\n    // Open the file as an OpenEXR input file\n    if (EXRInputFile input_openEXRInputFile(infile)) {\n        std::cout << \"Opened OpenEXR file successfully: \" << input.getSchemaName() << std::endl;\n    } else {\n        std::cerr << \"Error opening OpenEXR file\" << std::endl;\n        return 1;\n    }\n\n    // Close the file\n    input.close();\n\n    // If everything is fine, return 0 success\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009042,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/Image.h>\n#include <OpenEXR/EXRFileIO.h>\n\n#include <iostream>\n#include <vector>\n#include <cstdlib>\n#include <cstring>\n#include <stdexcept>\n\nint LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    std::vector<char> buffer(data, data + size);\n\n    auto stream = new MemoryStream(&buffer);\n    if (!stream) {\n        std::cerr << \"Failed to create memory stream\" << std::endl;\n        return 0;\n    }\n\n    auto stream = new IEOpenEXR::Iostream(*stream);\n    if (!stream) {\n        std::cerr << \"Failed to create IO stream\" << std::endl;\n        return 0;\n    }\n\n    IEOpenEXR* header = new OpenEXR::Header;\n    *header = (*header).readOpenEXRImageHeader(*stream);\n    if (!header) {\n        std::cerr << \"Failed to read image header\" << std::endl;\n        return 0;\n    }\n\n    auto input = new OpenEXR::ImageInput(header);\n    if (!input) {\n        std::cerr << \"Failed to create image input\" << std::endl;\n        return 0;\n    }\n\n    IE::Vector3f::Format format;\n    IE::Vector3f* image = new IE::Vector3f(*input->getHeader(), format);\n    if (!image) {\n        std::cerr << \"Failed to create image data\" << std::endl;\n        return 0;\n    }\n\n    image->readImage(image, stream);\n    if (!image) {\n        std::cerr << \"Failed to read image\" << std::endl;\n        return 0;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009043,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <Imath.h>\n#include <ImfFile.h>\n#include <iostream>\n#include <cstring>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Convert the input data to a string for easier handling\n    std::string fuzzData(data, size);\n\n    try {\n        OpenEXR::iR iR(fuzzData);\n\n        // Try using different OpenEXR APIs\n        OpenEXR::iR iR::i;\n        OpenEXR::iR(iR::i);\n        OpenEXR::iR::iR::iR::i;\n        OpenEXR::iR(iR::iR::i);\n        OpenEXR::iR(iR::i);\n        OpenEXR::iR(iR);\n    } catch (std::exception& e) {\n        // Handle any exceptions\n        return 0;\n    }\n\n    try {\n        // Try using different OpenEXR APIs\n        OpenEXR::iR(iR::iR, false, false);\n        OpenEXR::iR::iR, false, false);\n        OpenEXR::iR::iR(iR, false, false);\n        OpenEXR::iR(iR, false, false);\n        OpenEXR::iR(iR::, false, false);\n        OpenEXR::iR(iR, false, false, false);\n        OpenEXR::iR::iR, false, false, false);\n        OpenEXR::iR(iR::, false, false, false);\n        OpenEXR::iR(iR::iR);\n        OpenEXR::iR,::std::string::string);\n        OpenEXR::iR(const OpenEXR::iR::iR, false, false",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009044,
+   "error_line": 2,
+   "random_correct": false,
+   "code": "#include <OpenEXR/OpenEXRConfig.h>\n#include <OpenEXR/OpenEXR.h>\n#include <stdint.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    using OpenEXR::Image;\n\n    std::string input(data, size);\n\n    // Attempt to call OpenEXR parsing APIs with the fuzzed input\n    // For example, trying to read the image\n    // auto img = OpenEXR::readImage(input);\n    // ...\n\n    // Return 0 to indicate libFuzzer success\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009045,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR.h>\n#include <ImfHeader.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    try {\n        OpenEXR::InputFile file(data, size);\n        const IE::Headers& headers = file.headers();\n        for (const IE::ImageHeader& header : headers) {\n            header.printHeader();\n        }\n    } catch (const IE::Exception& ) {\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009046,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/EXROutput.h>\n#include <stdint.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Create anEXROutput\n    OpenEXR::EXROutputOptions options;\n    auto exr = OpenEXR::EXROutput(options);\n    {\n        // Write the fuzz data to the EXR\n        //        exr.writeRaw(data, size);\n        // Close the EXR\n        exr.close();\n    }\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009047,
+   "error_line": 2,
+   "random_correct": false,
+   "code": "#include <ImfImage.h>\n#include <Imath.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Check if the input data is a valid OpenEXR header\n    if (size < OpenEXR::Header::SIZE() || memcmp(data, data, OpenEXR::Header::SIZE()) != 0) {\n        std::cerr << \"Invalid input data or size too small for OpenEXR\" << std::endl;\n        return 0;\n    }\n\n    // Convert the input data to an OpenEXR::MemoryBuffer\n    OpenEXR::Buffer buffer = OpenEXR::MemoryBuffer(data, size);\n\n    try {\n        // Open the file in read mode\n        OpenEXR::ImfFile file;\n        file.open(buffer, OpenEXR::IOM::READ_MODE);\n        OpenEXR::Header header;\n    } catch (const std::exception& e) {\n        std::cerr << \"Error opening file: \" <<.what() << std::endl;\n        return 0;\n    }\n\n    try {\n        // Attempt to read the image data\n        OpenEXR::ImfImage image(file, header);\n        image.read();\n    } catch (const Imath::Exception& e) {\n        std::cerr << \"Error reading image:\" << e.what() << std::endl;\n        return 0;\n    } catch (const std::exception& e) {\n        std::cerr << \"Error reading image data: \" << e.what() << std::endl;\n        return 0;\n    }\n\n    // Close the file after reading data\n    try {\n        file.close();\n    } catch (const std::exception& e) {\n        std::cerr << \"Error closing file: \" << e.what() << std",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009048,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/InputFile.h>\n#include <OpenEXR/Memory.h>\n#include <stdexcept>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    try {\n        OpenEXR::InputFile input_file(OpenEXR::MemoryInput((const unsigned char*)data, size));\n    } catch (std::exception& e) {\n        std::cerr << \"Exception: \" << e.what() << std::endl;\n        return 0;\n    }\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009049,
+   "error_line": 1,
+   "random_correct": true,
+   "code": "#include <OpenEXR/Image.h>\n#include <OpenEXR/EXR.h>\n#include <iostream>\n#include <cstddef>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, const uint8_t* end, size_t size) {\n    // Create an OpenEXR image header\n    OpenEXR::Image::Header imageHeader = OpenEXR::Image::Header();\n\n    // Create an OpenEXR image\n    OpenEXR::Image::Mode imageMode = OpenEXR::Image::Spec/OpenEXR::Image::READS_NONE,\n                                    OpenEXR::Image::WRITE_NONE);\n\n    // Initialize the OpenEXR image\n    OpenEXR::Image image(&imageHeader, imageMode);\n    \n    // Parse the data into the OpenEXR image\n    image.parseData(data, end, size);\n    \n    // Close the image\n    image.close();\n    \n    // Return 0 to indicate that the fuzzing found no issues with the provided data\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009050,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXRFile.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* fuzz_data, size_t size) {\n    // Convert the fuzz data to a std::string\n    std::string input_data(fuzz_data, size);\n\n    // Use OpenEXR::InputFile to parse the EXR data\n    OpenEXR::InputFile file(input_data);\n\n    // You can attempt to read or process the contents of the file here\n    // For now, return 0\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009051,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <EXR.h>\n#include <Imath.h>\n\nextern \"C\" LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Create an EXR::InputFile object and pass the fuzzed data\n    EXR::InputFile file(EXR::InputFile::makeFileName(data, size));\n    if (!file) {\n        return 0;\n    }\n\n    // Read the header of the EXR file\n    EXR::Header header = file.header();\n\n    // Perform additional operations with the the header if needed\n\n    // Close the file\n    file.close();\n\n    // Return 0 to indicate a successful test\n    return 0;\n}\n",
+   "confidence_correct": true,
+   "entropy_correct": true,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009052,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <Imf.h>\n#include <ImfImage.h>\n#include <ImfInput.h>\n#include <ImathBox.h>\n#include <iostream>\n#include <vector>\n#include <inttypes.h>\n\nusing namespace Imf;\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    try {\n        // Create an input stream from the fuzz data\n        std::vector<uint8_t> inputData(data, uint8_t*)data + size);\n        \n        // Open the input stream as an OpenEXR file\n        Imf::Input input = Input::open(inputData, Imf::Input::READ_ONLY);\n        \n        // Create an ImageInput object\n        ImageInput image(input);\n        \n        // Attempt to open the image\n        if (image.open()) {\n            std::cout << \"Successfully opened the image.\" << std::endl;\n        } else {\n            std::cout << \"Failed to open the image.\" << std::endl;\n        }\n    } catch (const std::exception& e) {\n        std::cerr << \"Exception: \" << e.what() << std::endl;\n    }\n    \n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009053,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXRFile.h>\n#include <OpenEXRInput.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Create an OpenEXR stream object\n    OpenEXR::EXRInput::Stream stream((char*)data);\n\n    // Check if the stream was created successfully\n    if (!stream) {\n        return 0;\n    }\n\n    // Create an OpenEXR input object\n    OpenEXR::EXRInput* input = OpenEXR::EXRInput::createInput(stream.get());\n\n    // Check if the input was created successfully\n    if (!input.isValid()) {\n        return 0;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009054,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXRFile.h>\n#include <iostream>\n#include <string>\n#include <sstream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    std::string buffer((const char*)data, size);\n    std::istringstream iss(buffer);\n    \n    if (!iss) {\n        std::cerr << \"Failed to create stringstream\" << std::endl;\n        return 1;\n    }\n\n    // Read OpenEXR file\n    try {\n        OpenEXR::OpenEXR::read(iss, OpenEXR::OpenEXR::ReadFileOptions::NONE);\n        // Add additional checks here\n    } catch (const std::exception& ie) {\n        std::cerr << \"Failed to read OpenEXR file: \" << ie.what() << std::endl;\n        return 1;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4009055,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <EXR.h>\n#include <Imath.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Convert the data to a string\n    std::string inputString(data, size);\n\n    try {\n        // Attempt to read the OpenEXR file\n        OpenEXR::InputFile file(inputString);\n        // If reading is successful, return 0\n        return 0;\n    } catch (std::exception& e) {\n        // In case of any exception, return 0\n        return 0;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": true,
+   "entropy_correct": true,
+   "margin_correct": true
+  },
+  {
+   "seed": 4010000,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <ImfFile.h>\n#include <Imf.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Create a stream from the data\n    std::istringstream stream((((char*)(data)), size));\n\n    // Create an ImfInputFile from the stream\n    IMF::ImfInputFile input(stream);\n\n    // Open the ImfInputFile and close it\n    input.open();\n    input.close();\n\n    // Return 0 to indicate that no error has occurred\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010001,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXRFile.h>\n#include <OpenEXRConfig.h>\n#include <OpenEXR.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(uint8_t* data, size_t size) {\n    try {\n        if (size == 0) {\n            return 0;\n        }\n\n        try {\n            // Attempt to create OpenEXR InputFile with the fuzz data\n            OpenEXR::InputFile file(reinterpret_cast<char*>(data), size);\n\n            if (file.isOpen()) {\n                try {\n                    file.close();\n                } catch (Im::Exception& e) {\n                    std::cerr << \"Failed to close the file: \" << e.msg();\n                }\n            }\n        } catch (const Im::Exception& e) {\n            std::cerr << \"Caught Im exception: \" << e.msg() << std::endl;\n        } catch (const Exception& e) {\n            std::cerr << \"Caught generic exception: \" << e.msg() << std::endl;\n        }\n    } catch (const Exception& e) {\n        std::cerr << \"Caught generic exception: \" << e.msg() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010002,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXRFile.h>\n#include <OpenEXREXR.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Ensure the input data is not empty\n    if (size == 0) {\n        return 0;\n    }\n\n    // OpenEXR initialization\n    OpenEXR::OpenEXRLibrary library = OpenEXR::initializeLibrary();\n    OpenEXR::HeaderEXR header = OpenEXR::HeaderEXR();\n\n    // Create a char buffer to hold the input data with a null terminator\n    char* inputBuffer = new char[size + 1];\n\n    // Copy input data into the char buffer\n    for (size_t i = 0; i < size; ++i) {\n        inputBuffer[i] = data[i];\n    }\n    inputBuffer[size] = '\\0';\n\n    // Attempt to load and parse the input data\n    try {\n        // Create a std::string from the char buffer\n        std::string inputData = std::string(inputBuffer);\n\n        // Create an OpenEXR file\n        OpenEXR::OpenEXRFile* file = OpenEXR::OpenEXRFile::createFile(inputString, header);\n\n        // Close the OpenEXR file\n        file->close();\n\n        // Clean up the file\n        delete file;\n    } catch (const std::exception& e) {\n        std::cerr << \"Exception:\" << e.what() << \"\\n\";\n        return 0;\n    } finally {\n        // Clean up the allocated char buffer\n        delete[] inputBuffer;\n        library::destroy();\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010003,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/Imf.h>\n#include <OpenEXR/Imath.h>\n#include <stdint.h>\n#include <cstring>\n#include <iostream>\n#include <string>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) {\n        return 0;\n    }\n\n    std::string inputData((char*)data);\n\n    try {\n        OpenEXR::InputFile* exrFile = OpenEXR::openInputFile(inputData);\n        exrFile.close();\n        delete exrFile;\n    } catch (const OpenEXR::Exception& e) {\n        if (e.code() == OpenEXR::Exception::Code::INVALID) {\n            return 0;\n        }\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010004,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/Header.h>\n#include <OpenEXR/File.h>\n#include <OpenEXR/EXRInput.h>\n#include <iostream>\n#include <fstream>\n#include <vector>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Create a temporary file to store the fuzzed data\n    std::string tempFileName = \"fuzzed.exr\";\n    std::ofstream file(tempFileName, std::ios::binary);\n    file.write(reinterpret_cast<const char*>(data), size);\n\n    // Check if we opened the file\n    if (!file.is_open()) {\n        std::cerr << \"Failed to open temporary file\" << std::endl;\n        return 1;\n    }\n\n    // Create an input stream for the OpenEXR file\n    OpenEXR::InputStream inputStream(nullptr);\n\n    // Open the OpenEXR file\n    OpenEXR::File<OpenEXR::EXRInput> file(&file, &input);\n\n    // Get the header of the file\n    const Header const& header = file.header();\n\n    // Get the image dimensions\n    int width = header.imageWidth();\n    int height = header.imageHeight();\n\n    // Create a vector to hold the image data\n    std::vector<unsigned char> image(width, height, 0xFF);\n\n    // Try to read the image\n    try {\n        file.readPixels(image.data(), width, image.size() * height);\n    } catch (const std::exception& e) {\n        std::cerr << \"Failed to read pixels: Exception\" << std::endl;\n        std::cerr << e.what() << std::endl;\n    }\n\n    // Close the file and the temporary file\n    file.close();\n    ::remove(tempFileName.c_str());\n\n    // Return 0\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010005,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/OpenEXR.h>\n#include <OpenEXRConfig.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Make sure to initialize the OpenEXR library first\n    OpenEXR::OpenEXRConfig::initialize();\n\n    // Create a new InputEXRFile with the fuzz data\n    OpenEXR::InputEXRFile::Stream stream((const char*)data, size);\n    OpenEXR::InputEXRFile* file = OpenEXR::InputEXRFile(stream, OpenEXR::InputEXRFile::READ);\n\n    try {\n        // Attempt to read the data from the InputEXRFile\n        file->read();\n\n        // Attempt to read the header of the EXR file\n        OpenEXR::InputEXRFile::Header* header = OpenEXR::InputEXRFile::readHeader(file);\n        OpenEXR::InputEXRFile::close(file, header);\n    } catch (Exception&) {\n        // Close the file in case of exceptions\n        delete file;\n    }\n\n    // Return 0 to indicate the input is considered valid\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010006,
+   "error_line": 3,
+   "random_correct": false,
+   "code": "#include <cstdint>\n#include <iostream>\n#include <EXRHeader.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Check if the size is zero to avoid errors\n    if (size == 0) {\n        return 0;\n    }\n\n    try {\n        using OpenEXR::EXRHeaderParser;\n\n        // Parse the EXR header from the fuzz data\n        EXRHeaderParser parseEXRHeader(size, reinterpret_cast<const unsigned char*>(data);\n\n    } catch (const std::exception& e) {\n        // Handle exceptions that may occur\n        std::cerr << \"Exception in OpenEXR parsing: \" << e.what() << '\\n';\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": true,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010007,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/ImageFile.h>\n#include <iostream>\n\nextern \"C\" {\nint LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Attempt to create a temporary OpenEXR file\n    EXR::ImageFile file;\n    file.open(\"EXRF_file.exr\", EXR::ImageFile::Write, EXR::RGBFloatF, 1, 1, 1, 1);\n    if (file.is_open()) {\n        file.write(data, size);\n               file.close();\n    }\n\n    return 0;\n}\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010008,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/ImfParse.h>\n\nextern \"C\" \nint LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Feed the fuzz bytes into the OpenEXR parser\n    ImfParse parse((char)data, size);\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010009,
+   "error_line": 2,
+   "random_correct": false,
+   "code": "#include <stdint.h>\n#include <EXRFile.h>\n#include <ImfHeader.h>\n#include <ImfImage.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0)\n        return 0;\n\n    try {\n        std::ifstream file;\n        file.open(std::ios::binary);\n        if (!file.is_open()) {\n            return abort();\n        }\n\n        file.write(reinterpret_cast<char*>(data, size);\n\n        OpenEX::EXRHeader header;\n        file >> header;\n        header.verifyFileSignature();\n\n        file.close();\n    }\n    catch (std::exception& e) {\n        std::cerr << \"Error: \" e.what() << std::endl;\n        abort();\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010010,
+   "error_line": 4,
+   "random_correct": false,
+   "code": "#include <iostream>\n#include <cstdint>\n#include <vector>\n#include <OpenEXR/IOFile.h>\n#include <OpenEXR/Header.h>\n#include <OpenEXR/Image.h>\n#include <OpenEXR/Output.h>\n#include <OpenEXR/Exception.h>\n#include <OpenEXR/ImfInputFile.h>\n#include <fstream>\n#include <iostream>\n#include <stdexcept>\n\nusing namespace OpenEXR;\nusing namespace OpenEXR;\nusing namespace OpenEXR;\nusing namespace OpenEXR::internal;\nusing namespace OpenEXR;\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    size_t pos = 0;\n    while (pos < size) {\n        // Attempt to read header size\n        if (size - pos < 20) {\n            return 0;\n        }\n        size_t headerSize = (data[pos] << 8) | data[pos + 1] | data[pos + 2] << 8) | data[pos + 3] | data[pos + 4] | data[pos + 5] | data[pos + 6] | data[pos + 7] | data[pos + 8] | data[pos + 9] | data[pos + 10] | data[pos + 11] | data[pos + 12] | data[pos + 13] | data[pos + 14];\n        pos += headerSize + 2;\n\n        if (pos + headerSize > size) {\n            return 0;\n        }\n\n        // Attempt to parse the header\n        Header header;\n        try {\n            header = Header::parse(std::vector<const char>(data + pos, pos + headerSize));\n        } catch (const Exception &e) {\n            return 0;\n        }\n\n        if (",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010011,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXRFile.h>\n#include <OpenEXRConfig.h>\n#include <OpenEXRException.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Create a File object to handle the OpenEXR data\n    OpenEXRFile file;\n    if (!file.open(data, size)) {\n        perror(\"Failed to open OpenEXR file\");\n        return 0;\n    }\n\n    // Read the OpenEXR file data\n    bool success = file.read();\n    if (!success) {\n        perror(\"Failed to read OpenEXR file data\");\n    }\n\n    // Close the file to free up resources\n    file.close();\n\n    return 0;  // The return value for libFuzzer should be 0\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": true,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010012,
+   "error_line": 3,
+   "random_correct": false,
+   "code": "#include <iostream>\n#include <vector>\n#include <Imf.h>\n#include <Imath.h>\n#include <ImfImage.h>\n#include <ImfOutput.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) {\n        return 0;\n    }\n\n    std::vector<char> imageData(data, data<size);\n\n    const int width = static_cast<int>(10);\n    const int height = static_cast<int>(5);\n\n    if (width <= 0 || height <= 0) {\n        return 0;\n    }\n\n    try {\n        OpenExr::Header::Header::HeaderData headerData(width, height);\n        OpenExr::Header::Header header(\n            OpenExr::Header::OPENEXR, width, height,\n            OpenExr::Header::RGBA, OpenExr::Header::FLOAT,\n            OpenExr::Header::FLOAT,\n            OpenExr::Header::LINEAR,\n            OpenExr::Header::LINEAR,\n            OpenExr::Header::LINEAR,\n            {0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0},\n            OpenExr::Header::LINEAR, OpenExr::Header::LINEAR\n        );\n\n        OpenExr::ImfOutput out(header);\n        out.writePixels(imageData.data(), width, height);\n        out.close();\n    } catch (const std::exception& e) {\n        std::cerr << \"Exception caught: \" << e.what() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010013,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/EXRConfig.h>\n#include <OpenEXR/ImFile.h>\n#include <OpenEXR/EXRFile.h>\n#include <OpenEXR/InRgbaFile.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    try {\n        openEXR::InRgbaFile::ChannelType(\n            openEXR::InRgbaFile::ChannelType,\n            openEXR::InRgbaFile::ChannelType,\n            openEXR::InRgbaFile::ChannelType,\n            openEXR::InRgbaFile::ChannelType::ChannelType,\n            OpenEXR::ChannelType\n            openEXR::InRgbaFile::ChannelType::ChannelType,\n            openEXR::InRgbaFile::ChannelType::Type,\n            openEXR::InRgbaFile::Channel::Type,\n            openEXR::InRgbaFile::ChannelType::Type,\n            openEXR::InRgbaFile::Channel::Type,\n            openEXR::InRgbaFile::ChannelType::ChannelType::Type,\n            openEXR::InRgbaFile::ChannelType,\n            openEXR::InRgbaFile::ChannelType::Type,\n            openEXR::InRgbaFile::ChannelType::Type,\n            openEXR::InRgbaFile::Channel::Type::Type,\n            openEXR::InRgbaFile::ChannelType::Type,\n            openEXR::InRgbaFile::ChannelType::Type::Type,\n            openEXR::InRgbaFile::ChannelType::Type,\n            openEXR::InRgbaFile::ChannelType::Type,\n            openEXR::InRgbaFile::ChannelType::Type,\n            openEXR::In",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010014,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR.h>\n#include <Imath.h>\n#include <ImathVector.h>\n#include <iostream>\n#include <stdexcept>\n#include <vector>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Copy the fuzz data\n    std::vector<char> fuzzData(data, data + size);\n\n    // Feed the fuzz data into OpenEXR parsing APIs\n    try {\n        // Attempt to read the data\n        OpenEXR::Image OpenEXR::readFromMemory(fuzzData);\n    } catch (std::exception& e) {\n    }\n\n    // Return 0 to indicate that the fuzz did not find any issues with the input\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010015,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/Config.h>\n#include <OpenEXR/Exception.h>\n#include <ImfInputFile.h>\n#include <iostream>\n#include <string>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Create a string from the input data\n    std::string exRData(data, size);\n\n    try {\n        // Open the OpenEXR file\n        ImfInputFile inputfile(exRData);\n\n        // Read the header of the OpenEXR\n        inputFile.readFileHeader();\n    } catch (const std::exception& e) {\n        // Handle any exceptions that may occur during OpenEXR parsing\n        std::cerr << \"Exception occurred: \" << e.what() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010016,
+   "error_line": 1,
+   "random_correct": true,
+   "code": "#include <OpenEXR/OpenEXR.h>\n#include <OpenEXR/ halfImage.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    try {\n        // Create an OpenEXR image from the fuzz data\n    } catch (const std::exception& e) {\n        std::cerr << \"Caught an exception: \" << e.what() << std::endl;\n        // Return 0 to indicate successful execution\n        return 0;\n    }\n    // Return 0 to indicate successful execution\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010017,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/IorFile.h>\n#include <OpenEXR/IorFile.h>\n#include <OpenEXR/Header.h>\n#include <ImfStream.h>\n#include <sstream>\n#include <vector>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* fuzz_data, size_t size)\n{\n    using namespace OpenEXR;\n\n    // Create an InputStream from the fuzz data\n    ImfStream::InputStream input_stream(fuzz_data, size);\n\n    // Create an ist stream from the input stream\n    std::istream i_stream(&input_stream);\n\n    IorFile file;\n\n    // Try to open the data as an OpenEXR file\n    try\n    {\n        file = openIorFile(i_stream, true);\n    }\n    catch (std::exception &e)\n    {\n        std::cerr << \"Failed to open OpenEXR file with exception: \" << e.what()\n                  << std::endl;\n        return 0;\n    }\n\n    // Access the header of the file\n    const auto &header = file.getHeader();\n    const auto &window = header.dataWindow();\n\n    // Create a pixel buffer to read the pixel data from the file\n    std::vector<ImfPixel> pixels((int)window.height());\n\n    // Define the dimensions of the read window\n    int x = 0;\n    int y = 0;\n    int width = window.width();\n    int height = (int)window.height();\n\n    try\n    {\n        // Read the pixel data from the file\n        file.readPixels(x, y, 1, width, pixels);\n    }\n    catch (std::exception &e)\n    {\n        // Handle any exceptions that might occur during the reading process\n        std::cerr << \"Failed to read OpenEXR file with exception: \" << e.what",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010018,
+   "error_line": 2,
+   "random_correct": false,
+   "code": "#include <OpenEXR/ImfHeader.h>\n#include <OpenEXR/Imf.h>\n#include <iostream>\n#include <vector>\n#include <cstring>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    std::string EXRData(data, data + size);\n    \n    try {\n        Imf::ImfHeader::parseHeader(&EXRData);\n    } catch (Imf::Exception& e) {\n        // Handle exceptions thrown by the OpenEX parsing APIs\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010019,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include \"Imf.h\"\n#include \"ImfInput.h\"\n#include \"ImfChannel.h\"\n#include \"Imath.h\"\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) return 0;\n\n    // Create a stream from the input data\n    std::istringstream stream(data, size);\n\n    // Create an EXR input\n    OpenEXR::Input* input = OpenEXR::createInput(stream);\n    if (!*input) {\n        std::cerr << \"Failed to create input: \" << std::endl;\n        return 0;\n    }\n\n    // Read the header\n    OpenEXR::Header header = OpenEXR::readHeader(*input, OpenEXR::Header());\n    if (!header) {\n        std::cerr << \"Failed to read header: \" << std::endl;\n        return 0;\n    }\n\n    // Read channels\n    OpenEXR::Channels channels;\n    OpenEXR::ConstChannelMap* channels = OpenEXR::readChannels(*input, &header, &channels);\n    if (!*channels) {\n        std::cerr << \"Failed to read channels: \" << std::endl;\n        return 0;\n    }\n\n    // For demonstration, try to access channel names\n    if (channels.size() > 0) {\n        auto channelIterator = channels.begin();\n        std::string channelName = channelIterator.first;\n    }\n\n    // Close the stream\n    //stream.close();\n\n    // Clean up\n    OpenEXR::destroyInput(input);\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010020,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/ header.h>\n#include <OpenEXR/Imath.h>\n#include <OpenEXR/Imf.h>\n#include <OpenEXR/ImfInput.h>\n#include <iostream>\n#include <vector>\n#include <sstream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, std::size_t size) {\n    try {\n        std::istringstream inputStream(reinterpret_cast<const char*>(data), size);\n        \n        OpenEXR::EXRHeader::Options options = OpenEXR::EXRHeader::options;\n        OpenEXR::EXRHeader options = OpenEXR::EXRHeader::options | OpenEXR::EXRHeader::options;\n        \n        OpenEXR::Imf::EXRInput input(inputStream, options);\n        OpenEXR::Imf::EXRHeader header = OpenEXR::EXRHeader(\n            input, OpenEXR::EXRHeader::options);\n        \n        OpenEXR::EXRHeader::Options options = OpenEXR::EXRHeader::options;\n        OpenEXR::EXRHeader::options,\n        OpenEXR::EXRHeader::options | OpenEXR::EXRHeader::options | OpenEXR::EXRHeader::options |\n        OpenEXR::EXRHeader::options;\n\n        OpenEXR::Imf::EXRInput input(inputStream, OpenEXR::Imf::EXRHeader::options);\n        OpenEXR::Imf::EXRHeader header = OpenEXR::Imf::EXRHeader(&input, OpenEXR::EXRHeader::options);\n        \n        OpenEXR::Imf::EXRInput(input, options, options, options, options, options);\n        \n        OpenEXR::Imf::EXRHeader header(input, options, options, options, options",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010021,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXRImageFile.h>\n#include <OpenEXRConfig.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) {\n        return 0;\n    }\n\n    OpenEXR::MemoryIStream memoryStream(data, size);\n    try {\n        OpenEXR::FileInput imageFile(&memoryStream, OpenEXR::File::READ);\n        imageFile.close();\n        return 0; \n    } catch (const std::exception &e) {\n        return 0;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010022,
+   "error_line": 2,
+   "random_correct": true,
+   "code": "#include <iostream>\n#include <.half.h>\n#include <EXR.h>\n#include <OpenEXR.h> \n#include <sstream>\n\nusing namespace OpenEXR; \n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Create an input stream from the data\n    std::istringstream input;\n    input.write(reinterpret_cast(\"\"), size);\n    \n    // Reset the input stream to the beginning\n    input.seekg(0);\n    \n    // Attempt to open the OpenEXR file\n    InputFile file;\n    IE::InputHeader header;\n    try {\n        file = InputFile(&input, std::ios_binary);\n        header = file.openEXRHeader();\n    } catch (const OpenEXR::Exception &e) {\n        std::cerr << \"Failed to open file.\\n\";\n        return 0;\n    }\n\n    // Read the image\n    size_t width  = header.imageWidth();\n    size_t height = header.imageHeight();\n    size_t numChannels = header.numberOfChannels();\n    std::vector<Half> channel(numChannels);\n\n    int xOrigin, width = 0;\n    int yOrigin = 0;\n    int xOrigin = 0;\n    int yOrigin = 0;\n\n    for (size_t i = 0; i < numChannels; ++i) {\n        try {\n            file.readEXRData(channel[i], width, height, xOrigin, width, yOrigin, height, width, height);\n        } catch (const OpenEXR::Exception &e) {\n            std::cerr << \"Failed to read the image.\\n\";\n            return 0;\n        }\n    }\n\n    // Clean up\n    file.close();\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": true,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010023,
+   "error_line": 1,
+   "random_correct": true,
+   "code": "#include \"OpenEXR.h\"\n#include \"Imath.h\"\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (data == nullptr) {\n        return 0;\n    }\n\n    // Feed the data into OpenEXR\n    Imf::InputStream stream(data, size);\n    Imf::EXR::Header header;\n    header.read(&stream);\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010024,
+   "error_line": 1,
+   "random_correct": true,
+   "code": "#include <OpenEXR.h>\n#include <ImfInput.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    try {\n        Imf::InputFile file(reinterpret_cast<const std:: stream char*>(data));\n        file.close();\n        return 0;\n    } catch (const Imf::Exception& e) {\n        return 0;\n    }\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010025,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR(EXR.h>\n#include <OpenEXR(InputImage.h>\n#include <iostream>\n#include <stdexcept>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    try {\n        OpenEXR::EXRInputHeader header;\n        OpenEXR::EXRInput inputHeader(header);\n    } catch (const std::exception& e) {\n        std::cerr << \"Exception: \" << e << std::endl;\n    }\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010026,
+   "error_line": 1,
+   "random_correct": true,
+   "code": "#include <OpenEXR/EXR.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, const size_t size) {\n    try {\n        // Attempt to read the OpenEXR file\n        Imf::EXRInput input;\n        input.readHeader(reinterpret_cast<const<const char*>(data));\n    } catch (std::exception& e) {\n        // If an exception occurs, the input is considered as valid\n        return 0;\n    }\n\n    // If no exception is thrown, the input is considered as valid\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010027,
+   "error_line": 2,
+   "random_correct": false,
+   "code": "#include <iostream>\n#include <OpenEXRHeader.h>\n#include <OpenEXRImage.h>\n#include <OpenEXR>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Convert the input data to a string\n    std::string input(data, size);\n\n    // Create a HeaderInput object\n    OpenEXR::HeaderInput* headerInput = new OpenEXR::HeaderInput(input);\n\n    // Try reading the header\n    OpenEXR::HeaderInput* exrHeader = new OpenEXR::HeaderInput(*headerInput);\n\n    // Check if the EXR header was parsed successfully\n    if ( *exrHeader == nullptr) {\n        return 0;\n    }\n\n    // Try reading the image\n    OpenEXR::ImageInput* exrImage = new OpenEXR::ImageInput(*headerInput);\n\n    // Ensure image was loaded successfully\n    if (exrImage == nullptr) {\n        return 0;\n    }\n\n    // Clean up resources\n    delete exrImage;\n    delete exrHeader;\n    delete headerInput;\n\n    // Return 0 on success\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010028,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXRFile.h>\n#include <iostream>\n#include <cstddef>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Create an OpenEXR file to write out the fuzz data\n    OpenEXRFile file(\"fuzz.exr\", OpenEXRFile::Write, true, 1024, 1024, false);\n    \n    // Write the data to the file\n    file.write(data, size);\n    file.close();\n    \n    return 0; // Indicate success\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": true,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010029,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR.h>\n#include <ImfFileIO.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Create an input stream for the OpenEXR file\n    OpenEXR::InputFile file(reinterpret_cast<const char*>(data));\n\n    // Read the header of the file\n    OpenEXR::Header header = file.readHeader();\n\n    // Close the file\n    file.close();\n\n    // Return 0 indicating success\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010030,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <EXRFile.h>\n#include <ImathImathVec.h>\n#include <iostream>\n#include <vector>\n#include <sstream>\n#include <stdexcept>\n\nnamespace OpenEXR {\nusing OpenEXR;\nusing namespace std;\n}\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    try {\n        // Create an input stream from the fuzz data\n        std::istringstream inputData((char*)data + size);\n\n        // Create an EXR input stream object\n        OpenEXR::EXRInputStream* input = new OpenEXR::EXRInputStream(&inputData);\n\n        // Read the OpenEXR file's header\n        OpenEXR::EXRHeader header = input->readHeader();\n\n        // Create OpenEXR file object\n        OpenEXR::RiFile file(input, header);\n\n        // Read the image data\n        OpenEXR::EXRInputImageStream* imageData = new OpenEXR::EXRInputImageStream(&file);\n        OpenEXR::EXRHeader::Channels imageChannels = header.channels();\n        file.readImage(imageData, imageChannels);\n\n        // Further processing of the image data is omitted in this example.\n        // For now, we just print the channel names.\n        std::vector<std::string> channelNames;\n        for (OpenEXR::EXRHeader::Iterator it = header.channels().begin(); it != header.channels().end(); ++it) {\n            channelNames.push_back(it->name());\n        }\n\n        std::cout << \"OpenEXR channel names:\" << std::endl;\n        for (const auto& name : channelNames) {\n            std::cout << \"Channel: \" << name << std::endl;\n        }\n\n        return 0;\n    } catch (const std::exception& e) {\n        // Handle",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010031,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/EXRInput.h>\n#include <OpenEXR/IEXR.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Create an IEXR instance for the OpenEXR file reader\n    OpenEXR::EXRReader EXRR;\n    OpenEXR::EXRInputFile EXRIF(EXRR);\n    \n    // Feed the fuzzed data into the EXR file reader\n    EXRIF.open(data, size);\n\n    // Close the EXR file reader to clean up any resources\n    EXRIF.close();\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010032,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/InputFile.h>\n#include <OpenEXR/Header.h>\n#include <vector>\n#include <iostream>\n#include <sstream>\n#include <stdint.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput( IN const uint8_t* data, size_t size) {\n    // Convert the input data to a std::istringstream for convenience\n    std::istringstream input((char*)data, size);\n\n    try {\n        // Attempt to read the header from the input stream\n        OpenEXR::EXRInputHeader header;\n        OpenEXR::Header::read(inputStream, OpenEXR::InputFile::header, OpenEXR::InputFile::header);\n        \n        // Verify the header can be read\n        OpenEXR::InputFile inputFile = new OpenEXR::InputFile(&inputStream, header);\n        inputFile.close();\n    } catch (EXR::Exception& e) {\n        std::cerr << \"Caught OpenEXR exception during parsing: \" << e.what() << std::endl;\n        return 0;\n    }\n\n    try {\n        // Try reading a .EXR file from the input data\n        OpenEXR::EXRInputHeader header;\n        OpenEXR::Header::read(inputStream, OpenEXR::InputFile::header, OpenEXR::InputFile::header);\n        OpenEXR::InputFile inputFile = new OpenEXR::InputFile(&inputStream, header);\n        inputFile.close();\n    } catch (EXR::Exception& e) {\n        std::cerr << \"Caught OpenEXR exception: \" << e.what() << std::endl;\n    } catch (std::exception& e) {\n        std::cerr << \"Unexpected exception: \" << e.what() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010033,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/Header.h>\n#include <iostream>\n#include <cstring>\n#include <vector>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    try {\n        std::vector<char> buffer(data, data + size);\n\n        // Feed the fuzzed bytes into the OpenEXR parsing API\n        EXR::Header header;\n        EXR::Buffer buffer;\n        header.readHeader(buffer);\n\n    } catch (const EXR::IException& iex) {\n        std::cerr << \"CaughtR exception: \" << iex.what() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010034,
+   "error_line": 3,
+   "random_correct": false,
+   "code": "#include <iostream>\n#include <vector>\n#include <EXRConfig.h>\n#include <OpenEXRConfig.h>\n\nextern \"C int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Convert the data to a string\n    std::string inputData(data, data + size);\n\n    // Attempt to parse the input data using OpenEXR APIs\n    // Replace with actual parsing logic using the OpenEXR API\n    try {\n        // Assuming a mock class for OpenEXRReader and OpenEXRWriter\n        // These are placeholders to be replaced with the actual classes\n        // OpenEXRReader reader = OpenEXRReader();\n        // OpenEXRWriter writer = OpenEXRWriter();\n\n        // Example parsing logic\n        //        reader.read(inputData);\n        //        writer.write(inputData);\n\n        // Handle exceptions thrown by OpenEXR APIs\n    } catch (const Exception& e) {\n        // if (e.isError()) {\n            std::cerr << \"Exception encountered: \" << e.what() << std::endl;\n            // return;\n        // }\n    }\n\n    // LLVMFuzzer returns 0 if the input is valid, so we return 0\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010035,
+   "error_line": 4,
+   "random_correct": false,
+   "code": "#include <iostream>\n#include <fstream>\n#include <vector>\n#include <OpenEXR/Header.h>\n#include <EXR/Input.h>\n#include <EXR/Output.h>\n#include <EXR/Channel.h>\n#include <EXR/Util.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Create an IOBuffer from the fuzz data\n    std::vector<uint8_t> buffer(size);\n    buffer.assignassign(data, size);\n    Openexr::IOBuffer ioBuffer(size, (unsigned char*)buffer.data());\n\n    // Attempt to write and read an OpenEXR file\n    try {\n        std::string filename = \"fuzz.exr\";\n        Openexr::Header header = Openexr::Header();\n        Openexr::writeEXR(filename, header, ioBuffer);\n    } catch (const std::exception& e) {\n        std::cerr << \"Failed to write OpenEXR file: \" << e.what() << std::endl;\n        return 1;\n    }\n\n    // Attempt to read the OpenEXR file\n    try {\n        Openexr::InputFile inputFile = Openexr::InputFile.open(filename);\n        Openexr::Header& header = inputFile.header();\n        Openexr::OutputFile outputFile = Openexr::OutputFile(header);\n        std::vector<Openexr::ChannelList> channels;\n        Openexr::readEXR(inputFile, outputFile, header, channels);\n        std::cout << \"Successfully read OpenEXR file \" << filename << std::endl;\n    } catch (const std::exception& e) {\n        std::cerr << \"Error reading OpenEXR file: \" << e.what() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010036,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXRHeader.h>\n#include <OpenEXRFile.h>\n#include <iostream>\n#include <cstring>\n\nextern \"C\" {\nint LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) {\n        return 0;\n    }\n    \n    OpenEXR::EXRHeader header(reinterpret_cast<char*>(data));\n    if (!header.isValid()) {\n        return 0;\n    }\n\n    OpenEXR::InputFileHandle file = OpenEXR::InputFileHandle(reinterpret_cast<const char*>(data), header);\n    if (!file.open()) {\n        std::cerr << \"Error: Failed to open the OpenEXR file.\";\n        return 0;\n    }\n\n    // Process the OpenEXR file here\n    file.close();\n\n    std::cout << \"Successfully fuzzed the OpenEXR file.\\n\";\n    return 0;\n}\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010037,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/Image.h>\n#include <iostream>\n#include <cstddef>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    try {\n        // Create an Image from the input data\n        OpenEXR::Image img(reinterpret_cast<const unsigned char*>(data), size);\n\n        // Validate the image to ensure it's correct\n        img.validate();\n    } catch (const std::exception& e) {\n        // Handle exceptions that occur\n        std::cerr << \"Exception: \" << e.what() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010038,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR.h>\n#include <iostream>\n\nextern \"C\" {\nint LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size > 0) {\n        // Attempt to read OpenEXR file from fuzz data\n        OpenEXR::MemoryIStream stream(data, size);\n        OpenEXR::EXRInput* file = OpenEXR::open(&stream);\n        if (file) {\n            file.close();\n        }\n    }\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010039,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <EXR/OpenEXR.h>\n#include <EXR/InputFile.h>\n#include <EXR/OutputFile.h>\n#include <EXR/InputStream.h>\n#include <EXR/ReadImage.h>\n#include <EXR/EXRHeader.h>\n#include <stdint.h>\n#include <iostream>\n#include <fstream>\n#include <vector>\n#include <stdexcept>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) {\n        return 0;  // No data to process, return 0\n    }\n\n    // Test OpenEXR's parsing APIs\n    try {\n        // Use OpenEXR::InputStream\n        OpenEXR::InputStream inputStream(data, size);\n    } catch (const std::runtime_error& ioError) {\n        std::cerr << \"Failed to open input stream: \" << ioError.what() << std::endl;\n        return 1;\n    }\n\n    try {\n        // Use OpenEXR::InputFile\n        OpenEXR::InputFile(data);\n    } catch (const std::runtime_error& ioError) {\n        std::cerr << \"Failed to open EXR file: \" << ioError.what() << std::endl;\n        return -1;\n    }\n\n    try {\n        // Read image using OpenEXR::readImage API\n        OpenEXR::EXRHeader header;\n        std::unique_ptr<Imath::Image> image = OpenEXR::readImage(data, size, header);\n    } catch (const std::runtime_error& ioError) {\n        std::cerr << \"Failed to read EXR file using OpenEXR API: \" << ioError.what() << std::endl;\n        return -1;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010040,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/IexFile.h>\n#include <OpenEXR/MemoryIO.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Create an in-memory input stream to read the fuzz data\n    OpenEXR::::MemoryIStream memoryStream(data, size);\n\n    // Open the OpenEXR file from the in-memory stream\n    OpenEXR::::IexFile file(memoryStream);\n\n    // Check if the file was successfully opened\n    if (file.isOpen()) {\n        // Attempt to read the headers of the OpenEXR file\n        file.readAllHeaders();\n        \n        // Close the file after reading\n        file.close();\n    }\n\n    // Return 0 to indicate successful execution\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010041,
+   "error_line": 3,
+   "random_correct": false,
+   "code": "#include <iostream>\n#include <sstream>\n#include <OpenEXR/EXRFile.h>\n#include <OpenEXR/EXRInput.h>\n#include <OpenEXR/EXRUtil.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Create a string stream from the fuzz data\n    std::istringstream fileStream((const char*)data, size);\n\n    // Create an OpenEXR::InputFileSpec object for OpenEXR::InputFile\n    OpenEXR::InputFileSpec fileSpec = OpenEXR::InputFile::defaultSpec();\n\n    try {\n        // Attempting OpenEXR::InputFile constructor with inputStream and fileSpec\n        OpenEXR::InputFile inputFile(fileStream, fileSpec);\n    } catch(const OpenEXR::Exception& e) {\n        printf(\"\", e.what());\n    }\n\n    try {\n        // Attempting OpenEXR::Header constructor with inputStream\n        OpenEXR::Header header(fileStream);\n    } catch(const OpenEXR::Exception& e) {\n        printf(\"\", e.what());\n    }\n\n    try {\n        // Attempting OpenEXR::ImfOpenEXR constructor\n        OpenEXR::ReadOpenEXR readOpenEXR(fileStream, fileSpec, OpenEXR::ChannelType::any, OpenEXR::Type::any);\n    } catch(const OpenEXR::Exception& e) {\n        printf(\"\", e.what());\n    }\n\n    try {\n        // Attempting OpenEXR::EXREXRUtil constructor\n        OpenEXR::EXREXRUtil readEXREXRUtil(fileStream, OpenEXR::InputFile::defaultSpec());\n    } catch(const OpenEXR::Exception& e) {\n        printf(\"\", e.what());\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010042,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXRHeader.h>\n#include <OpenEXRFile.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    try {\n        // Parse OpenEXR header from the fuzz data\n        OpenEXR::Header header = OpenEXR::parseEXRHeader(data, size);\n    } catch(Exception&) {\n        std::cerr << \"Caught exception: \" << e.what() << std::endl;\n    }\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": true
+  },
+  {
+   "seed": 4010043,
+   "error_line": 5,
+   "random_correct": false,
+   "code": "#include <cstdint>\n#include <iostream>\n#include <vector>\n#include <ImfHeader.h>\n#include <ImfFile.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    try {\n        // Create a vector to hold the input data\n        std::vector<uint8_t> inputData(data, data + size);\n\n        // Attempt to parse the OpenEXR header\n        OpenEXR::Header header;\n        header.parseHeader(inputData, OpenEXR::mainHeader);\n\n        for (const std::vector<std::string>&& key : header.keys()) {\n            std::cout << header.name << \": \" << key << std::endl;\n        }\n\n        // Opening the OpenEXR file\n        OpenEXR::OutputFile out(\"output_test.exr\", header);\n\n        // Attempt to write to the OpenEXR file\n        // Assuming image size is 1\n        out.write(1.0f, 1.0f, 1.0f);\n\n        // Closeing the OpenEXR file\n        out.close();\n\n    } catch (std::exception& e) {\n        std::cerr << \"Error in processing OpenEXR: \" << e.what() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010044,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/EXRReader.h>\n#include <OpenEXR/EXR.h>\n#include <OpenEXR/Imath.h>\n#include <iostream>\n#include <cstring>\n\nint OpenEXREXRTest(const uint8_t* inputData) {\n    // Create an EXRReader from the input data\n    OpenEXR::EXRReader* reader = new OpenEXR::EXRReader(inputData);\n    if (reader == nullptr) {\n        std::cerr << \"Failed to open image\\n\";\n        return 1;\n    }\n\n    // Read the header\n    OpenEXR::EXRHeader* header = reader->readFileHeader();\n    if (header == nullptr) {\n        std::cerr << \"Failed to read header\\n\";\n        return 1;\n    }\n\n    // Try to read the image data\n    try {\n        OpenEXR::Image3fR image(*header);\n        reader->readImagePixels(image);\n    } catch (OpenEXR::Exception e) {\n        std::cerr << \"Failed to read image: \" << e.msg();\n        return 1;\n    }\n\n    // Clean up resources\n    delete reader;\n    delete header;\n\n    return 0;\n}\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    return OpenEXREXRTestData(data);\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010045,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <ImR.h>\n#include <Imath.h>\n#include <Imath.h>\n#include <iostream>\n\nvoid testOpenEXRFileInput(const OpenEXR::InputFile& input) {\n    OpenEXR::EXRHeader header;\n    OpenEXR::EXR::Type* type;\n    std::vector<const OpenEXR::EXR::Type* > typeList = {\n    OpenEXR::EXR::INT, OpenEXR::EXR::Type::INT8, OpenEXR::EXR::Type::INT,\n    OpenEXR::EXR::Type::INT16, OpenEXR::EXR::INT, OpenEXR::EXR::INT8, OpenEXR::EXR::Type::INT8, OpenEXR::EXR::INT,\n    OpenEXR::EXR::INT8, OpenEXR::EXR::INT, OpenEXR::EXR::INT8, OpenEXR::EXR::Type::INT16, OpenEXR::EXR::INT, OpenEXR::EXR::Type::INT,\n    OpenEXR::EXR::INT, OpenEXR::EXR::INT8, OpenEXR::EXR::INT8, OpenEXR::EXR::Type::INT, OpenEXR::EXR::INT,\n    OpenEXR::EXR::INT, OpenEXR::EXR::INT8, OpenEXR::EXR::Type::INT8, OpenEXR::EXR::Type::INT,\n    OpenEXR::EXR::Type::INT8, OpenEXR::EXR::INT8, OpenEXR::EXR::INT8, OpenEXR::EXR::Type::INT8, OpenEXR::EXR::Type::INT,\n    OpenEXR",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010047,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR/EXR.h>\n#include <sstream>\n#include <vector>\n#include <iostream>\n#include <cstring>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* fuzzData, size_t size) {\n    // Create a memory stream to hold the OpenEXR file\n    std::ostringstream memoryStream;\n    OpenEXR::EXROutputHeader header = OpenEXR::EXROutputHeader(OpenEXR::EXRHeader);\n\n    // Initialize the OpenEXR file\n    OpenEXR::EXROutputFile outputFile = OpenEXR::EXROutputFile(memoryStream, header, OpenEXR::EXRInputImage());\n\n    // Write the fuzz data to the memory stream as a raw OpenEXR\n    OpenEXR::EXRImage image = OpenEXR::EXRInputImage(header);\n    image.write(fuzzData, size);\n\n    // Create an OpenEXR input file from the memory stream\n    OpenEXR::EXRInputFile inputFile = OpenEXR::EXRInputFile(memoryStream);\n\n    // Attempt to parse the file\n    try {\n        OpenEXR::EXRInputHeader header = OpenEXR::EXRInputHeader(inputFile);\n        OpenEXR::EXRInputImage inputImage = OpenEXR::EXRInputImage(header);\n        std::cout << \"OpenEXR file parsed successfully.\" << std::endl;\n    } catch (std::exception& e) {\n        std::cerr << \"Error parsing OpenEXR: \" << e.what() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010048,
+   "error_line": 11,
+   "random_correct": false,
+   "code": "#include <OpenEXRConfig.h>\n#include <ImfInputFile.h>\n#include <ImfHeader.h>\n#include <ImfRgba.h>\n#include <ImfRgba.h>\n#include <iostream>\n#include <string>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Convert the input data to std::string\n    std::string dataAsStr(char(data), data + size);\n\n    // Check for the validity of the input\n    if (dataAsStr.empty())\n        return 0;\n\n    try {\n        // Open the OpenEXR file\n        OpenEXR::InputFile input_file(dataAsStr, OpenEXR::ReadMode);\n\n        // Read the header of the OpenEXR file\n        OpenEXR::HeaderRgba headerRgba(inputFile.header());\n\n        // Read the RGBA data\n        OpenEXR::InputRgba inputRgba(&inputFile, headerRgba);\n\n        // Read the end of the file\n        inputRgba.endRead();\n\n        // Process the header to check for any specific condition\n        if (headerRgba.channelType() != HeaderRgba::CHANNEL_RGBA) {\n            return 0;\n        }\n    } catch (std::exception& e) {\n        return 0;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010049,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <ImfFile>\n#include <ImfInput>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Create an output string stream from the data to simulate file input\n    std::ostringstream outStream;\n    outStream.write(reinterpret_cast<const char*>(data), static_cast<size_t>(size));\n\n    // Create an input stream from the output string stream\n    OpenEXR::InputStream inputStream(outStream);\n\n    try {\n        // Attempt to open the file from the input stream\n        OpenEXR::ImfFile file(inputStream);\n\n        // If no exception is thrown, we assume the file is valid, so return zero\n    } catch (/* const OpenEXR::Exception& e) {\n        // If an exception occurs, print the error message and return zero\n        std::cerr << \"OpenEXR file exception: \" << e.what() << std::endl;\n        return 0;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010050,
+   "error_line": 2,
+   "random_correct": false,
+   "code": "#include <iostream>\n#include \"OpenEXRFile.h\"\n\nextern \"C\" int LLVMFuzzerTestOneInput( const uint8_t* data, size_t size) {\n    if (size > 0) {\n        try {\n            OpenEXR::Header header((char*)data, size);\n            OpenEXR::validateHeader(header);\n        } catch (const std::exception& e) {\n            std::cerr << \"Caught exception: \" << e.what() << std::endl;\n        }\n    }\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010051,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Convert the fuzz data to a buffer and write to an OpenEXR file\n    OpenEXR::RHeader header;\n    std::string filename = \"output.ex\";\n\n    try {\n        OpenEXR::RFile file(filename, header, OpenEXR::File::Write);\n        file.write(data, size);\n        file.close();\n    } catch (const std::exception& e) {\n        std::cerr << \"Error during OpenEXR file writing: \" << e.what() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010053,
+   "error_line": 4,
+   "random_correct": false,
+   "code": "#include <cstdint>\n#include <iostream>\n#include <vector>\n#include <OpenEXR.h>\n#include <ImfEXR.h>\n#include <ImfEXR.h>\n#include <ImathVector.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    try {\n        // Convert the input data to an OpenEXR MemoryBuffer\n        OpenEXR::MemoryBuffer buffer(data, size);\n        OpenEXR::HeaderHandle* header = OpenEXR::HeaderDescription::default();\n        \n        // Create an InputFile to read the OpenEXR file\n        OpenEXR::Imf::InputFile* inputFile = new OpenEXR::InputFile(buffer, header);\n        \n        // Create a Reader to read the image\n        OpenEXR::ImageImf::Reader* imageReader = new OpenEXR::ImageImf::Reader(header, inputFile);\n        \n        // Read the image\n        imageReader->read();\n        \n        // Clean up\n        delete imageReader;\n        delete inputFile;\n        delete header;\n        \n    } catch (const OpenEXR::Imf::Exception& e) {\n        std::cerr << \"OpenEXR exception caught: \" << e.what() << std::endl;\n        \n    } catch (const OpenEXR::IO::Exception& e) {\n        std::cerr << \"OpenEXR IO exception caught: \" << e.what() << std::endl;\n        \n    } catch (const OpenEXR::Imath::Exception& e) {\n        std::cerr << \"Imath exception caught: \" << e.what() << std::endl;\n        \n    } catch (const std::exception& e) {\n        std::cerr << \"General exception caught: \" << e.what() << std::endl;\n    }\n    \n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010054,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <InputFile.h>\n#include <OpenEXRConfig.h>\n#include <iostream>\n#include <stdint.h>\n#include <stdlib.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Create a memory stream from the fuzz data\n    OpenEXR::StreamMemory* memoryStream = new OpenEXR::StreamMemory(data);\n\n    // Open the input file\n    OpenEXR::InputFile* file = new OpenEXR::InputFile(memoryStream);\n\n    // Create an input header object\n    OpenEXR::InputHeader* header = new OpenEXR::InputHeader(file);\n\n    // Read the input channel\n    OpenEXR::InputChannel* inputChannel = new OpenEXR::InputRgba(file, header);\n\n    // Read the RGBA data\n    OpenEXR::InputRgba* rgba = new OpenEXR::InputRgba(file, header);\n\n    // Read the blue\n    OpenEXR::InputRgba::readBlueChannel(rgba, 0);\n\n    // Read the red channel of the pixel\n    OpenEXR::InputRgba::readRed(rgba, 0, 0);\n\n    // Read the green\n    OpenEXR::InputRgba::readGreenChannel(rgba, 0);\n\n    // Read the alpha\n    OpenEXR::InputRgba::readAlpha(rgba, 0);\n\n    // Delete the allocated memory\n    delete rgba;\n    delete 0;\n    delete rgba;\n    delete 0;\n    delete inputChannel;\n    delete header;\n    delete rgba;\n    delete file;\n    delete memoryStream;\n\n    // Use a a simple loop to process the fuzz bytes\n    for (size_t i = 0; i < size; ++i) {\n        (void) data[i];\n    }\n\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010055,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <FuzzerInterface.h>\n#include <OpenEXR/IOutput.h>\n#include <OpenEXR/IInput.h>\n#include <OpenEXR/EXR.h>\n#include <OpenEXR.h>\n\nextern \"C\" \nint LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size < 1) {\n        return 0;\n    }\n\n   IER::OpenEXR::MemoryInputFile file(data);\n    OpenEXR::EXRHeader header;\n\n    if (OpenEXR::isEXRFile(&header, 0)) {\n        if (OpenEXR::EXRInput::open(file, header)) {\n\n        }\n    } else {\n        OpenEXR::EXRInput::open(file, header, 0);\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010056,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <EXR.h>\n#include <iostream.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    try {\n        // Create an OpenEXR InputFile object from the input data\n        OpenEXR::InputFile inputFile((char*)data, size);\n\n        // Read the file header to trigger the parsing logic\n        inputFile.header();\n        inputFile.close();\n    } catch (const std::exception& e) {\n        // Handle any exceptions that may occur\n        return 0;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": true,
+   "margin_correct": false
+  },
+  {
+   "seed": 4010057,
+   "error_line": 1,
+   "random_correct": false,
+   "code": "#include <OpenEXR.h>\n#include <ImfFile.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Attempt to create an OpenEXR inputFile from the fuzz data\n    try {\n        Imf::InputFile inputFile(reinterpret_cast<const char*)data, size);\n    } catch (const Imf::OpenEXRException& e) {\n        std::cerr << \"Caught exception: \" << e.what() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "confidence_correct": false,
+   "entropy_correct": false,
+   "margin_correct": false
+  }
+ ],
+ "summary": {
+  "confidence": {
+   "n_correct": 5,
+   "n_rand": 11,
+   "n10": 4,
+   "n01": 10,
+   "p": 0.1795654296875
+  },
+  "entropy": {
+   "n_correct": 14,
+   "n_rand": 11,
+   "n10": 12,
+   "n01": 9,
+   "p": 0.6636238098144531
+  },
+  "margin": {
+   "n_correct": 4,
+   "n_rand": 11,
+   "n10": 3,
+   "n01": 10,
+   "p": 0.09228515625
+  }
+ }
+}

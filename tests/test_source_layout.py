@@ -171,6 +171,7 @@ def test_package_dependency_direction_matches_final_matrix() -> None:
         "native",
         "revision",
         "experiments",
+        "harness_synthesis",
         "web",
         "cli",
     }

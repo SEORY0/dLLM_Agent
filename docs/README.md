@@ -21,6 +21,7 @@
 | 증거 조회 콘솔 | `web` | **구현·검증.** loopback에서 저장된 report와 candidate bank를 hash로 결합해 조회한다. | 원격 다중 사용자 운영, 실시간 사고 과정 또는 token playback |
 | dLLM-native online portfolio revision | `poc-revision` + 전용 online config | **구현·검증, 효능 미측정.** 실제 model-selected token commit, resident worker, lineage별 selective remask, crash-artifact exact proof, shared cause/Pareto archive가 코드와 자동 테스트로 연결돼 있다. | 새 runtime의 실제 Stable-DiffCoder×OpenEXR end-to-end 결과, ablation 이득, 취약점 발견, dLLM 우월성·전역 최적성 |
 | 논문 효능 연구 | 없음 | **설계.** protocol과 판정 gate가 있으며 powered AR/dLLM 비교는 아직 없다. | dLLM 탐지 우월성, 일반화, 유의한 효과 크기 |
+| trajectory 신호 기반 harness synthesis (RQ1/RQ3, 종료) | `tools/harness_synthesis/*.py`(수동 실행 스크립트, 기본 CLI·`openexr_one_day` 파이프라인에는 연결되지 않음) | **측정, RQ3 종료.** Dream-Coder로 OpenEXR 하네스(본문) 생성·컴파일·fuzz가 실제 GPU에서 가능함을 확인(고정 scaffold, 수정량을 고정한 window remask까지). confidence 기반 위치 선택이 random보다 컴파일률·coverage에서 낫다는 증거는 RQ1(N=224, 3개 신호)과 RQ3의 여러 재설계(스모크, B0/B0v2 baseline 감사, region 기반·수정량 통제 window pilot)에서 일관되게 나오지 않았다. | confidence 신호에 효과가 "없다"는 확정(표본이 작아 판정 불가에 가까움), dLLM 대 AR의 퍼징 성능·버그 발견·비용 우위(미판정), 프로덕션 파이프라인 연동 |
 
 위 표의 OpenEXR 비교는 한 번의 bring-up 실행이다. native proof가 static baseline보다 target
 coverage가 소폭 높았지만 후보 source와 trajectory가 서로 같고 반복 측정도 없어서 controller
@@ -73,6 +74,7 @@ flowchart LR
 | [`dllm-fuzzing-feedback-loop.md`](dllm-fuzzing-feedback-loop.md) | `hunt` v1의 한계에서 출발한 역사적 설계 메모 |
 | [`superpowers/plans/2026-08-20-feedback-conditioned-poc-revision.md`](superpowers/plans/2026-08-20-feedback-conditioned-poc-revision.md) | 작업 계획. 체크박스나 계획 문구는 구현 증거가 아님 |
 | [`superpowers/specs/2026-08-31-dllm-native-online-portfolio-design.md`](superpowers/specs/2026-08-31-dllm-native-online-portfolio-design.md) | 승인 설계. 실제 구현 상태와 효능은 online portfolio 문서에서 분리 |
+| [`superpowers/plans/2026-09-29-trajectory-signal-harness-synthesis.md`](superpowers/plans/2026-09-29-trajectory-signal-harness-synthesis.md) | 동결 프로토콜·원시 결과·판정 근거를 함께 담은 통합 기록. RQ1/RQ3 확정 결과와 RQ3 종료 판단, N=469는 사용하지 않은 과거 pilot 추정치임을 명시한 종합 결론 포함 |
 
 ## 증거와 source of truth
 

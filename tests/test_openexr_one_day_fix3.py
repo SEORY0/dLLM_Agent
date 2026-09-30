@@ -312,7 +312,7 @@ def test_resource_map_validates_explicit_gpu_identity_records() -> None:
     assert resource_map.gpu_records[0].uuid.startswith("GPU-")
     gpu_records = cast("list[dict[str, JsonValue]]", payload["gpu_records"])
     gpu_records[0]["index"] = 1
-    with pytest.raises(ValueError, match="GPU identity"):
+    with pytest.raises(ValueError, match="duplicate physical GPU index"):
         _ = ResourceMap.model_validate(payload)
 
 

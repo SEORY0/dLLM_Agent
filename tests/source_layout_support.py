@@ -65,6 +65,7 @@ FINAL_RUNTIME_MODULES: Final = module_set(
     dllm_agent.core dllm_agent.core.errors dllm_agent.core.io dllm_agent.core.models
     dllm_agent.experiments
     dllm_agent.experiments.multitarget
+    dllm_agent.experiments.multitarget.ar_slot_sampler
     dllm_agent.experiments.multitarget.artifacts
     dllm_agent.experiments.multitarget.bank_generation
     dllm_agent.experiments.multitarget.budget
@@ -115,6 +116,15 @@ FINAL_RUNTIME_MODULES: Final = module_set(
     dllm_agent.experiments.openexr_one_day.resident_pool
     dllm_agent.experiments.openexr_one_day.runtime
     dllm_agent.experiments.openexr_one_day.schedule
+    dllm_agent.harness_synthesis
+    dllm_agent.harness_synthesis.api_knowledge
+    dllm_agent.harness_synthesis.audit_ledger
+    dllm_agent.harness_synthesis.fitness
+    dllm_agent.harness_synthesis.power_calc
+    dllm_agent.harness_synthesis.regions
+    dllm_agent.harness_synthesis.remask
+    dllm_agent.harness_synthesis.token_trace
+    dllm_agent.harness_synthesis.trajectory_hook
     dllm_agent.replay dllm_agent.replay.pipeline dllm_agent.replay.sampler
     dllm_agent.replay.scoring dllm_agent.replay.validator
     dllm_agent.targets dllm_agent.targets.models dllm_agent.targets.profiles
@@ -125,14 +135,16 @@ FINAL_RUNTIME_MODULES: Final = module_set(
     dllm_agent.targets.openexr dllm_agent.targets.openexr.deep_parse
     dllm_agent.targets.openexr.particle dllm_agent.targets.openexr.probe
     dllm_agent.targets.openexr.probe_coverage dllm_agent.targets.openexr.proof
-    dllm_agent.targets.openexr.proof_execution dllm_agent.targets.structured
+    dllm_agent.targets.openexr.proof_execution
+    dllm_agent.targets.openexr.harness_reference dllm_agent.targets.structured
     dllm_agent.fuzzing dllm_agent.fuzzing.contracts dllm_agent.fuzzing.execution
     dllm_agent.fuzzing.runner dllm_agent.fuzzing.coverage
     dllm_agent.fuzzing.coverage.contracts dllm_agent.fuzzing.coverage.execution
     dllm_agent.fuzzing.coverage.runner
     dllm_agent.hunt dllm_agent.hunt.validation dllm_agent.hunt.models
     dllm_agent.hunt.artifacts dllm_agent.hunt.scoring dllm_agent.hunt.pipeline
-    dllm_agent.runtime dllm_agent.runtime.live_sampler dllm_agent.runtime.revision_checks
+    dllm_agent.runtime dllm_agent.runtime.ar_model_loader dllm_agent.runtime.live_sampler
+    dllm_agent.runtime.revision_checks
     dllm_agent.runtime.revision_client dllm_agent.runtime.revision_process
     dllm_agent.native dllm_agent.native.artifacts dllm_agent.native.models
     dllm_agent.native.pipeline dllm_agent.native.scoring
@@ -151,13 +163,14 @@ ALLOWED_DEPENDENCIES: Final = grouped_sets(
     """
     core: core
     replay: core replay
-    targets: core experiments targets
+    targets: core experiments targets harness_synthesis
     fuzzing: core targets fuzzing
     hunt: core targets fuzzing hunt
     runtime: core experiments hunt runtime revision targets
     native: core targets fuzzing hunt native
     revision: core targets revision
     experiments: core experiments revision runtime targets
+    harness_synthesis: core harness_synthesis
     web: core hunt web
     cli: cli core experiments replay targets fuzzing hunt runtime native revision web
     """

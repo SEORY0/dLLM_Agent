@@ -1,0 +1,818 @@
+[
+ {
+  "example": "InputFile",
+  "seed": 11000000,
+  "body_token_count": 36,
+  "window_count": 4,
+  "confidence_window": {
+   "start": 16,
+   "length": 8
+  },
+  "random_window": {
+   "start": 24,
+   "length": 8
+  },
+  "same_window_picked": false,
+  "outside_window_preserved": {
+   "confidence": true,
+   "random": true
+  },
+  "arm_bodies": {
+   "reference": "    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n    // Inspect the file header\n    // Additional statements to access the header can be added here\n  ",
+   "confidence": "    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n    // Inspect the file header\n    // Example statements to access the header can be added here\n  ",
+   "random": "    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n    // Inspect the file header\n    // Additional statements to inspect the header can be added here\n  "
+  },
+  "arm_harnesses": {
+   "reference": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n    // Inspect the file header\n    // Additional statements to access the header can be added here\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n",
+   "confidence": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n    // Inspect the file header\n    // Example statements to access the header can be added here\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n",
+   "random": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n    // Inspect the file header\n    // Additional statements to inspect the header can be added here\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+  },
+  "arm_reference": {
+   "compiled": true,
+   "compile_error": null,
+   "replicate_edges": [
+    1139,
+    1148,
+    1172
+   ],
+   "mean_edges": 1153.0,
+   "min_edges": 1139,
+   "max_edges": 1172,
+   "secondary_fixed_runs_edges": 1222
+  },
+  "arm_confidence": {
+   "compiled": true,
+   "compile_error": null,
+   "replicate_edges": [
+    1150,
+    1175,
+    1181
+   ],
+   "mean_edges": 1168.6666666666667,
+   "min_edges": 1150,
+   "max_edges": 1181,
+   "secondary_fixed_runs_edges": 1232
+  },
+  "arm_random": {
+   "compiled": true,
+   "compile_error": null,
+   "replicate_edges": [
+    1152,
+    1182,
+    1194
+   ],
+   "mean_edges": 1176.0,
+   "min_edges": 1152,
+   "max_edges": 1194,
+   "secondary_fixed_runs_edges": 1233
+  }
+ },
+ {
+  "example": "InputFile",
+  "seed": 11000001,
+  "body_token_count": 36,
+  "window_count": 4,
+  "confidence_window": {
+   "start": 16,
+   "length": 8
+  },
+  "random_window": {
+   "start": 0,
+   "length": 8
+  },
+  "same_window_picked": false,
+  "outside_window_preserved": {
+   "confidence": true,
+   "random": true
+  },
+  "arm_bodies": {
+   "reference": "    OPENEXR_IMF_NAMESPACE::InputFile inputFile(stream);\n\n    // Access the header (optional)\n    // OpenEXR::Header header = inputFile.header();\n    \n  ",
+   "confidence": "    OPENEXR_IMF_NAMESPACE::InputFile inputFile(stream);\n\n    // Access the header of the file\n    OpenEXR::Header header = inputFile.header();\n    \n  ",
+   "random": "    OPENEXR_IMF_NAMESPACE::InputFile inputFile(stream);\n\n    // Access the header (optional)\n    // OpenEXR::Header header = inputFile.header();\n    \n  "
+  },
+  "arm_harnesses": {
+   "reference": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::InputFile inputFile(stream);\n\n    // Access the header (optional)\n    // OpenEXR::Header header = inputFile.header();\n    \n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n",
+   "confidence": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::InputFile inputFile(stream);\n\n    // Access the header of the file\n    OpenEXR::Header header = inputFile.header();\n    \n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n",
+   "random": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::InputFile inputFile(stream);\n\n    // Access the header (optional)\n    // OpenEXR::Header header = inputFile.header();\n    \n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+  },
+  "arm_reference": {
+   "compiled": true,
+   "compile_error": null,
+   "replicate_edges": [
+    1141,
+    1176,
+    1184
+   ],
+   "mean_edges": 1167.0,
+   "min_edges": 1141,
+   "max_edges": 1184,
+   "secondary_fixed_runs_edges": 1198
+  },
+  "arm_confidence": {
+   "compiled": false,
+   "compile_error": "harness.cc:38:5: error: use of undeclared identifier 'OpenEXR'",
+   "replicate_edges": [
+    0,
+    0,
+    0
+   ],
+   "mean_edges": 0.0,
+   "min_edges": 0,
+   "max_edges": 0,
+   "secondary_fixed_runs_edges": 0
+  },
+  "arm_random": {
+   "compiled": true,
+   "compile_error": null,
+   "replicate_edges": [
+    1141,
+    1225,
+    1253
+   ],
+   "mean_edges": 1206.3333333333333,
+   "min_edges": 1141,
+   "max_edges": 1253,
+   "secondary_fixed_runs_edges": 1314
+  }
+ },
+ {
+  "example": "InputFile",
+  "seed": 11000002,
+  "body_token_count": 36,
+  "window_count": 4,
+  "confidence_window": {
+   "start": 24,
+   "length": 8
+  },
+  "random_window": {
+   "start": 8,
+   "length": 8
+  },
+  "same_window_picked": false,
+  "outside_window_preserved": {
+   "confidence": true,
+   "random": true
+  },
+  "arm_bodies": {
+   "reference": "    OPENEXR_IMF::InputFile inputFile(stream);\n    OPENEXR_IMF::Header header;\n    header = inputFile.header();  // Access the header\n  ",
+   "confidence": "    OPENEXR_IMF::InputFile inputFile(stream);\n    OPENEXR_IMF::Header header;\n    header = inputFile.header(); // inspecting the header\n  ",
+   "random": "    OPENEXR_IMF::InputFile inputFile(stream);\n    OPENEXR_IMF::Header header;\n    header = inputFile.header();  // Access the header\n  "
+  },
+  "arm_harnesses": {
+   "reference": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF::InputFile inputFile(stream);\n    OPENEXR_IMF::Header header;\n    header = inputFile.header();  // Access the header\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n",
+   "confidence": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF::InputFile inputFile(stream);\n    OPENEXR_IMF::Header header;\n    header = inputFile.header(); // inspecting the header\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n",
+   "random": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF::InputFile inputFile(stream);\n    OPENEXR_IMF::Header header;\n    header = inputFile.header();  // Access the header\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+  },
+  "arm_reference": {
+   "compiled": false,
+   "compile_error": "harness.cc:35:5: error: use of undeclared identifier 'OPENEXR_IMF'\nharness.cc:36:5: error: use of undeclared identifier 'OPENEXR_IMF'\nharness.cc:37:14: error: use of undeclared identifier 'inputFile'",
+   "replicate_edges": [
+    0,
+    0,
+    0
+   ],
+   "mean_edges": 0.0,
+   "min_edges": 0,
+   "max_edges": 0,
+   "secondary_fixed_runs_edges": 0
+  },
+  "arm_confidence": {
+   "compiled": false,
+   "compile_error": "harness.cc:35:5: error: use of undeclared identifier 'OPENEXR_IMF'\nharness.cc:36:5: error: use of undeclared identifier 'OPENEXR_IMF'\nharness.cc:37:14: error: use of undeclared identifier 'inputFile'",
+   "replicate_edges": [
+    0,
+    0,
+    0
+   ],
+   "mean_edges": 0.0,
+   "min_edges": 0,
+   "max_edges": 0,
+   "secondary_fixed_runs_edges": 0
+  },
+  "arm_random": {
+   "compiled": false,
+   "compile_error": "harness.cc:35:5: error: use of undeclared identifier 'OPENEXR_IMF'\nharness.cc:36:5: error: use of undeclared identifier 'OPENEXR_IMF'\nharness.cc:37:14: error: use of undeclared identifier 'inputFile'",
+   "replicate_edges": [
+    0,
+    0,
+    0
+   ],
+   "mean_edges": 0.0,
+   "min_edges": 0,
+   "max_edges": 0,
+   "secondary_fixed_runs_edges": 0
+  }
+ },
+ {
+  "example": "InputFile",
+  "seed": 11000003,
+  "body_token_count": 27,
+  "window_count": 3,
+  "confidence_window": {
+   "start": 8,
+   "length": 8
+  },
+  "random_window": {
+   "start": 16,
+   "length": 8
+  },
+  "same_window_picked": false,
+  "outside_window_preserved": {
+   "confidence": true,
+   "random": true
+  },
+  "arm_bodies": {
+   "reference": "    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n    // Optionally inspect the header\n    // file.header();\n  ",
+   "confidence": "    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n    // Optionally inspect the header\n    // file.header();\n  ",
+   "random": "    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n    // Optionally inspect the file header\n    file.header();\n  "
+  },
+  "arm_harnesses": {
+   "reference": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n    // Optionally inspect the header\n    // file.header();\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n",
+   "confidence": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n    // Optionally inspect the header\n    // file.header();\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n",
+   "random": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n    // Optionally inspect the file header\n    file.header();\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+  },
+  "arm_reference": {
+   "compiled": true,
+   "compile_error": null,
+   "replicate_edges": [
+    1141,
+    1221,
+    1255
+   ],
+   "mean_edges": 1205.6666666666667,
+   "min_edges": 1141,
+   "max_edges": 1255,
+   "secondary_fixed_runs_edges": 1334
+  },
+  "arm_confidence": {
+   "compiled": true,
+   "compile_error": null,
+   "replicate_edges": [
+    1141,
+    1181,
+    1200
+   ],
+   "mean_edges": 1174.0,
+   "min_edges": 1141,
+   "max_edges": 1200,
+   "secondary_fixed_runs_edges": 1252
+  },
+  "arm_random": {
+   "compiled": true,
+   "compile_error": null,
+   "replicate_edges": [
+    1164,
+    1249,
+    1258
+   ],
+   "mean_edges": 1223.6666666666667,
+   "min_edges": 1164,
+   "max_edges": 1258,
+   "secondary_fixed_runs_edges": 1294
+  }
+ },
+ {
+  "example": "InputFile",
+  "seed": 11000004,
+  "body_token_count": 23,
+  "window_count": 2,
+  "confidence_window": {
+   "start": 8,
+   "length": 8
+  },
+  "random_window": {
+   "start": 0,
+   "length": 8
+  },
+  "same_window_picked": false,
+  "outside_window_preserved": {
+   "confidence": true,
+   "random": true
+  },
+  "arm_bodies": {
+   "reference": "    OPENEXR_IMF_NAMESPACE::InputFile inputFile(stream);\n    // Optionally inspect the file header\n  ",
+   "confidence": "    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n    // Optionally inspect the file header\n  ",
+   "random": "    OPENEXR_IMF_NAMESPACE::InputFile inputFile(stream);\n    // Optionally inspect the file header\n  "
+  },
+  "arm_harnesses": {
+   "reference": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::InputFile inputFile(stream);\n    // Optionally inspect the file header\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n",
+   "confidence": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n    // Optionally inspect the file header\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n",
+   "random": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::InputFile inputFile(stream);\n    // Optionally inspect the file header\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+  },
+  "arm_reference": {
+   "compiled": true,
+   "compile_error": null,
+   "replicate_edges": [
+    1139,
+    1160,
+    1220
+   ],
+   "mean_edges": 1173.0,
+   "min_edges": 1139,
+   "max_edges": 1220,
+   "secondary_fixed_runs_edges": 1279
+  },
+  "arm_confidence": {
+   "compiled": true,
+   "compile_error": null,
+   "replicate_edges": [
+    1141,
+    1180,
+    1189
+   ],
+   "mean_edges": 1170.0,
+   "min_edges": 1141,
+   "max_edges": 1189,
+   "secondary_fixed_runs_edges": 1247
+  },
+  "arm_random": {
+   "compiled": true,
+   "compile_error": null,
+   "replicate_edges": [
+    1152,
+    1171,
+    1180
+   ],
+   "mean_edges": 1167.6666666666667,
+   "min_edges": 1152,
+   "max_edges": 1180,
+   "secondary_fixed_runs_edges": 1184
+  }
+ },
+ {
+  "example": "InputFile",
+  "seed": 11000005,
+  "body_token_count": 33,
+  "window_count": 4,
+  "confidence_window": {
+   "start": 24,
+   "length": 8
+  },
+  "random_window": {
+   "start": 0,
+   "length": 8
+  },
+  "same_window_picked": false,
+  "outside_window_preserved": {
+   "confidence": true,
+   "random": true
+  },
+  "arm_bodies": {
+   "reference": "    OPENEXR_IMF_NAMESPACE::InputFile inputFile(stream);\n    // Inspect the header of the Input file\n    auto header = inputFile.header();\n  ",
+   "confidence": "    OPENEXR_IMF_NAMESPACE::InputFile inputFile(stream);\n    // Inspect the header of the Input file\n    inputFile.header().printSummary();\n  ",
+   "random": "    OPENEXR_IMF_NAMESPACE::InputFile inputFile(stream);\n    // Inspect the header of the Input file\n    auto header = inputFile.header();\n  "
+  },
+  "arm_harnesses": {
+   "reference": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::InputFile inputFile(stream);\n    // Inspect the header of the Input file\n    auto header = inputFile.header();\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n",
+   "confidence": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::InputFile inputFile(stream);\n    // Inspect the header of the Input file\n    inputFile.header().printSummary();\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n",
+   "random": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::InputFile inputFile(stream);\n    // Inspect the header of the Input file\n    auto header = inputFile.header();\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+  },
+  "arm_reference": {
+   "compiled": true,
+   "compile_error": null,
+   "replicate_edges": [
+    1159,
+    1170,
+    1183
+   ],
+   "mean_edges": 1170.6666666666667,
+   "min_edges": 1159,
+   "max_edges": 1183,
+   "secondary_fixed_runs_edges": 1266
+  },
+  "arm_confidence": {
+   "compiled": false,
+   "compile_error": "harness.cc:37:24: error: no member named 'printSummary' in 'Imf_3_4::Header'",
+   "replicate_edges": [
+    0,
+    0,
+    0
+   ],
+   "mean_edges": 0.0,
+   "min_edges": 0,
+   "max_edges": 0,
+   "secondary_fixed_runs_edges": 0
+  },
+  "arm_random": {
+   "compiled": true,
+   "compile_error": null,
+   "replicate_edges": [
+    1196,
+    1219,
+    1249
+   ],
+   "mean_edges": 1221.3333333333333,
+   "min_edges": 1196,
+   "max_edges": 1249,
+   "secondary_fixed_runs_edges": 1273
+  }
+ },
+ {
+  "example": "MultiPartInputFile",
+  "seed": 11000006,
+  "body_token_count": 37,
+  "window_count": 4,
+  "confidence_window": {
+   "start": 16,
+   "length": 8
+  },
+  "random_window": {
+   "start": 24,
+   "length": 8
+  },
+  "same_window_picked": false,
+  "outside_window_preserved": {
+   "confidence": true,
+   "random": true
+  },
+  "arm_bodies": {
+   "reference": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream, 10, 0, false);\n    uint32_t header = file.headerCount();\n  ",
+   "confidence": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream, 0);\n    // Inspect header\n    uint32_t header = file.headerCount();\n  ",
+   "random": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream, 10, 0, false);\n    file.currentPartIndex();\n    file.headerCount();\n  "
+  },
+  "arm_harnesses": {
+   "reference": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream, 10, 0, false);\n    uint32_t header = file.headerCount();\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n",
+   "confidence": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream, 0);\n    // Inspect header\n    uint32_t header = file.headerCount();\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n",
+   "random": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream, 10, 0, false);\n    file.currentPartIndex();\n    file.headerCount();\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+  },
+  "arm_reference": {
+   "compiled": false,
+   "compile_error": "harness.cc:35:47: error: no matching constructor for initialization of 'Imf::MultiPartInputFile'\nharness.cc:36:28: error: no member named 'headerCount' in 'Imf_3_4::MultiPartInputFile'",
+   "replicate_edges": [
+    0,
+    0,
+    0
+   ],
+   "mean_edges": 0.0,
+   "min_edges": 0,
+   "max_edges": 0,
+   "secondary_fixed_runs_edges": 0
+  },
+  "arm_confidence": {
+   "compiled": false,
+   "compile_error": "harness.cc:37:28: error: no member named 'headerCount' in 'Imf_3_4::MultiPartInputFile'",
+   "replicate_edges": [
+    0,
+    0,
+    0
+   ],
+   "mean_edges": 0.0,
+   "min_edges": 0,
+   "max_edges": 0,
+   "secondary_fixed_runs_edges": 0
+  },
+  "arm_random": {
+   "compiled": false,
+   "compile_error": "harness.cc:35:47: error: no matching constructor for initialization of 'Imf::MultiPartInputFile'\nharness.cc:36:10: error: no member named 'currentPartIndex' in 'Imf_3_4::MultiPartInputFile'\nharness.cc:37:10: error: no member named 'headerCount' in 'Imf_3_4::MultiPartInputFile'",
+   "replicate_edges": [
+    0,
+    0,
+    0
+   ],
+   "mean_edges": 0.0,
+   "min_edges": 0,
+   "max_edges": 0,
+   "secondary_fixed_runs_edges": 0
+  }
+ },
+ {
+  "example": "MultiPartInputFile",
+  "seed": 11000007,
+  "body_token_count": 36,
+  "window_count": 4,
+  "confidence_window": {
+   "start": 24,
+   "length": 8
+  },
+  "random_window": {
+   "start": 24,
+   "length": 8
+  },
+  "same_window_picked": true,
+  "outside_window_preserved": {
+   "confidence": true,
+   "random": true
+  },
+  "arm_bodies": {
+   "reference": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    // Optionally inspect the header of the file\n    // auto header = file.fileHeader();\n  ",
+   "confidence": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    // Optionally inspect the header of the file\n    auto mainHeader = file.mainHeader();\n  ",
+   "random": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    // Optionally inspect the header of the file\n    auto mainHeader = file.mainHeader();\n  "
+  },
+  "arm_harnesses": {
+   "reference": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    // Optionally inspect the header of the file\n    // auto header = file.fileHeader();\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n",
+   "confidence": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    // Optionally inspect the header of the file\n    auto mainHeader = file.mainHeader();\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n",
+   "random": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    // Optionally inspect the header of the file\n    auto mainHeader = file.mainHeader();\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+  },
+  "arm_reference": {
+   "compiled": true,
+   "compile_error": null,
+   "replicate_edges": [
+    1090,
+    1159,
+    1179
+   ],
+   "mean_edges": 1142.6666666666667,
+   "min_edges": 1090,
+   "max_edges": 1179,
+   "secondary_fixed_runs_edges": 1239
+  },
+  "arm_confidence": {
+   "compiled": false,
+   "compile_error": "harness.cc:37:28: error: no member named 'mainHeader' in 'Imf_3_4::MultiPartInputFile'",
+   "replicate_edges": [
+    0,
+    0,
+    0
+   ],
+   "mean_edges": 0.0,
+   "min_edges": 0,
+   "max_edges": 0,
+   "secondary_fixed_runs_edges": 0
+  },
+  "arm_random": {
+   "compiled": false,
+   "compile_error": "harness.cc:37:28: error: no member named 'mainHeader' in 'Imf_3_4::MultiPartInputFile'",
+   "replicate_edges": [
+    0,
+    0,
+    0
+   ],
+   "mean_edges": 0.0,
+   "min_edges": 0,
+   "max_edges": 0,
+   "secondary_fixed_runs_edges": 0
+  }
+ },
+ {
+  "example": "MultiPartInputFile",
+  "seed": 11000008,
+  "body_token_count": 37,
+  "window_count": 4,
+  "confidence_window": {
+   "start": 24,
+   "length": 8
+  },
+  "random_window": {
+   "start": 8,
+   "length": 8
+  },
+  "same_window_picked": false,
+  "outside_window_preserved": {
+   "confidence": true,
+   "random": true
+  },
+  "arm_bodies": {
+   "reference": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    // Optionally, inspect the file, e.g., get its header\n    // file.header();\n  ",
+   "confidence": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    // Optionally, inspect the file, e.g., its header\n    //    file.header();\n  ",
+   "random": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    // Optionally, inspect the file, e.g., get its header\n    // file.header();\n  "
+  },
+  "arm_harnesses": {
+   "reference": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    // Optionally, inspect the file, e.g., get its header\n    // file.header();\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n",
+   "confidence": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    // Optionally, inspect the file, e.g., its header\n    //    file.header();\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n",
+   "random": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    // Optionally, inspect the file, e.g., get its header\n    // file.header();\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+  },
+  "arm_reference": {
+   "compiled": true,
+   "compile_error": null,
+   "replicate_edges": [
+    1096,
+    1163,
+    1167
+   ],
+   "mean_edges": 1142.0,
+   "min_edges": 1096,
+   "max_edges": 1167,
+   "secondary_fixed_runs_edges": 1210
+  },
+  "arm_confidence": {
+   "compiled": true,
+   "compile_error": null,
+   "replicate_edges": [
+    1095,
+    1157,
+    1181
+   ],
+   "mean_edges": 1144.3333333333333,
+   "min_edges": 1095,
+   "max_edges": 1181,
+   "secondary_fixed_runs_edges": 1219
+  },
+  "arm_random": {
+   "compiled": true,
+   "compile_error": null,
+   "replicate_edges": [
+    1096,
+    1120,
+    1137
+   ],
+   "mean_edges": 1117.6666666666667,
+   "min_edges": 1096,
+   "max_edges": 1137,
+   "secondary_fixed_runs_edges": 1181
+  }
+ },
+ {
+  "example": "MultiPartInputFile",
+  "seed": 11000009,
+  "body_token_count": 38,
+  "window_count": 4,
+  "confidence_window": {
+   "start": 24,
+   "length": 8
+  },
+  "random_window": {
+   "start": 16,
+   "length": 8
+  },
+  "same_window_picked": false,
+  "outside_window_preserved": {
+   "confidence": true,
+   "random": true
+  },
+  "arm_bodies": {
+   "reference": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    // Optionally inspect the file, for example:\n    // IMF::Header header = file.readHeader();\n  ",
+   "confidence": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    // Optionally inspect the file, for example, by reading its header\n    // file.readHeader();\n  ",
+   "random": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    // Optional statements for inspecting the header:\n    // IMF::Header header = file.readHeader();\n  "
+  },
+  "arm_harnesses": {
+   "reference": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    // Optionally inspect the file, for example:\n    // IMF::Header header = file.readHeader();\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n",
+   "confidence": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    // Optionally inspect the file, for example, by reading its header\n    // file.readHeader();\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n",
+   "random": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    // Optional statements for inspecting the header:\n    // IMF::Header header = file.readHeader();\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+  },
+  "arm_reference": {
+   "compiled": true,
+   "compile_error": null,
+   "replicate_edges": [
+    1096,
+    1131,
+    1173
+   ],
+   "mean_edges": 1133.3333333333333,
+   "min_edges": 1096,
+   "max_edges": 1173,
+   "secondary_fixed_runs_edges": 1241
+  },
+  "arm_confidence": {
+   "compiled": true,
+   "compile_error": null,
+   "replicate_edges": [
+    1096,
+    1147,
+    1204
+   ],
+   "mean_edges": 1149.0,
+   "min_edges": 1096,
+   "max_edges": 1204,
+   "secondary_fixed_runs_edges": 1256
+  },
+  "arm_random": {
+   "compiled": true,
+   "compile_error": null,
+   "replicate_edges": [
+    1096,
+    1124,
+    1148
+   ],
+   "mean_edges": 1122.6666666666667,
+   "min_edges": 1096,
+   "max_edges": 1148,
+   "secondary_fixed_runs_edges": 1262
+  }
+ },
+ {
+  "example": "MultiPartInputFile",
+  "seed": 11000010,
+  "body_token_count": 60,
+  "window_count": 7,
+  "confidence_window": {
+   "start": 48,
+   "length": 8
+  },
+  "random_window": {
+   "start": 40,
+   "length": 8
+  },
+  "same_window_picked": false,
+  "outside_window_preserved": {
+   "confidence": true,
+   "random": true
+  },
+  "arm_bodies": {
+   "reference": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n\n    // Optionally, inspect the file\n    // Example: Accessing header\n    // auto header = file.header();\n    // std::cout << \"Version \" << header.version().value() << std::endl;\n\n   ",
+   "confidence": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n\n    // Optionally, inspect the file\n    // Example: Accessing header\n    // auto header = file.header();\n    // std::cout << \"Version \" << header.version().version() << std::endl;\n\n   ",
+   "random": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n\n    // Optionally, inspect the file\n    // Example: Accessing header\n    // auto header = file.header();\n    // std::cout << \"Version \" << header.version().value() << std::endl;\n\n   "
+  },
+  "arm_harnesses": {
+   "reference": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n\n    // Optionally, inspect the file\n    // Example: Accessing header\n    // auto header = file.header();\n    // std::cout << \"Version \" << header.version().value() << std::endl;\n\n   \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n",
+   "confidence": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n\n    // Optionally, inspect the file\n    // Example: Accessing header\n    // auto header = file.header();\n    // std::cout << \"Version \" << header.version().version() << std::endl;\n\n   \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n",
+   "random": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n\n    // Optionally, inspect the file\n    // Example: Accessing header\n    // auto header = file.header();\n    // std::cout << \"Version \" << header.version().value() << std::endl;\n\n   \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+  },
+  "arm_reference": {
+   "compiled": true,
+   "compile_error": null,
+   "replicate_edges": [
+    1090,
+    1149,
+    1180
+   ],
+   "mean_edges": 1139.6666666666667,
+   "min_edges": 1090,
+   "max_edges": 1180,
+   "secondary_fixed_runs_edges": 1197
+  },
+  "arm_confidence": {
+   "compiled": true,
+   "compile_error": null,
+   "replicate_edges": [
+    1096,
+    1169,
+    1174
+   ],
+   "mean_edges": 1146.3333333333333,
+   "min_edges": 1096,
+   "max_edges": 1174,
+   "secondary_fixed_runs_edges": 1246
+  },
+  "arm_random": {
+   "compiled": true,
+   "compile_error": null,
+   "replicate_edges": [
+    1096,
+    1142,
+    1162
+   ],
+   "mean_edges": 1133.3333333333333,
+   "min_edges": 1096,
+   "max_edges": 1162,
+   "secondary_fixed_runs_edges": 1165
+  }
+ },
+ {
+  "example": "MultiPartInputFile",
+  "seed": 11000011,
+  "body_token_count": 35,
+  "window_count": 4,
+  "confidence_window": {
+   "start": 16,
+   "length": 8
+  },
+  "random_window": {
+   "start": 0,
+   "length": 8
+  },
+  "same_window_picked": false,
+  "outside_window_preserved": {
+   "confidence": true,
+   "random": true
+  },
+  "arm_bodies": {
+   "reference": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    // Optionally: inspect the file's header\n    // auto header = file.header();\n  ",
+   "confidence": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    // Optionally inspect the file like as header\n    // auto header = file.header();\n  ",
+   "random": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    // Optionally: inspect the file's header\n    // auto header = file.header();\n  "
+  },
+  "arm_harnesses": {
+   "reference": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    // Optionally: inspect the file's header\n    // auto header = file.header();\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n",
+   "confidence": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    // Optionally inspect the file like as header\n    // auto header = file.header();\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n",
+   "random": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n#include <ImfIO.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    // Optionally: inspect the file's header\n    // auto header = file.header();\n  \n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+  },
+  "arm_reference": {
+   "compiled": true,
+   "compile_error": null,
+   "replicate_edges": [
+    1096,
+    1124,
+    1139
+   ],
+   "mean_edges": 1119.6666666666667,
+   "min_edges": 1096,
+   "max_edges": 1139,
+   "secondary_fixed_runs_edges": 1178
+  },
+  "arm_confidence": {
+   "compiled": true,
+   "compile_error": null,
+   "replicate_edges": [
+    1096,
+    1134,
+    1155
+   ],
+   "mean_edges": 1128.3333333333333,
+   "min_edges": 1096,
+   "max_edges": 1155,
+   "secondary_fixed_runs_edges": 1229
+  },
+  "arm_random": {
+   "compiled": true,
+   "compile_error": null,
+   "replicate_edges": [
+    1096,
+    1126,
+    1130
+   ],
+   "mean_edges": 1117.3333333333333,
+   "min_edges": 1096,
+   "max_edges": 1130,
+   "secondary_fixed_runs_edges": 1243
+  }
+ }
+]

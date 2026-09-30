@@ -75,6 +75,53 @@ def test_llvm_export_counts_only_canonical_openexr_target_files() -> None:
     assert counts.target_file_count == 1
 
 
+def test_llvm_export_accepts_real_world_fields_beyond_the_counts_we_consume() -> None:
+    # Given an export shaped like real `llvm-cov export -summary-only` output:
+    # every metric also carries notcovered/percent, files carry functions and
+    # instantiations, newer LLVM adds mcdc, and the top level has totals/type/version.
+    def metric(covered: int, count: int) -> dict[str, float]:
+        return {
+            "count": count,
+            "covered": covered,
+            "notcovered": count - covered,
+            "percent": 100.0 * covered / count,
+        }
+
+    summary = {
+        "branches": metric(5, 15),
+        "regions": metric(7, 20),
+        "lines": metric(9, 30),
+        "functions": metric(2, 4),
+        "instantiations": metric(2, 4),
+        "mcdc": {"count": 0, "covered": 0, "notcovered": 0, "percent": 0.0},
+    }
+    raw = json.dumps(
+        {
+            "type": "llvm.coverage.json.export",
+            "version": "3.1.0",
+            "data": [
+                {
+                    "files": [
+                        {
+                            "filename": "/opt/openexr-src/src/lib/OpenEXR/ImfInputFile.cpp",
+                            "summary": summary,
+                        }
+                    ],
+                    "totals": summary,
+                }
+            ],
+        }
+    ).encode()
+
+    # When
+    counts = parse_target_coverage_export(raw)
+
+    # Then only the consumed integer counts are read; the extras are ignored
+    assert (counts.branches_covered, counts.branches_total) == (5, 15)
+    assert (counts.regions_covered, counts.regions_total) == (7, 20)
+    assert (counts.lines_covered, counts.lines_total) == (9, 30)
+
+
 def test_llvm_export_rejects_percentage_only_and_missing_target_data() -> None:
     # Given
     percentage_only = json.dumps(

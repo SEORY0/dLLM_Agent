@@ -1,0 +1,934 @@
+{
+ "results": [
+  {
+   "arm": "resample",
+   "seed": 2000,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <OpenEXR/ImFile.h>\n#include <OpenEXR/ImR.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) return 0;\n\n    try {\n        OpenEXR::InputFile inputFile(reinterpret_cast<const char8_t*>(data), size);\n        std::cout << \"Parsed OpenEXR file successfully.\" << std::endl;\n    } catch (const std::exception& e) {\n        std::cerr << \"Caught exception: \" << e.what() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    }
+   ]
+  },
+  {
+   "arm": "feedback",
+   "seed": 2000,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <OpenEXR/ImFile.h>\n#include <OpenEXR/ImR.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) return 0;\n\n    try {\n        OpenEXR::InputFile inputFile(reinterpret_cast<const char8_t*>(data), size);\n        std::cout << \"Parsed OpenEXR file successfully.\" << std::endl;\n    } catch (const std::exception& e) {\n        std::cerr << \"Caught exception: \" << e.what() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    }
+   ]
+  },
+  {
+   "arm": "kb",
+   "seed": 2000,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <ImfCheckFile.h>\n#include <ImfHeader.h>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\n#define OPENEXR_IMF_NAMESPACE OpenEXR\nusing namespace OPENEXR_IMF_NAMESPACE;\n\n#include <iostream>\n#include <vector>\n#include <sstream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Check if the input is too small for an OpenEXR file\n    if (size < 1024) {\n        std::cerr << \"Input is too small for an OpenEXR/EXR file.\" << std::endl;\n        return 0;\n    }\n\n    // Create an in-memory stream from the data\n    std::ostringstream bufferStream;\n\n    // Write the input data to the buffer\n    for (size_t i = 0; i < size; ++i) {\n        bufferStream << data[i];\n    }\n\n    std::istringstream bufferStream(bufferStream.str());\n\n    try {\n        // Open the OpenEXR file from the in-memory stream\n        ImfInputFile file(&bufferStream, ImfInputFile::OpenMode::READ_ONLY);\n\n        // Check if the file is a valid OpenEXR file\n        if (!file.isFile()) {\n            return 0;\n        }\n\n        // Access the header\n        const ImfHeader& header = file.header();\n\n        // Check the channels in the header\n        for (std::Uint i = 0; i < header.numChannels(); ++i) {\n            const ImfChannelDescription& channel = header.channel(i);\n            // Access the channel name and type\n            std::string name = channel.name();\n            std::string type = channel.type();\n        }\n    }",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:21:22: error: expected ';' at end of declaration\nharness.cc:29:20: error: expected ';' after expression"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:29:20: error: expected ';' after expression\nharness.cc:29:10: error: no member named 'istreambuf' in namespace 'std'"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:9:17: error: expected namespace name\nharness.cc:30:24: error: redefinition of 'bufferStream' with a different type: 'std::istringstream' (aka 'basic_istringstream<char>') vs 'std::ostringst"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:9:17: error: expected namespace name\nharness.cc:30:24: error: redefinition of 'bufferStream' with a different type: 'std::istringstream' (aka 'basic_istringstream<char>') vs 'std::ostringst"
+    }
+   ]
+  },
+  {
+   "arm": "kb_shared",
+   "seed": 2000,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <ImfCheckFile.h>\n#include <ImfHeader.h>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\n#define OPENEXR_IMF_NAMESPACE OpenEXR\nusing namespace OPENEXR_IMF_NAMESPACE;\n\n#include <iostream>\n#include <vector>\n#include <sstream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Check if the input is too small for an OpenEXR file\n    if (size < 1024) {\n        std::cerr << \"Input is too small for an OpenEXR/EXR file.\" << std::endl;\n        return 0;\n    }\n\n    // Create an in-memory stream from the data\n    std::ostringstream bufferStream;\n\n    // Write the input data to the buffer\n    for (size_t i = 0; i < size; ++i) {\n        bufferStream << data[i];\n    }\n\n    std::istringstream bufferStream(bufferStream.str());\n\n    try {\n        // Open the OpenEXR file from the in-memory stream\n        ImfInputFile file(&bufferStream, ImfInputFile::OpenMode::READ_ONLY);\n\n        // Check if the file is a valid OpenEXR file\n        if (!file.isFile()) {\n            return 0;\n        }\n\n        // Access the header\n        const ImfHeader& header = file.header();\n\n        // Check the channels in the header\n        for (std::Uint i = 0; i < header.numChannels(); ++i) {\n            const ImfChannelDescription& channel = header.channel(i);\n            // Access the channel name and type\n            std::string name = channel.name();\n            std::string type = channel.type();\n        }\n    }",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:21:22: error: expected ';' at end of declaration\nharness.cc:29:20: error: expected ';' after expression"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:29:20: error: expected ';' after expression\nharness.cc:29:10: error: no member named 'istreambuf' in namespace 'std'"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:9:17: error: expected namespace name\nharness.cc:30:24: error: redefinition of 'bufferStream' with a different type: 'std::istringstream' (aka 'basic_istringstream<char>') vs 'std::ostringst"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:9:17: error: expected namespace name\nharness.cc:30:24: error: redefinition of 'bufferStream' with a different type: 'std::istringstream' (aka 'basic_istringstream<char>') vs 'std::ostringst"
+    }
+   ]
+  },
+  {
+   "arm": "resample",
+   "seed": 2001,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <OpenEXR/ImFile.h>\n#include <iostreamEXR/ImFile.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) return 0;\n\n    try {\n        OpenEXR::InputFile inputFile(reinterpret_cast<const char8_t*>(data), size);\n        std::cout << \"Parsed OpenEXR file successfully.\" << std::endl;\n    } catch (const std::exception& e) {\n        std::cerr << \"Caught exception: \" << e.what() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    }
+   ]
+  },
+  {
+   "arm": "feedback",
+   "seed": 2001,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <OpenEXR/ImFile.h>\n#include <iostreamEXR/ImFile.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) return 0;\n\n    try {\n        OpenEXR::InputFile inputFile(reinterpret_cast<const char8_t*>(data), size);\n        std::cout << \"Parsed OpenEXR file successfully.\" << std::endl;\n    } catch (const std::exception& e) {\n        std::cerr << \"Caught exception: \" << e.what() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    }
+   ]
+  },
+  {
+   "arm": "kb",
+   "seed": 2001,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <ImfCheckFile.h>\n#include <ImfHeader.h>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\n#define OPENEXR_IMF_NAMESPACE OpenEXR\nusing OPENEXR_IMF_NAMESPACE;\n\n#include <iostream>\n#include <vector>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Check if the input is likely to be an OpenEXR file\n    if (size < 1024) {  // Assume a reasonable minimum size for an OpenEXR header\n        return 0;\n    }\n\n    // Create an in-memory stream to simulate reading from an OpenEXR file\n    std::vector<char> buffer;\n    std::streambuf<std::vector<char> bufferStream;\n\n    // Write the input data into the buffer\n    for (size_t i = 0; i < size; ++i) {\n        bufferStream << data[i];\n    }\n\n    std::streambuf<std::vector<char>::streambuf_iterator_type bufferStreamStream(&bufferStream);\n\n    // Read the header of the file\n    Header header(bufferStreamStream);\n    \n    // Check if it's a multi-part file\n    if (!header.isMultiPartFile()) {\n        InputFile inputFile(bufferStream, header);\n        // Read the header\n        header = inputFile.header();\n        size = static_cast<size_t>(header.size());\n    } else {\n        // Iterate over each part of the file\n        for (std::uint i = 0; i < header.numParts(); ++i) {\n            MultiPartInputFile partFile(bufferStream, i);\n            // Read the header of the current part\n            Header partHeader = partFile.header();\n            size = static_cast<size",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:21:19: error: expected unqualified-id\nharness.cc:25:9: error: use of undeclared identifier 'bufferStream'"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:22:19: error: expected unqualified-id\nharness.cc:26:9: error: use of undeclared identifier 'bufferStream'"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:22:19: error: expected unqualified-id\nharness.cc:26:9: error: use of undeclared identifier 'bufferStream'"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:22:19: error: expected unqualified-id\nharness.cc:26:9: error: use of undeclared identifier 'bufferStream'"
+    }
+   ]
+  },
+  {
+   "arm": "kb_shared",
+   "seed": 2001,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <ImfCheckFile.h>\n#include <ImfHeader.h>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\n#define OPENEXR_IMF_NAMESPACE OpenEXR\nusing OPENEXR_IMF_NAMESPACE;\n\n#include <iostream>\n#include <vector>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Check if the input is likely to be an OpenEXR file\n    if (size < 1024) {  // Assume a reasonable minimum size for an OpenEXR header\n        return 0;\n    }\n\n    // Create an in-memory stream to simulate reading from an OpenEXR file\n    std::vector<char> buffer;\n    std::streambuf<std::vector<char> bufferStream;\n\n    // Write the input data into the buffer\n    for (size_t i = 0; i < size; ++i) {\n        bufferStream << data[i];\n    }\n\n    std::streambuf<std::vector<char>::streambuf_iterator_type bufferStreamStream(&bufferStream);\n\n    // Read the header of the file\n    Header header(bufferStreamStream);\n    \n    // Check if it's a multi-part file\n    if (!header.isMultiPartFile()) {\n        InputFile inputFile(bufferStream, header);\n        // Read the header\n        header = inputFile.header();\n        size = static_cast<size_t>(header.size());\n    } else {\n        // Iterate over each part of the file\n        for (std::uint i = 0; i < header.numParts(); ++i) {\n            MultiPartInputFile partFile(bufferStream, i);\n            // Read the header of the current part\n            Header partHeader = partFile.header();\n            size = static_cast<size",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:21:19: error: expected unqualified-id\nharness.cc:25:9: error: use of undeclared identifier 'bufferStream'"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:22:19: error: expected unqualified-id\nharness.cc:26:9: error: use of undeclared identifier 'bufferStream'"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:22:19: error: expected unqualified-id\nharness.cc:26:9: error: use of undeclared identifier 'bufferStream'"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:22:19: error: expected unqualified-id\nharness.cc:26:9: error: use of undeclared identifier 'bufferStream'"
+    }
+   ]
+  },
+  {
+   "arm": "resample",
+   "seed": 2002,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <OpenEXR/Imf.h>\n#include <OpenEXR/Imath.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) return 0;\n\n    try {\n        OpenEXR::InputFile inputFile(reinterpret_cast<const char8_t*>(data), size);\n        std::cout << \"Parsed OpenEXR file successfully.\" << std::endl;\n    } catch (const std::exception& e) {\n        std::cerr << \"Caught exception: \" << e.what() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/Imf.h' file not found"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/Imf.h' file not found"
+    }
+   ]
+  },
+  {
+   "arm": "feedback",
+   "seed": 2002,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <OpenEXR/Imf.h>\n#include <OpenEXR/Imath.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) return 0;\n\n    try {\n        OpenEXR::InputFile inputFile(reinterpret_cast<const char8_t*>(data), size);\n        std::cout << \"Parsed OpenEXR file successfully.\" << std::endl;\n    } catch (const std::exception& e) {\n        std::cerr << \"Caught exception: \" << e.what() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/Imf.h' file not found"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/Imf.h' file not found"
+    }
+   ]
+  },
+  {
+   "arm": "kb",
+   "seed": 2002,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <ImfCheckFile.h>\n#include <ImfHeader.h>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\n#define OPENEXR_IMF_NAMESPACE OpenEXR\nusing OPENEXR_IMF_NAMESPACE;\n\n#include <iostream>\n#include <vector>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Initialize the OpenEXR namespace\n    OPENEXR_IMF_NAMESPACE::initializeOpenEXR();\n\n    // Check if the input size is too small to be meaningful\n    if (size == 0) {\n        std::cerr << \"Empty input data\" << '\\n';\n        return 0;\n    }\n\n    // Create a in-memory stream from the input data\n    std::vector<char> bufferStream;\n\n    // Write the input data to the buffer\n    for (size_t i = 0; i < size; ++i) {\n        bufferStream.push_back(data[i]);\n    }\n\n    // Check if it's an OpenEXEX file\n    if (!checkFile(bufferStream)) {\n        std::cerr << \"Not an OpenEXEX file\" << '\\n';\n        return 0;\n    }\n\n    try {\n        // Read the header\n        InputFile header(bufferStream);\n\n        // Check if it's a multi-part file\n        if (header.isMultiPartFile()) {\n            // Process each part of the file\n            for (std::uint i = 0; i < header.numParts(); ++i) {\n                MultiPartInputFile partFile(bufferStream, i);\n                // Process more the header or needed data\n            }\n        } else {\n            // Process the single part file\n        }\n    } catch (const ImfException& e) {\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:16:5: error: use of undeclared identifier 'OpenEXR'\nharness.cc:29:22: error: invalid operands to binary expression ('std::"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:16:5: error: use of undeclared identifier 'OpenEXR'\nharness.cc:33:10: error: use of undeclared identifier 'checkFile'"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:16:5: error: use of undeclared identifier 'OpenEXR'\nharness.cc:33:10: error: use of undeclared identifier 'checkFile'"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:16:5: error: use of undeclared identifier 'OpenEXR'\nharness.cc:33:10: error: use of undeclared identifier 'checkFile'"
+    }
+   ]
+  },
+  {
+   "arm": "kb_shared",
+   "seed": 2002,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <ImfCheckFile.h>\n#include <ImfHeader.h>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\n#define OPENEXR_IMF_NAMESPACE OpenEXR\nusing OPENEXR_IMF_NAMESPACE;\n\n#include <iostream>\n#include <vector>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Initialize the OpenEXR namespace\n    OPENEXR_IMF_NAMESPACE::initializeOpenEXR();\n\n    // Check if the input size is too small to be meaningful\n    if (size == 0) {\n        std::cerr << \"Empty input data\" << '\\n';\n        return 0;\n    }\n\n    // Create a in-memory stream from the input data\n    std::vector<char> bufferStream;\n\n    // Write the input data to the buffer\n    for (size_t i = 0; i < size; ++i) {\n        bufferStream.push_back(data[i]);\n    }\n\n    // Check if it's an OpenEXEX file\n    if (!checkFile(bufferStream)) {\n        std::cerr << \"Not an OpenEXEX file\" << '\\n';\n        return 0;\n    }\n\n    try {\n        // Read the header\n        InputFile header(bufferStream);\n\n        // Check if it's a multi-part file\n        if (header.isMultiPartFile()) {\n            // Process each part of the file\n            for (std::uint i = 0; i < header.numParts(); ++i) {\n                MultiPartInputFile partFile(bufferStream, i);\n                // Process more the header or needed data\n            }\n        } else {\n            // Process the single part file\n        }\n    } catch (const ImfException& e) {\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:16:5: error: use of undeclared identifier 'OpenEXR'\nharness.cc:29:22: error: invalid operands to binary expression ('std::"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:16:5: error: use of undeclared identifier 'OpenEXR'\nharness.cc:33:10: error: use of undeclared identifier 'checkFile'"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:16:5: error: use of undeclared identifier 'OpenEXR'\nharness.cc:33:10: error: use of undeclared identifier 'checkFile'"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:16:5: error: use of undeclared identifier 'OpenEXR'\nharness.cc:33:10: error: use of undeclared identifier 'checkFile'"
+    }
+   ]
+  },
+  {
+   "arm": "resample",
+   "seed": 2003,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <OpenEXR/ImFile.h>\n#include <iostreamEXR/ImFile.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) return 0;\n\n    try {\n        OpenEXR::InputFile inputFile(reinterpret_cast<const char8_t*>(data), size);\n        std::cout << \"Parsed OpenEXR file successfully.\" << std::endl;\n    } catch (const std::exception& e) {\n        std::cerr << \"Caught exception: \" << e.what() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    }
+   ]
+  },
+  {
+   "arm": "feedback",
+   "seed": 2003,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <OpenEXR/ImFile.h>\n#include <iostreamEXR/ImFile.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) return 0;\n\n    try {\n        OpenEXR::InputFile inputFile(reinterpret_cast<const char8_t*>(data), size);\n        std::cout << \"Parsed OpenEXR file successfully.\" << std::endl;\n    } catch (const std::exception& e) {\n        std::cerr << \"Caught exception: \" << e.what() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    }
+   ]
+  },
+  {
+   "arm": "kb",
+   "seed": 2003,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <ImfCheckFile.h>\n#include <ImfHeader.h>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\n#define OPENEXR_IMF_NAMESPACE OpenEXR\nusing namespace OPENEXR_IMF_NAMESPACE;\n\n#include <vector>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Check if the input is likely to be an OpenEXR file\n    if (size < 12) {\n        return 0;\n    }\n\n    // Check if the input starts with the \"EXEX\" magic\n    if (std::string(data, 4) != \"EXEX\") {\n        return 0;\n    }\n\n    // Create a buffer stream from the input data\n    IO::Stream bufferStream;\n\n    // Write the input data to the buffer\n    for (size_t i = 0; i < size; ++i) {\n        bufferStream << data[i];\n    }\n\n    std::ios::pos_type pos = bufferStream.tellg();\n    bufferStream.seekg(0, std::ios::beg);\n\n    // Read the header of the OpenEXR file\n    Header header;\n    try {\n        readFileHeader(bufferStream, header);\n    } catch (std::exception& e) {\n        std::cerr << \"Failed to read header: \" << e.what() << std::endl;\n        return 0;\n    }\n\n    // Iterate over each part of the file\n    for (std::uint i = 0; i < header.numParts(); ++i) {\n        MultiPartInputFile partFile(bufferStream, i);\n        // Further parsing operations can be done here, if needed\n    }\n\n    return 0;\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:21:9: error: 'data' is not a class, namespace, or enumeration\nharness.cc:21:15: error: expected unqualified-id"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:11:10: error: empty filename\nharness.cc:9:17: error: expected namespace name\nharness.cc:21:9: error: no matching constructor for initialization of 'std::string' (aka 'basic_string<char>')"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:9:17: error: expected namespace name\nharness.cc:21:9: error: no matching constructor for initialization of 'std::string' (aka 'basic_string<char>')\nharness.cc:26:5: error: use of undeclared"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:9:17: error: expected namespace name\nharness.cc:21:9: error: no matching constructor for initialization of 'std::string' (aka 'basic_string<char>')\nharness.cc:26:5: error: use of undeclared"
+    }
+   ]
+  },
+  {
+   "arm": "kb_shared",
+   "seed": 2003,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <ImfCheckFile.h>\n#include <ImfHeader.h>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\n#define OPENEXR_IMF_NAMESPACE OpenEXR\nusing namespace OPENEXR_IMF_NAMESPACE;\n\n#include <vector>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Check if the input is likely to be an OpenEXR file\n    if (size < 12) {\n        return 0;\n    }\n\n    // Check if the input starts with the \"EXEX\" magic\n    if (std::string(data, 4) != \"EXEX\") {\n        return 0;\n    }\n\n    // Create a buffer stream from the input data\n    IO::Stream bufferStream;\n\n    // Write the input data to the buffer\n    for (size_t i = 0; i < size; ++i) {\n        bufferStream << data[i];\n    }\n\n    std::ios::pos_type pos = bufferStream.tellg();\n    bufferStream.seekg(0, std::ios::beg);\n\n    // Read the header of the OpenEXR file\n    Header header;\n    try {\n        readFileHeader(bufferStream, header);\n    } catch (std::exception& e) {\n        std::cerr << \"Failed to read header: \" << e.what() << std::endl;\n        return 0;\n    }\n\n    // Iterate over each part of the file\n    for (std::uint i = 0; i < header.numParts(); ++i) {\n        MultiPartInputFile partFile(bufferStream, i);\n        // Further parsing operations can be done here, if needed\n    }\n\n    return 0;\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:21:9: error: 'data' is not a class, namespace, or enumeration\nharness.cc:21:15: error: expected unqualified-id"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:11:10: error: empty filename\nharness.cc:9:17: error: expected namespace name\nharness.cc:21:9: error: no matching constructor for initialization of 'std::string' (aka 'basic_string<char>')"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:9:17: error: expected namespace name\nharness.cc:21:9: error: no matching constructor for initialization of 'std::string' (aka 'basic_string<char>')\nharness.cc:26:5: error: use of undeclared"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:9:17: error: expected namespace name\nharness.cc:21:9: error: no matching constructor for initialization of 'std::string' (aka 'basic_string<char>')\nharness.cc:26:5: error: use of undeclared"
+    }
+   ]
+  },
+  {
+   "arm": "resample",
+   "seed": 2004,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <OpenEXR/ImFile.h>\n#include <iostreamEXR/ImFile.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) return 0;\n\n    try {\n        OpenEXR::InputFile inputFile(reinterpret_cast<const char8_t*>(data), size);\n        std::cout << \"Parsed OpenEXR file successfully.\" << std::endl;\n    } catch (const std::exception& e) {\n        std::cerr << \"Caught exception: \" << e.what() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    }
+   ]
+  },
+  {
+   "arm": "feedback",
+   "seed": 2004,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <OpenEXR/ImFile.h>\n#include <iostreamEXR/ImFile.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) return 0;\n\n    try {\n        OpenEXR::InputFile inputFile(reinterpret_cast<const char8_t*>(data), size);\n        std::cout << \"Parsed OpenEXR file successfully.\" << std::endl;\n    } catch (const std::exception& e) {\n        std::cerr << \"Caught exception: \" << e.what() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    }
+   ]
+  },
+  {
+   "arm": "kb",
+   "seed": 2004,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <ImfCheckFile.h>\n#include <ImfHeader.h>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\n#define OPENEXR_IMF_NAMESPACE OpenEXR\nusing OPENEXR_IMF_NAMESPACE;\n\n#include <iostream>\n#include <vector>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Check if the input data is a valid OpenEXR file\n    if (size == 0) {\n        std::cerr << \"Input data is empty.\" << std::endl;\n        return 0;\n    }\n\n    // Create an in-memory stream using a byte buffer from the input data\n    std::vector<char> buffer(size);\n    ::std::stringstream bufferStream(buffer, std::ios::binary);\n\n    // Write the input data to the buffer\n    for (size_t i = 0; i < size; ++i) {\n        bufferStream << data[i];\n    }\n\n    std::ios::pos_type pos = bufferStream.tellg();\n    bufferStream.seekg(0, std::ios::beg);\n\n    // Try reading the OpenEXR header from the buffer\n    Header header;\n    try {\n        header = readHeader(bufferStream);\n    } catch (const std::exception& e) {\n        std::cerr << \"Failed to read header: \" << e.what() << std::endl;\n        return 0;\n    }\n\n    // Process each part of the file\n    for (std::uint i = 0; i < header.numParts(); ++i) {\n        MultiPartInputFile partFile(bufferStream, i);\n        try {\n            std::cout << \"Processing part \" << i << std::endl;\n        } catch (const std",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:23:25: error: no matching constructor for initialization of '::std::stringstream' (aka 'basic_stringstream<char>')\nharness"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:23:25: error: no matching constructor for initialization of '::std::stringstream' (aka 'basic_stringstream<char>')\nharness"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:23:25: error: no matching constructor for initialization of '::std::stringstream' (aka 'basic_stringstream<char>')\nharness"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:23:25: error: no matching constructor for initialization of '::std::stringstream' (aka 'basic_stringstream<char>')\nharness"
+    }
+   ]
+  },
+  {
+   "arm": "kb_shared",
+   "seed": 2004,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <ImfCheckFile.h>\n#include <ImfHeader.h>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\n#define OPENEXR_IMF_NAMESPACE OpenEXR\nusing OPENEXR_IMF_NAMESPACE;\n\n#include <iostream>\n#include <vector>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Check if the input data is a valid OpenEXR file\n    if (size == 0) {\n        std::cerr << \"Input data is empty.\" << std::endl;\n        return 0;\n    }\n\n    // Create an in-memory stream using a byte buffer from the input data\n    std::vector<char> buffer(size);\n    ::std::stringstream bufferStream(buffer, std::ios::binary);\n\n    // Write the input data to the buffer\n    for (size_t i = 0; i < size; ++i) {\n        bufferStream << data[i];\n    }\n\n    std::ios::pos_type pos = bufferStream.tellg();\n    bufferStream.seekg(0, std::ios::beg);\n\n    // Try reading the OpenEXR header from the buffer\n    Header header;\n    try {\n        header = readHeader(bufferStream);\n    } catch (const std::exception& e) {\n        std::cerr << \"Failed to read header: \" << e.what() << std::endl;\n        return 0;\n    }\n\n    // Process each part of the file\n    for (std::uint i = 0; i < header.numParts(); ++i) {\n        MultiPartInputFile partFile(bufferStream, i);\n        try {\n            std::cout << \"Processing part \" << i << std::endl;\n        } catch (const std",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:23:25: error: no matching constructor for initialization of '::std::stringstream' (aka 'basic_stringstream<char>')\nharness"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:23:25: error: no matching constructor for initialization of '::std::stringstream' (aka 'basic_stringstream<char>')\nharness"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:23:25: error: no matching constructor for initialization of '::std::stringstream' (aka 'basic_stringstream<char>')\nharness"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:23:25: error: no matching constructor for initialization of '::std::stringstream' (aka 'basic_stringstream<char>')\nharness"
+    }
+   ]
+  },
+  {
+   "arm": "resample",
+   "seed": 2005,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <OpenEXR/InputFile.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) return 0;\n\n    try {\n        OpenEXR::InputFile inputFile(reinterpret_cast<const char8_t*>(data), size);\n        std::cout << \"Parsed OpenEXR file successfully.\" << std::endl;\n    } catch (const std::exception& e) {\n        std::cerr << \"Caught exception: \" << e.what() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/IOutputFile.h' file not found"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/InputFile.h' file not found"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/InputFile.h' file not found"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/InputFile.h' file not found"
+    }
+   ]
+  },
+  {
+   "arm": "feedback",
+   "seed": 2005,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <OpenEXR/InputFile.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) return 0;\n\n    try {\n        OpenEXR::InputFile inputFile(reinterpret_cast<const char8_t*>(data), size);\n        std::cout << \"Parsed OpenEXR file successfully.\" << std::endl;\n    } catch (const std::exception& e) {\n        std::cerr << \"Caught exception: \" << e.what() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/IOutputFile.h' file not found"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/InputFile.h' file not found"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/InputFile.h' file not found"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/InputFile.h' file not found"
+    }
+   ]
+  },
+  {
+   "arm": "kb",
+   "seed": 2005,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <ImfCheckFile.h>\n#include <ImfHeader.h>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\n#define OPENEXR_IMF_NAMESPACE OpenEXR\nusing OPENEXR_IMF_NAMESPACE;\n\n#include <iostream>\n#include <vector>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Check if the input data is a valid OpenEXR file\n    if (size == 0) {\n        std::cerr << \"Input data is empty.\" << std::endl;\n        return 0;\n    }\n\n    // Create an in-memory stream using the byte buffer from the input data\n    std::vector<char> buffer(size);\n    ::std::istringstream bufferStream(buffer, std::ios::binary);\n\n    // Write the input data to the buffer\n    for (size_t i = 0; i < size; ++i) {\n        bufferStream << data[i];\n    }\n\n    std::ios::pos_type pos = bufferStream.tellg();\n    bufferStream.seekg(0, std::ios::beg);\n\n    // Try reading the OpenEXR header from the buffer\n    Header header;\n    try {\n        header = readHeader(bufferStream);\n    } catch (const std::exception& e) {\n        std::cerr << \"Failed to read header: \" << e.what() << std::endl;\n        return 0;\n    }\n\n    // Process each part of the file\n    for (std::uint i = 0; i < header.numParts(); ++i) {\n        MultiPartInputFile partFile(bufferStream, i);\n        try {\n            // Access the part header data\n            Header partHeader = partFile.header();\n            // (void <<",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:23:26: error: no matching constructor for initialization of '::std::istringstream' (aka 'basic_istringstream<char>')\nharne"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:23:26: error: no matching constructor for initialization of '::std::istringstream' (aka 'basic_istringstream<char>')\nharne"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:23:26: error: no matching constructor for initialization of '::std::istringstream' (aka 'basic_istringstream<char>')\nharne"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:23:26: error: no matching constructor for initialization of '::std::istringstream' (aka 'basic_istringstream<char>')\nharne"
+    }
+   ]
+  },
+  {
+   "arm": "kb_shared",
+   "seed": 2005,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <ImfCheckFile.h>\n#include <ImfHeader.h>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\n#define OPENEXR_IMF_NAMESPACE OpenEXR\nusing OPENEXR_IMF_NAMESPACE;\n\n#include <iostream>\n#include <vector>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Check if the input data is a valid OpenEXR file\n    if (size == 0) {\n        std::cerr << \"Input data is empty.\" << std::endl;\n        return 0;\n    }\n\n    // Create an in-memory stream using the byte buffer from the input data\n    std::vector<char> buffer(size);\n    ::std::istringstream bufferStream(buffer, std::ios::binary);\n\n    // Write the input data to the buffer\n    for (size_t i = 0; i < size; ++i) {\n        bufferStream << data[i];\n    }\n\n    std::ios::pos_type pos = bufferStream.tellg();\n    bufferStream.seekg(0, std::ios::beg);\n\n    // Try reading the OpenEXR header from the buffer\n    Header header;\n    try {\n        header = readHeader(bufferStream);\n    } catch (const std::exception& e) {\n        std::cerr << \"Failed to read header: \" << e.what() << std::endl;\n        return 0;\n    }\n\n    // Process each part of the file\n    for (std::uint i = 0; i < header.numParts(); ++i) {\n        MultiPartInputFile partFile(bufferStream, i);\n        try {\n            // Access the part header data\n            Header partHeader = partFile.header();\n            // (void <<",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:23:26: error: no matching constructor for initialization of '::std::istringstream' (aka 'basic_istringstream<char>')\nharne"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:23:26: error: no matching constructor for initialization of '::std::istringstream' (aka 'basic_istringstream<char>')\nharne"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:23:26: error: no matching constructor for initialization of '::std::istringstream' (aka 'basic_istringstream<char>')\nharne"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:23:26: error: no matching constructor for initialization of '::std::istringstream' (aka 'basic_istringstream<char>')\nharne"
+    }
+   ]
+  },
+  {
+   "arm": "resample",
+   "seed": 2006,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <OpenEXR/ImFile.h>\n#include <iostreamEXR/ImFile.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) return 0;\n\n    try {\n        OpenEXR::InputFile inputFile(reinterpret_cast<const char8_t*>(data), size);\n        std::cout << \"Parsed OpenEXR file successfully.\" << std::endl;\n    } catch (const std::exception& e) {\n        std::cerr << \"Caught exception: \" << e.what() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    }
+   ]
+  },
+  {
+   "arm": "feedback",
+   "seed": 2006,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <OpenEXR/ImFile.h>\n#include <iostreamEXR/ImFile.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) return 0;\n\n    try {\n        OpenEXR::InputFile inputFile(reinterpret_cast<const char8_t*>(data), size);\n        std::cout << \"Parsed OpenEXR file successfully.\" << std::endl;\n    } catch (const std::exception& e) {\n        std::cerr << \"Caught exception: \" << e.what() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/ImFile.h' file not found"
+    }
+   ]
+  },
+  {
+   "arm": "kb",
+   "seed": 2006,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <ImfCheckFile.h>\n#include <ImfHeader.h>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\n#define OPENEXR_IMF_NAMESPACE OpenEXR\nusing namespace OPENEXR_IMF_NAMESPACE;\n\n#include <iostream>\n#include <vector>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Check if the input size is zero\n    if (size == 0) {\n        std::cerr << \"Empty input detected\" << std::endl;\n        return 0;\n    }\n\n    // Create an in-memory stream from the fuzzed data\n    std::vector<char> buffer(size);\n    std::streambuf<std::vector<char>> bufferStream(buffer, std::ios::_base::in);\n\n    // Write the fuzz data to the buffer\n    for (size_t i = 0; i < size; ++i) {\n        bufferStream << data[i];\n    }\n\n    std::ios::pos_type pos = bufferStream.tellg();\n    if (pos != bufferStream.size()) {\n        std::cerr << \"Buffer size mismatch\" << std::endl;\n    }\n\n    // Read the header\n    try {\n        Header header(bufferStream);\n    } catch (const std::exception& e) {\n        std::cerr << \"Failed to read header: \" << e.what() << std::endl;\n        return 0;\n    }\n\n    // Process each part of the file\n    for (std::uint i = 0; i < header.numParts(); ++i) {\n        MultiPartInputFile partFile(bufferStream, i);\n    }\n\n    return 0;\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:23:19: error: expected unqualified-id"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:9:17: error: expected namespace name\nharness.cc:23:19: error: expected unqualified-id\nharness.cc:27:9: error: use of undeclared identifier 'bufferStream'"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:9:17: error: expected namespace name\nharness.cc:23:19: error: expected unqualified-id\nharness.cc:27:9: error: use of undeclared identifier 'bufferStream'"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:9:17: error: expected namespace name\nharness.cc:23:19: error: expected unqualified-id\nharness.cc:27:9: error: use of undeclared identifier 'bufferStream'"
+    }
+   ]
+  },
+  {
+   "arm": "kb_shared",
+   "seed": 2006,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <ImfCheckFile.h>\n#include <ImfHeader.h>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\n#define OPENEXR_IMF_NAMESPACE OpenEXR\nusing namespace OPENEXR_IMF_NAMESPACE;\n\n#include <iostream>\n#include <vector>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Check if the input size is zero\n    if (size == 0) {\n        std::cerr << \"Empty input detected\" << std::endl;\n        return 0;\n    }\n\n    // Create an in-memory stream from the fuzzed data\n    std::vector<char> buffer(size);\n    std::streambuf<std::vector<char>> bufferStream(buffer, std::ios::_base::in);\n\n    // Write the fuzz data to the buffer\n    for (size_t i = 0; i < size; ++i) {\n        bufferStream << data[i];\n    }\n\n    std::ios::pos_type pos = bufferStream.tellg();\n    if (pos != bufferStream.size()) {\n        std::cerr << \"Buffer size mismatch\" << std::endl;\n    }\n\n    // Read the header\n    try {\n        Header header(bufferStream);\n    } catch (const std::exception& e) {\n        std::cerr << \"Failed to read header: \" << e.what() << std::endl;\n        return 0;\n    }\n\n    // Process each part of the file\n    for (std::uint i = 0; i < header.numParts(); ++i) {\n        MultiPartInputFile partFile(bufferStream, i);\n    }\n\n    return 0;\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:23:19: error: expected unqualified-id"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:9:17: error: expected namespace name\nharness.cc:23:19: error: expected unqualified-id\nharness.cc:27:9: error: use of undeclared identifier 'bufferStream'"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:9:17: error: expected namespace name\nharness.cc:23:19: error: expected unqualified-id\nharness.cc:27:9: error: use of undeclared identifier 'bufferStream'"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:9:17: error: expected namespace name\nharness.cc:23:19: error: expected unqualified-id\nharness.cc:27:9: error: use of undeclared identifier 'bufferStream'"
+    }
+   ]
+  },
+  {
+   "arm": "resample",
+   "seed": 2007,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <OpenEXR/InputFile.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) return 0;\n\n    try {\n        OpenEXR::InputFile inputFile(reinterpret_cast<const char8_t*>(data), size);\n        std::cout << \"Parsed OpenEXR file successfully.\" << std::endl;\n    } catch (const std::exception& e) {\n        std::cerr << \"Caught exception: \" << e.what() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/IOutputFile.h' file not found"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/InputFile.h' file not found"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/InputFile.h' file not found"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/InputFile.h' file not found"
+    }
+   ]
+  },
+  {
+   "arm": "feedback",
+   "seed": 2007,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <OpenEXR/InputFile.h>\n#include <iostream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    if (size == 0) return 0;\n\n    try {\n        OpenEXR::InputFile inputFile(reinterpret_cast<const char8_t*>(data), size);\n        std::cout << \"Parsed OpenEXR file successfully.\" << std::endl;\n    } catch (const std::exception& e) {\n        std::cerr << \"Caught exception: \" << e.what() << std::endl;\n    }\n\n    return 0;\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/IOutputFile.h' file not found"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/InputFile.h' file not found"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/InputFile.h' file not found"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:1:10: fatal error: 'OpenEXR/InputFile.h' file not found"
+    }
+   ]
+  },
+  {
+   "arm": "kb",
+   "seed": 2007,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <ImfCheckFile.h>\n#include <ImfHeader.h>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\n#define OPENEXR_IMF_NAMESPACE OpenEXR\nusing namespace OPENEXR_IMF_NAMESPACE;\n\n#include <iostream>\n#include <vector>\n#include <sstream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Check if the input data is a valid OpenEXR file\n    if (size == 0) {\n        std::cerr << \"Input data is empty.\" << std::endl;\n        return 0;\n    }\n\n    // Create an in-memory stream from the binary representation of the input data\n    std::vector<char> buffer(size);\n    std::istringstream bufferStream(buffer, std::ios::binary);\n\n    // Write the input data to the buffer\n    for (size_t i = 0; i < size; ++i) {\n        bufferStream << data[i];\n    }\n\n    std::ios::pos_type pos = bufferStream.tellg();\n    bufferStream.seekg(0, std::ios::beg);\n\n    // Try reading the OpenEXR header from the buffer\n    Header header;\n    try {\n        header = readHeader(bufferStream);\n    } catch (const std::exception& e) {\n        std::cerr << \"Failed to read header: \" << e.what() << std::endl;\n        return 0;\n    }\n\n    // Process each part of the file\n    for (std::uint i = 0; i < header.numParts(); ++i) {\n        MultiPartInputFile partFile(bufferStream, i);\n        try {\n            // Read the rest of the file\n            partFile.readAll();\n        } catch",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:23:26: error: no matching constructor for initialization of '::std::istringstream' (aka 'basic_istringstream<char>')\nharne"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:11:10: error: empty filename\nharness.cc:9:17: error: expected namespace name\nharness.cc:24:24: error: no matching constructor for initialization of 'std::istringstream' (aka 'basic_istrings"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:9:17: error: expected namespace name\nharness.cc:24:24: error: no matching constructor for initialization of 'std::istringstream' (aka 'basic_istringstream<char>')\nharness.cc:28:22: error: i"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:9:17: error: expected namespace name\nharness.cc:24:24: error: no matching constructor for initialization of 'std::istringstream' (aka 'basic_istringstream<char>')\nharness.cc:28:22: error: i"
+    }
+   ]
+  },
+  {
+   "arm": "kb_shared",
+   "seed": 2007,
+   "ok": false,
+   "rounds": 3,
+   "code": "#include <ImfCheckFile.h>\n#include <ImfHeader.h>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\n#define OPENEXR_IMF_NAMESPACE OpenEXR\nusing namespace OPENEXR_IMF_NAMESPACE;\n\n#include <iostream>\n#include <vector>\n#include <sstream>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    // Check if the input data is a valid OpenEXR file\n    if (size == 0) {\n        std::cerr << \"Input data is empty.\" << std::endl;\n        return 0;\n    }\n\n    // Create an in-memory stream from the binary representation of the input data\n    std::vector<char> buffer(size);\n    std::istringstream bufferStream(buffer, std::ios::binary);\n\n    // Write the input data to the buffer\n    for (size_t i = 0; i < size; ++i) {\n        bufferStream << data[i];\n    }\n\n    std::ios::pos_type pos = bufferStream.tellg();\n    bufferStream.seekg(0, std::ios::beg);\n\n    // Try reading the OpenEXR header from the buffer\n    Header header;\n    try {\n        header = readHeader(bufferStream);\n    } catch (const std::exception& e) {\n        std::cerr << \"Failed to read header: \" << e.what() << std::endl;\n        return 0;\n    }\n\n    // Process each part of the file\n    for (std::uint i = 0; i < header.numParts(); ++i) {\n        MultiPartInputFile partFile(bufferStream, i);\n        try {\n            // Read the rest of the file\n            partFile.readAll();\n        } catch",
+   "hist": [
+    {
+     "round": 0,
+     "ok": false,
+     "err": "harness.cc:9:7: error: using declaration requires a qualified name\nharness.cc:23:26: error: no matching constructor for initialization of '::std::istringstream' (aka 'basic_istringstream<char>')\nharne"
+    },
+    {
+     "round": 1,
+     "ok": false,
+     "err": "harness.cc:11:10: error: empty filename\nharness.cc:9:17: error: expected namespace name\nharness.cc:24:24: error: no matching constructor for initialization of 'std::istringstream' (aka 'basic_istrings"
+    },
+    {
+     "round": 2,
+     "ok": false,
+     "err": "harness.cc:9:17: error: expected namespace name\nharness.cc:24:24: error: no matching constructor for initialization of 'std::istringstream' (aka 'basic_istringstream<char>')\nharness.cc:28:22: error: i"
+    },
+    {
+     "round": 3,
+     "ok": false,
+     "err": "harness.cc:9:17: error: expected namespace name\nharness.cc:24:24: error: no matching constructor for initialization of 'std::istringstream' (aka 'basic_istringstream<char>')\nharness.cc:28:22: error: i"
+    }
+   ]
+  }
+ ],
+ "kb_chars": 386,
+ "bad": []
+}

@@ -73,23 +73,28 @@ class StructuredMinimizationResult:
 
 
 def run_exact(
-    snapshot: bytes, duration_seconds: int, proof_seed: int, runner: ProofCommand
+    snapshot: bytes,
+    duration_seconds: int,
+    proof_seed: int,
+    runner: ProofCommand,
+    image_digest: str,
 ) -> ProofProcessResult:
     with tempfile.TemporaryDirectory(prefix="dllm-openexr-proof-") as directory:
         root = Path(directory)
         _stage_input(root, snapshot)
-        argv = _replay_argv(root, proof_seed)
+        argv = _replay_argv(root, proof_seed, image_digest)
         process = runner(argv, _ASAN_ENV, float(duration_seconds + 30))
         artifacts = _artifact_hashes(root / "artifacts")
         return process, argv, artifacts
 
 
-def structured_minimize(
+def structured_minimize(  # noqa: PLR0913, PLR0917 - exact replay inputs are all explicit.
     snapshot: bytes,
     duration_seconds: int,
     proof_seed: int,
     runner: ProofCommand,
     signature: tuple[str, str],
+    image_digest: str,
 ) -> StructuredMinimizationResult:
     recovered = _recover_v1_selectors(snapshot)
     snapshot_sha = sha256_bytes(snapshot)
@@ -108,11 +113,11 @@ def structured_minimize(
         candidate_selectors = (*selectors[:index], 0, *selectors[index + 1 :])
         candidate = materialize_particle(decode_particle(candidate_selectors, mode))
         first, first_argv, _first_artifacts = run_exact(
-            candidate.content, duration_seconds, proof_seed, runner
+            candidate.content, duration_seconds, proof_seed, runner, image_digest
         )
         reject_boundary_process(first)
         second, second_argv, _second_artifacts = run_exact(
-            candidate.content, duration_seconds, proof_seed, runner
+            candidate.content, duration_seconds, proof_seed, runner, image_digest
         )
         reject_boundary_process(second)
         if (
@@ -136,24 +141,27 @@ def structured_minimize(
     )
 
 
-def try_minimized(
+def try_minimized(  # noqa: PLR0913, PLR0917 - exact replay inputs are all explicit.
     snapshot: bytes,
     duration_seconds: int,
     proof_seed: int,
     runner: ProofCommand,
     signature: tuple[str, str],
+    image_digest: str,
 ) -> MinimizedResult | None:
     with tempfile.TemporaryDirectory(prefix="dllm-openexr-minimize-") as directory:
         root = Path(directory)
         _stage_input(root, snapshot)
-        argv = _minimize_argv(root, duration_seconds, proof_seed)
+        argv = _minimize_argv(root, duration_seconds, proof_seed, image_digest)
         process = runner(argv, _ASAN_ENV, float(duration_seconds + 30))
         reject_boundary_process(process)
         log = log_bytes(process)
         minimized = _minimized_artifact(root / "artifacts")
     if minimized is None:
         return None
-    rerun, rerun_argv, _artifacts = run_exact(minimized, duration_seconds, proof_seed, runner)
+    rerun, rerun_argv, _artifacts = run_exact(
+        minimized, duration_seconds, proof_seed, runner, image_digest
+    )
     reject_boundary_process(rerun)
     if asan_signature(log_bytes(rerun)) != signature:
         return None
@@ -216,9 +224,9 @@ def _stage_input(root: Path, snapshot: bytes) -> None:
     input_path.chmod(0o444)
 
 
-def _replay_argv(root: Path, proof_seed: int) -> tuple[str, ...]:
+def _replay_argv(root: Path, proof_seed: int, image_digest: str) -> tuple[str, ...]:
     return (
-        *_docker_prefix(root),
+        *_docker_prefix(root, image_digest),
         OPENEXR_PROOF_BINARY,
         "/work/input.exr",
         "-runs=1",
@@ -226,9 +234,11 @@ def _replay_argv(root: Path, proof_seed: int) -> tuple[str, ...]:
     )
 
 
-def _minimize_argv(root: Path, duration_seconds: int, proof_seed: int) -> tuple[str, ...]:
+def _minimize_argv(
+    root: Path, duration_seconds: int, proof_seed: int, image_digest: str
+) -> tuple[str, ...]:
     return (
-        *_docker_prefix(root),
+        *_docker_prefix(root, image_digest),
         OPENEXR_PROOF_BINARY,
         "/work/input.exr",
         "-minimize_crash=1",
@@ -238,7 +248,7 @@ def _minimize_argv(root: Path, duration_seconds: int, proof_seed: int) -> tuple[
     )
 
 
-def _docker_prefix(root: Path) -> tuple[str, ...]:
+def _docker_prefix(root: Path, image_digest: str) -> tuple[str, ...]:
     return (
         *_DOCKER_HEAD,
         "--tmpfs",
@@ -253,7 +263,7 @@ def _docker_prefix(root: Path) -> tuple[str, ...]:
         "/work",
         "--pull",
         "never",
-        OPENEXR_PROOF_IMAGE_DIGEST,
+        image_digest,
     )
 
 

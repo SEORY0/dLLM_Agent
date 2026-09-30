@@ -1,0 +1,35 @@
+{
+ "fixed_source_group_within_b0_v1": {
+  "edges_across_9_identical_sources": [
+   1795,
+   1805,
+   1829,
+   1834,
+   1837,
+   1838,
+   1851,
+   1854,
+   1932
+  ],
+  "note": "same generated source, different generation seeds -> different libFuzzer -seed values used for fuzzing"
+ },
+ "repeated_fuzz_same_binary_same_seed_corpus": {
+  "per_libfuzzer_seed_1_to_10": [
+   1861,
+   1922,
+   1848,
+   1836,
+   1871,
+   1823,
+   1832,
+   1829,
+   1831,
+   1811
+  ],
+  "seed_1_repeated_twice_more": [
+   1861,
+   1830
+  ],
+  "note": "fuzz_seconds=20.0, -max_total_time (wall-clock budget, not fixed executions) -- even the exact same -seed value did not reproduce exactly (1861 vs 1830)"
+ }
+}

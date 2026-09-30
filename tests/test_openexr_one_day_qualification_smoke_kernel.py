@@ -239,6 +239,44 @@ def test_execute_smoke_rejects_missing_deferred_deep_parse_evidence(tmp_path: Pa
         _ = execute_qualification_smoke(plan, fixture.dependencies)
 
 
+def test_execute_smoke_accepts_cells_stopped_at_the_deadline(tmp_path: Path) -> None:
+    """Given cells that ran their whole window, when stopped at the deadline, smoke passes.
+
+    Real Docker start-up eats the ~zero slack in -max_total_time, so healthy real
+    cells end as "deadline" (the coordinator's normal terminal reason), not "completed".
+    """
+    # Given
+    plan = build_qualification_smoke_plan(
+        config_sha256="4" * 64,
+        smoke_root=tmp_path / "smoke",
+        start_monotonic_seconds=120_000.0,
+    )
+    fixture = _fixture(cell_runner=_CellRunner(status="deadline"))
+
+    # When
+    result = execute_qualification_smoke(plan, fixture.dependencies)
+
+    # Then
+    assert result.passed
+
+
+@pytest.mark.parametrize("status", ["failed", "restart_limit"])
+def test_execute_smoke_still_rejects_cells_that_did_not_run_their_window(
+    tmp_path: Path, status: Literal["failed", "restart_limit"]
+) -> None:
+    # Given
+    plan = build_qualification_smoke_plan(
+        config_sha256="4" * 64,
+        smoke_root=tmp_path / "smoke",
+        start_monotonic_seconds=120_000.0,
+    )
+    fixture = _fixture(cell_runner=_CellRunner(status=status))
+
+    # When / Then
+    with pytest.raises(QualificationSmokeError, match="smoke cell did not complete"):
+        _ = execute_qualification_smoke(plan, fixture.dependencies)
+
+
 @dataclass(frozen=True, slots=True)
 class _Bank:
     selected_bank_sha256: Sha256
@@ -272,12 +310,13 @@ class _ModelExecutor:
 class _CellRunner:
     run_cell_ids: list[str] = field(default_factory=list)
     results: dict[str, SmokeCellResult] = field(default_factory=dict)
+    status: Literal["completed", "failed", "deadline", "restart_limit"] = "completed"
 
     def run(self, cell_id: str, deadline_monotonic_seconds: float) -> SmokeCellResult:
         self.run_cell_ids.append(cell_id)
         result = SmokeCellResult(
             cell_id=cell_id,
-            status="completed",
+            status=self.status,
             attempt_count=1,
             deadline_monotonic_seconds=deadline_monotonic_seconds,
             result_sha256=sha256_bytes(f"cell:{cell_id}".encode()),

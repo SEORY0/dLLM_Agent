@@ -1,0 +1,118 @@
+{
+ "results": [
+  {
+   "arm": "kb_usage",
+   "seed": 2000,
+   "ok": true,
+   "rounds": 0,
+   "code": "#include <ImfCheckFile.h>\n#include <ImfHeader.h>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    const char* bytes = reinterpret_cast<const char*>(data);\n    if (!OPENEXR_IMF_NAMESPACE::checkOpenEXRFile(bytes, size, true, true, false)) {\n        return 1; // Ind or invalid input\n    }\n    \n    return 0;  // Valid input\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": true,
+     "err": ""
+    }
+   ]
+  },
+  {
+   "arm": "kb_usage",
+   "seed": 2001,
+   "ok": true,
+   "rounds": 0,
+   "code": "#include <ImfCheckFile.h>\n#include <ImfHeader.h>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    const char* bytes = reinterpret_cast<const char*>(data);\n    if (!OPENEXR_IMF_NAMESPACE::checkOpenEXRFile(bytes, size, true, true, false)) {\n        return 1; // Invalid input or skip input\n    }\n    return 0;  // Successful input\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": true,
+     "err": ""
+    }
+   ]
+  },
+  {
+   "arm": "kb_usage",
+   "seed": 2002,
+   "ok": true,
+   "rounds": 0,
+   "code": "#include <ImfCheckFile.h>\n#include <ImfHeader.h>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    const char* bytes = reinterpret_cast<const char*>(data);\n    if (OPENEXR_IMF_NAMESPACE::checkOpenEXRFile(bytes, size, true, true, false)) {\n        return 1; // Invalid file\n    }\n    return 0; // Valid input\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": true,
+     "err": ""
+    }
+   ]
+  },
+  {
+   "arm": "kb_usage",
+   "seed": 2003,
+   "ok": true,
+   "rounds": 0,
+   "code": "#include <ImfCheckFile.h>\n#include <ImfHeader.h>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    const char* bytes = reinterpret_cast<const char*>(data);\n    if (!OPENEXR_IMF_NAMESPACE::checkOpenEXRFile(bytes, size, true, true, false)) {\n        return 1; // The input is invalid\n    }\n    return 0; // The input is valid\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": true,
+     "err": ""
+    }
+   ]
+  },
+  {
+   "arm": "kb_usage",
+   "seed": 2004,
+   "ok": true,
+   "rounds": 0,
+   "code": "#include <ImfCheckFile.h>\n#include <ImfHeader.h>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    const char* bytes = reinterpret_cast<const char*>(data);\n    if (!OPENEXR_IMF_NAMESPACE::checkOpenEXRFile(bytes, size, true, true, false)) {\n        return 1; // Invalid OpenEXR file\n    }\n    return 0;  // Valid input\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": true,
+     "err": ""
+    }
+   ]
+  },
+  {
+   "arm": "kb_usage",
+   "seed": 2005,
+   "ok": true,
+   "rounds": 0,
+   "code": "#include <ImfCheckFile.h>\n#include <ImfHeader.h>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    const char* bytes = reinterpret_cast<const char*>(data);\n    if (!OPENEXR_IMF_NAMESPACE::checkOpenEXRFile(bytes, size, true, true, false)) {\n        return 1; // Invalid input, trigger failure\n    }\n    return 0;  // Valid input\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": true,
+     "err": ""
+    }
+   ]
+  },
+  {
+   "arm": "kb_usage",
+   "seed": 2006,
+   "ok": true,
+   "rounds": 0,
+   "code": "#include <ImfCheckFile.h>\n#include <ImfHeader.h>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    const char* bytes = reinterpret_cast<const char*>(data);\n    if (!OPENEXR_IMF_NAMESPACE::checkOpenEXRFile(bytes, size, true, true, false)) {\n        return 1; // Return non-zero to indicate a failure\n    }\n    return 0; // Return zero on success\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": true,
+     "err": ""
+    }
+   ]
+  },
+  {
+   "arm": "kb_usage",
+   "seed": 2007,
+   "ok": true,
+   "rounds": 0,
+   "code": "#include <ImfCheckFile.h>\n#include <ImfHeader.h>\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n    const char* bytes = reinterpret_cast<const char*>(data);\n    if (!OPENEXR_IMF_NAMESPACE::checkOpenEXRFile(bytes, size, true, true, false)) {\n        return 1; // Return 1 to indicate a error\n    }\n    return 0;\n}\n",
+   "hist": [
+    {
+     "round": 0,
+     "ok": true,
+     "err": ""
+    }
+   ]
+  }
+ ],
+ "kb_chars": 386,
+ "bad": []
+}

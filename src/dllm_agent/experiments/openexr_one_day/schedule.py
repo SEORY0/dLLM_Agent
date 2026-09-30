@@ -29,8 +29,18 @@ _SEED_NAMESPACE_WIDTH: Final = 1_000
 def build_campaign_schedule(
     *,
     main_start_monotonic_seconds: MonotonicSeconds,
+    gpu_count: int = GPU_COUNT,
 ) -> CampaignSchedule:
-    """Build the fixed five-wave schedule from one absolute monotonic anchor."""
+    """Build the fixed five-wave schedule from one absolute monotonic anchor.
+
+    ``gpu_count`` defaults to the historical 8-GPU cluster topology; pass the
+    real ``len(config.resource_map.model_cores)`` to schedule model-arm cells
+    onto however many resident GPUs the current workstation actually has
+    (cells share a GPU by index-modulo when ``gpu_count`` is smaller).
+    """
+    if gpu_count < 1:
+        detail = "gpu_count must be positive"
+        raise ValueError(detail)
     seed_namespaces = tuple(
         _seed_namespace(RepetitionIndex(repetition)) for repetition in range(REPETITION_COUNT)
     )
@@ -42,6 +52,7 @@ def build_campaign_schedule(
                 WaveIndex(wave_index),
                 main_start_monotonic_seconds,
                 seed_namespaces,
+                gpu_count,
             )
             for wave_index in range(WAVE_COUNT)
         ),
@@ -61,6 +72,7 @@ def _build_wave(
     wave_index: WaveIndex,
     main_start: MonotonicSeconds,
     seed_namespaces: tuple[SeedNamespace, ...],
+    gpu_count: int,
 ) -> WaveSchedule:
     first_repetition = RepetitionIndex(int(wave_index) * REPETITIONS_PER_WAVE)
     repetitions = (
@@ -83,7 +95,7 @@ def _build_wave(
                 fuzzer_seed=Seed(
                     int(seed_namespaces[int(repetition)].start_seed) + ARMS.index(arm) + 1
                 ),
-                gpu_index=_gpu_index(arm, repetition_offset, wave_index),
+                gpu_index=_gpu_index(arm, repetition_offset, wave_index, gpu_count),
                 deadline_monotonic_seconds=deadline,
             )
             for repetition_offset, repetition in enumerate(repetitions)
@@ -96,6 +108,7 @@ def _gpu_index(
     arm: Arm,
     repetition_offset: int,
     wave_index: WaveIndex,
+    gpu_count: int,
 ) -> GpuIndex | None:
     match arm:
         case "selective-revision":
@@ -110,7 +123,7 @@ def _gpu_index(
             return None
         case _:
             assert_never(arm)
+    stride = max(1, gpu_count // REPETITIONS_PER_WAVE)
     return GpuIndex(
-        (arm_offset + (repetition_offset * (GPU_COUNT // REPETITIONS_PER_WAVE)) + int(wave_index))
-        % GPU_COUNT
+        (arm_offset + (repetition_offset * stride) + int(wave_index)) % gpu_count
     )

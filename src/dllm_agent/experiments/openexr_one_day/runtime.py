@@ -9,7 +9,7 @@ from __future__ import annotations
 import subprocess
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from time import monotonic
+from time import monotonic, sleep
 from typing import TYPE_CHECKING, Final, Protocol, Self, cast
 
 from dllm_agent.core.io import sha256_bytes
@@ -18,6 +18,7 @@ from dllm_agent.experiments.openexr_one_day.candidate_bank import (
     CandidateBank,
     build_candidate_bank,
     build_frozen_bank_adapters,
+    private_worker_delegate,
 )
 from dllm_agent.experiments.openexr_one_day.cell_runner import (
     CellResult,
@@ -91,6 +92,7 @@ from dllm_agent.targets.openexr.deep_parse import DockerDeepParseReplayer
 from dllm_agent.targets.openexr.probe import ProbeConfig, prepare_openexr_probe
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from contextlib import AbstractContextManager
     from subprocess import CompletedProcess
     from types import TracebackType
@@ -241,9 +243,19 @@ class RuntimeDependencyGraph:
 
     @property
     def revision_delegates(self) -> dict[ModelArm, RevisionSampler]:
-        """Compatibility view over the four production arm workers."""
+        """Compatibility view over the four production arm workers.
+
+        Modulo-indexed (not a direct positional index) so this degrades
+        safely -- rather than IndexError -- when the pool has fewer bindings
+        than model arms (gpu_count < 4). Unwrapped (unlike the real
+        _adapters_by_repetition/_smoke_adapters model-arm binding paths,
+        which do use private_worker_delegate): this is an unused
+        compatibility view, not itself a path where multiple arms are ever
+        compared for delegate-object distinctness.
+        """
+        bindings = self.resident_pool.bindings
         return {
-            arm: cast("RevisionSampler", cast("object", self.resident_pool.bindings[index].worker))
+            arm: cast("RevisionSampler", cast("object", bindings[index % len(bindings)].worker))
             for index, arm in enumerate(_MODEL_ARMS)
         }
 
@@ -264,7 +276,8 @@ class ProductionQualificationSmokeAdapter:
         if path.exists():
             return load_persisted_candidate_bank(path, repetition)
         schedule = build_campaign_schedule(
-            main_start_monotonic_seconds=config.main_start_monotonic_seconds
+            main_start_monotonic_seconds=config.main_start_monotonic_seconds,
+            gpu_count=len(config.resource_map.model_cores),
         )
         sampler = _smoke_bank_sampler(schedule.cells, self.resident_pool, repetition)
         producer = _smoke_producer_gpu(schedule.cells, repetition)
@@ -405,7 +418,9 @@ def _smoke_model_request(
     bank_ready_elapsed_seconds: float,
 ) -> ModelArmExecutionRequest:
     plan_cell = binding.plan_cell
-    schedule_cells = _smoke_schedule_cells(plan_cell.start_monotonic_seconds)
+    schedule_cells = _smoke_schedule_cells(
+        plan_cell.start_monotonic_seconds, len(binding.config.resource_map.model_cores)
+    )
     adapters = _smoke_adapters(
         schedule_cells, resident_pool, binding.bank, smoke_root, plan_cell.repetition
     )
@@ -454,7 +469,9 @@ def _persist_smoke_model_prep(
     enriched = replace(
         result,
         pre_release_corpus_set_sha256=rows[-1].cumulative_set_sha256,
-        producer_gpu_index=_smoke_model_gpu_index(binding.plan_cell),
+        producer_gpu_index=_smoke_model_gpu_index(
+            binding.plan_cell, len(binding.config.resource_map.model_cores)
+        ),
     )
     _persist_model_prep_result(
         _model_prep_evidence_path(binding.request),
@@ -488,7 +505,9 @@ def _persist_smoke_corpus_release(
         model_ready_elapsed_seconds=result.model_ready_elapsed_seconds,
         corpus_release_elapsed_seconds=0.0,
         pre_release_corpus_set_sha256=result.pre_release_corpus_set_sha256,
-        producer_gpu_index=_smoke_model_gpu_index(binding.plan_cell),
+        producer_gpu_index=_smoke_model_gpu_index(
+            binding.plan_cell, len(binding.config.resource_map.model_cores)
+        ),
         promoted_sha256=promoted,
     )
     _persist_corpus_release(binding.request.artifact_root / "corpus-release.json", release)
@@ -501,7 +520,10 @@ def _smoke_pending_cell(
 ) -> CellOutcome:
     manifest = build_campaign_manifest(
         config,
-        build_campaign_schedule(main_start_monotonic_seconds=config.main_start_monotonic_seconds),
+        build_campaign_schedule(
+            main_start_monotonic_seconds=config.main_start_monotonic_seconds,
+            gpu_count=len(config.resource_map.model_cores),
+        ),
     )
     return CellOutcome(
         cell_id=request.cell_id,
@@ -557,9 +579,12 @@ def _smoke_pending_cell_from_schedule(
     )
 
 
-def _smoke_schedule_cells(start_monotonic_seconds: float) -> tuple[CellSchedule, ...]:
+def _smoke_schedule_cells(
+    start_monotonic_seconds: float, gpu_count: int
+) -> tuple[CellSchedule, ...]:
     schedule = build_campaign_schedule(
-        main_start_monotonic_seconds=MonotonicSeconds(start_monotonic_seconds)
+        main_start_monotonic_seconds=MonotonicSeconds(start_monotonic_seconds),
+        gpu_count=gpu_count,
     )
     return schedule.waves[0].cells
 
@@ -583,7 +608,9 @@ def _smoke_adapters(
     bindings = tuple(
         ArmBankBinding(
             cell.arm,
-            cast("RevisionSampler", cast("object", resident_pool.worker_for(cell))),
+            private_worker_delegate(
+                cast("RevisionSampler", cast("object", resident_pool.worker_for(cell)))
+            ),
             smoke_root / "mutable" / f"rep-{int(cell.repetition):02d}" / cell.arm,
         )
         for cell in cells
@@ -599,7 +626,9 @@ def _smoke_bank_sampler(
 ) -> RevisionSampler:
     for cell in cells:
         if int(cell.repetition) == repetition and cell.arm in MODEL_ARMS:
-            return cast("RevisionSampler", cast("object", resident_pool.worker_for(cell)))
+            return private_worker_delegate(
+                cast("RevisionSampler", cast("object", resident_pool.worker_for(cell)))
+            )
     raise CoordinatorError(reason="smoke bank sampler missing")
 
 
@@ -612,9 +641,9 @@ def _smoke_producer_gpu(cells: tuple[CellSchedule, ...], repetition: int) -> int
     raise CoordinatorError(reason="smoke bank producer missing")
 
 
-def _smoke_model_gpu_index(plan_cell: QualificationSmokeCell) -> int:
+def _smoke_model_gpu_index(plan_cell: QualificationSmokeCell, gpu_count: int) -> int:
     cell = _matching_smoke_schedule_cell(
-        _smoke_schedule_cells(plan_cell.start_monotonic_seconds),
+        _smoke_schedule_cells(plan_cell.start_monotonic_seconds, gpu_count),
         plan_cell,
     )
     if cell.gpu_index is None:
@@ -649,13 +678,24 @@ class ProductionRuntimeFactory:
             worker_cpu_affinity_for_core(assignment.core_id, assignment.sibling_core_id)
             for assignment in config.resource_map.model_cores
         )
+        gpu_count = len(config.resource_map.model_cores)
+        gpu_records = config.resource_map.gpu_records
+        # Physical CUDA/nvidia-smi device per logical pool slot. gpu_records[i]
+        # is the workstation's real GPU for slot i (e.g. physical GPU 1 pinned
+        # as the sole slot 0 on a 2-GPU box); falls back to slot == device for
+        # historical contiguous-from-0 configs that never set gpu_records.
+        physical_indices = (
+            tuple(int(record.index) for record in gpu_records)
+            if gpu_records
+            else tuple(range(gpu_count))
+        )
         workers: tuple[ResidentRevisionWorker, ...] = tuple(
-            factory.create(device=f"cuda:{index}", cpu_affinity=affinities[index])
-            for index in range(8)
+            factory.create(device=f"cuda:{physical_indices[index]}", cpu_affinity=affinities[index])
+            for index in range(gpu_count)
         )
         pool = ResidentWorkerPool(
             bindings=tuple(
-                ResidentWorkerBinding(GpuIndex(index), worker)
+                ResidentWorkerBinding(GpuIndex(index), worker, physical_indices[index])
                 for index, worker in enumerate(workers)
             ),
             telemetry_probe=ProductionTelemetryProbe(),
@@ -714,6 +754,7 @@ class ProductionCellRunner:
             index_path=request.artifact_root / "corpus-index.jsonl",
         )
         prefix = load_corpus_index(index_request) if index_request.index_path.exists() else ()
+        _wait_for_cell_start(request.start_monotonic_seconds)
         return run_openexr_cell(
             request,
             self.launcher,
@@ -724,6 +765,25 @@ class ProductionCellRunner:
     def cancel_active(self) -> None:
         """Cancel and reap every Docker search owned by this runner."""
         self.launcher.cancel_active()
+
+
+def _wait_for_cell_start(
+    start_monotonic_seconds: float,
+    *,
+    now: Callable[[], float] = monotonic,
+    pause: Callable[[float], None] = sleep,
+) -> None:
+    """Hold a cell until its scheduled start.
+
+    A cell's search window is [start, deadline]; launching before `start` would
+    hand the fuzzer more than the profile's duration (SearchLaunchRequest rejects
+    that), and launching after the deadline runs nothing. Waiting makes a generous
+    start-time lead always safe, so a slow model-prep phase can no longer race the
+    cell's fixed window. A late arrival (now >= start) is not delayed.
+    """
+    delay = start_monotonic_seconds - now()
+    if delay > 0:
+        pause(delay)
 
 
 class ProcReader(Protocol):

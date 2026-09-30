@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import re
 import stat
 import subprocess
 import tempfile
@@ -114,6 +115,20 @@ _NVIDIA_GPU_TOPOLOGY_ARGV: Final = (
     "--query-gpu=index,uuid,pci.bus_id",
     "--format=csv,noheader,nounits",
 )
+
+
+def nvidia_gpu_topology_argv(physical_gpu_indices: tuple[int, ...]) -> tuple[str, ...]:
+    """Return the exact nvidia-smi argv for one topology query.
+
+    Restricted to ``physical_gpu_indices`` via ``-i`` when given, so a shared
+    box's other GPUs (in use by unrelated work) never enter this campaign's
+    resource_map identity evidence. Empty means "every GPU on the host" --
+    the original dedicated-cluster assumption.
+    """
+    if not physical_gpu_indices:
+        return _NVIDIA_GPU_TOPOLOGY_ARGV
+    indices = ",".join(str(index) for index in sorted(set(physical_gpu_indices)))
+    return (*_NVIDIA_GPU_TOPOLOGY_ARGV, "-i", indices)
 _PCI_DEVICE_ROOT: Final = Path("/sys/bus/pci/devices")
 _CACHE_WRITE_PROBE_NAME: Final = ".dllm-agent-cache-write-probe"
 _NVIDIA_DOMAIN_HEX_LEN: Final = 8
@@ -434,7 +449,10 @@ def write_record_backed_qualification_from_measurements(
     _reject_placeholder_provenance(config)
     manifest = build_campaign_manifest(
         config,
-        build_campaign_schedule(main_start_monotonic_seconds=config.main_start_monotonic_seconds),
+        build_campaign_schedule(
+            main_start_monotonic_seconds=config.main_start_monotonic_seconds,
+            gpu_count=len(config.resource_map.model_cores),
+        ),
     )
     measurements: dict[QualificationGateName, dict[str, JsonValue]] = {
         gate: _read_gate_measurements(measurements_root, gate) for gate in QUALIFICATION_GATE_NAMES
@@ -561,10 +579,30 @@ def finalize_config_payload_from_artifacts(
             "config_sha256": "0" * 64,
         }
     )
+    checker_sha256 = _manifest_deep_parse_checker_sha256(artifacts.coverage_build_manifest_path)
+    if checker_sha256 is not None:
+        payload["deep_parse_checker_sha256"] = checker_sha256
     payload["config_sha256"] = config_payload_sha256(payload)
     config = CampaignConfig.model_validate(payload)
     _reject_placeholder_provenance(config)
     return _JSON_OBJECT.validate_python(config.model_dump(mode="json"))
+
+
+def _manifest_deep_parse_checker_sha256(manifest_path: Path) -> str | None:
+    """Return the checker hash the built image's manifest attests, when it declares one.
+
+    The checker binary is compiled inside the image, so its hash is a property of the
+    build (a rebuild on another host yields different bytes) and must follow the
+    measured manifest rather than a value frozen in the template.
+    """
+    try:
+        manifest = _JSON_OBJECT.validate_json(manifest_path.read_bytes())
+    except ValidationError:
+        return None
+    value = manifest.get("deep_parse_checker_sha256")
+    if isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value):
+        return value
+    return None
 
 
 def collect_resource_topology_measurements(
@@ -572,10 +610,19 @@ def collect_resource_topology_measurements(
     *,
     thread_sibling_root: Path = _THREAD_SIBLING_ROOT,
     pci_device_root: Path = _PCI_DEVICE_ROOT,
+    physical_gpu_indices: tuple[int, ...] = (),
 ) -> dict[str, JsonValue]:
-    """Collect raw CPU/GPU topology evidence through fixed shell-free commands."""
+    """Collect raw CPU/GPU topology evidence through fixed shell-free commands.
+
+    ``physical_gpu_indices`` restricts the nvidia-smi query to the specific
+    GPUs the campaign actually declares (via ``-i``) -- required on a shared
+    box where other physical GPUs may be in use by unrelated work and were
+    never meant to be part of this resource_map's identity evidence. Empty
+    (the historical default) queries every GPU on the host, matching the
+    original dedicated-cluster assumption where used GPUs == all GPUs.
+    """
     lscpu = runner.run(_LSCPU_TOPOLOGY_ARGV)
-    nvidia = runner.run(_NVIDIA_GPU_TOPOLOGY_ARGV)
+    nvidia = runner.run(nvidia_gpu_topology_argv(physical_gpu_indices))
     lscpu_stdout = _decode_stdout(lscpu, "lscpu")
     lscpu_stderr = _decode_stderr(lscpu, "lscpu")
     nvidia_stdout = _decode_stdout(nvidia, "nvidia-smi")
@@ -605,7 +652,7 @@ def collect_resource_topology_measurements(
             "lscpu_stderr": lscpu_stderr,
             "lscpu_stdout_sha256": sha256_bytes(lscpu_stdout.encode()),
             "lscpu_stderr_sha256": sha256_bytes(lscpu_stderr.encode()),
-            "nvidia_smi_argv": list(_NVIDIA_GPU_TOPOLOGY_ARGV),
+            "nvidia_smi_argv": list(nvidia_gpu_topology_argv(physical_gpu_indices)),
             "nvidia_smi_exit_code": nvidia.returncode,
             "nvidia_smi_stdout": nvidia_stdout,
             "nvidia_smi_stderr": nvidia_stderr,
@@ -757,13 +804,14 @@ def _derive_gate_passed_from_measurements(  # noqa: C901, PLR0911, PLR0912
         case "vram":
             preload = _int_map_value(measurements, "pre_load_free_bytes")
             postload = _int_map_value(measurements, "post_load_free_bytes")
+            gpu_indexes = range(len(config.resource_map.model_cores))
             return (
-                set(preload) == {str(index) for index in range(8)}
-                and set(postload) == {str(index) for index in range(8)}
+                set(preload) == {str(index) for index in gpu_indexes}
+                and set(postload) == {str(index) for index in gpu_indexes}
                 and all(
                     preload[str(index)] >= _MINIMUM_PRELOAD_VRAM_BYTES
                     and postload[str(index)] >= _MINIMUM_POSTLOAD_VRAM_BYTES
-                    for index in range(8)
+                    for index in gpu_indexes
                 )
             )
         case "ram":
@@ -1090,7 +1138,13 @@ def _resource_topology_matches(  # noqa: PLR0911
     try:
         if tuple(_sequence_value(measurements, "lscpu_argv")) != _LSCPU_TOPOLOGY_ARGV:
             return False
-        if tuple(_sequence_value(measurements, "nvidia_smi_argv")) != _NVIDIA_GPU_TOPOLOGY_ARGV:
+        expected_physical_indices = (
+            tuple(record.index for record in expected.gpu_records)
+            if expected.gpu_records
+            else tuple(range(len(expected.model_cores)))
+        )
+        expected_argv = nvidia_gpu_topology_argv(expected_physical_indices)
+        if tuple(_sequence_value(measurements, "nvidia_smi_argv")) != expected_argv:
             return False
         lscpu_stdout = _str_value(measurements, "lscpu_stdout")
         lscpu_stderr = _str_value(measurements, "lscpu_stderr")

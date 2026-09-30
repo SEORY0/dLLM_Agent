@@ -1,0 +1,386 @@
+[
+ {
+  "example": "checkOpenEXRFile",
+  "condition": "directed",
+  "seed": 3000000,
+  "compiled": true,
+  "compile_error": null,
+  "self_similarity": 1.0,
+  "other_similarity": {
+   "InputFile": 0.2661818181818182,
+   "MultiPartInputFile": 0.16080402010050251
+  },
+  "reference_similarity": 0.8366197183098592,
+  "nearest_example": "checkOpenEXRFile",
+  "followed_instruction": true,
+  "code": "#include <cstdint>\n#include <ImfCheckFile.h>\n#include <ImfNamespace.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  const char* bytes = reinterpret_cast<const char*>(data);\n  (void)OPENEXR_IMF_NAMESPACE::checkOpenEXRFile(bytes, size, true, true, false);\n  return 0;\n}\n"
+ },
+ {
+  "example": "checkOpenEXRFile",
+  "condition": "directed",
+  "seed": 3000001,
+  "compiled": true,
+  "compile_error": null,
+  "self_similarity": 1.0,
+  "other_similarity": {
+   "InputFile": 0.2661818181818182,
+   "MultiPartInputFile": 0.16080402010050251
+  },
+  "reference_similarity": 0.8366197183098592,
+  "nearest_example": "checkOpenEXRFile",
+  "followed_instruction": true,
+  "code": "#include <cstdint>\n#include <ImfCheckFile.h>\n#include <ImfNamespace.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  const char* bytes = reinterpret_cast<const char*>(data);\n  (void)OPENEXR_IMF_NAMESPACE::checkOpenEXRFile(bytes, size, true, true, false);\n  return 0;\n}\n"
+ },
+ {
+  "example": "checkOpenEXRFile",
+  "condition": "directed",
+  "seed": 3000002,
+  "compiled": true,
+  "compile_error": null,
+  "self_similarity": 1.0,
+  "other_similarity": {
+   "InputFile": 0.2661818181818182,
+   "MultiPartInputFile": 0.16080402010050251
+  },
+  "reference_similarity": 0.8366197183098592,
+  "nearest_example": "checkOpenEXRFile",
+  "followed_instruction": true,
+  "code": "#include <cstdint>\n#include <ImfCheckFile.h>\n#include <ImfNamespace.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  const char* bytes = reinterpret_cast<const char*>(data);\n  (void)OPENEXR_IMF_NAMESPACE::checkOpenEXRFile(bytes, size, true, true, false);\n  return 0;\n}\n"
+ },
+ {
+  "example": "checkOpenEXRFile",
+  "condition": "directed",
+  "seed": 3000003,
+  "compiled": true,
+  "compile_error": null,
+  "self_similarity": 1.0,
+  "other_similarity": {
+   "InputFile": 0.2661818181818182,
+   "MultiPartInputFile": 0.16080402010050251
+  },
+  "reference_similarity": 0.8366197183098592,
+  "nearest_example": "checkOpenEXRFile",
+  "followed_instruction": true,
+  "code": "#include <cstdint>\n#include <ImfCheckFile.h>\n#include <ImfNamespace.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  const char* bytes = reinterpret_cast<const char*>(data);\n  (void)OPENEXR_IMF_NAMESPACE::checkOpenEXRFile(bytes, size, true, true, false);\n  return 0;\n}\n"
+ },
+ {
+  "example": "InputFile",
+  "condition": "directed",
+  "seed": 3000000,
+  "compiled": true,
+  "compile_error": null,
+  "self_similarity": 1.0,
+  "other_similarity": {
+   "checkOpenEXRFile": 0.3330909090909091,
+   "MultiPartInputFile": 0.9916974169741697
+  },
+  "reference_similarity": 0.20875420875420875,
+  "nearest_example": "InputFile",
+  "followed_instruction": true,
+  "code": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+ },
+ {
+  "example": "InputFile",
+  "condition": "directed",
+  "seed": 3000001,
+  "compiled": true,
+  "compile_error": null,
+  "self_similarity": 1.0,
+  "other_similarity": {
+   "checkOpenEXRFile": 0.3330909090909091,
+   "MultiPartInputFile": 0.9916974169741697
+  },
+  "reference_similarity": 0.20875420875420875,
+  "nearest_example": "InputFile",
+  "followed_instruction": true,
+  "code": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+ },
+ {
+  "example": "InputFile",
+  "condition": "directed",
+  "seed": 3000002,
+  "compiled": true,
+  "compile_error": null,
+  "self_similarity": 1.0,
+  "other_similarity": {
+   "checkOpenEXRFile": 0.3330909090909091,
+   "MultiPartInputFile": 0.9916974169741697
+  },
+  "reference_similarity": 0.20875420875420875,
+  "nearest_example": "InputFile",
+  "followed_instruction": true,
+  "code": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+ },
+ {
+  "example": "InputFile",
+  "condition": "directed",
+  "seed": 3000003,
+  "compiled": true,
+  "compile_error": null,
+  "self_similarity": 1.0,
+  "other_similarity": {
+   "checkOpenEXRFile": 0.3330909090909091,
+   "MultiPartInputFile": 0.9916974169741697
+  },
+  "reference_similarity": 0.20875420875420875,
+  "nearest_example": "InputFile",
+  "followed_instruction": true,
+  "code": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+ },
+ {
+  "example": "MultiPartInputFile",
+  "condition": "directed",
+  "seed": 3000000,
+  "compiled": true,
+  "compile_error": null,
+  "self_similarity": 1.0,
+  "other_similarity": {
+   "checkOpenEXRFile": 0.3287867910983489,
+   "InputFile": 0.9916974169741697
+  },
+  "reference_similarity": 0.20625415834996674,
+  "nearest_example": "MultiPartInputFile",
+  "followed_instruction": true,
+  "code": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n\n#include <ImfIO.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+ },
+ {
+  "example": "MultiPartInputFile",
+  "condition": "directed",
+  "seed": 3000001,
+  "compiled": true,
+  "compile_error": null,
+  "self_similarity": 1.0,
+  "other_similarity": {
+   "checkOpenEXRFile": 0.3287867910983489,
+   "InputFile": 0.9916974169741697
+  },
+  "reference_similarity": 0.20625415834996674,
+  "nearest_example": "MultiPartInputFile",
+  "followed_instruction": true,
+  "code": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n\n#include <ImfIO.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+ },
+ {
+  "example": "MultiPartInputFile",
+  "condition": "directed",
+  "seed": 3000002,
+  "compiled": true,
+  "compile_error": null,
+  "self_similarity": 1.0,
+  "other_similarity": {
+   "checkOpenEXRFile": 0.3287867910983489,
+   "InputFile": 0.9916974169741697
+  },
+  "reference_similarity": 0.20625415834996674,
+  "nearest_example": "MultiPartInputFile",
+  "followed_instruction": true,
+  "code": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n\n#include <ImfIO.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+ },
+ {
+  "example": "MultiPartInputFile",
+  "condition": "directed",
+  "seed": 3000003,
+  "compiled": true,
+  "compile_error": null,
+  "self_similarity": 1.0,
+  "other_similarity": {
+   "checkOpenEXRFile": 0.3287867910983489,
+   "InputFile": 0.9916974169741697
+  },
+  "reference_similarity": 0.20625415834996674,
+  "nearest_example": "MultiPartInputFile",
+  "followed_instruction": true,
+  "code": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n\n#include <ImfIO.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+ },
+ {
+  "example": "checkOpenEXRFile",
+  "condition": "directed",
+  "seed": 3000004,
+  "compiled": true,
+  "compile_error": null,
+  "self_similarity": 1.0,
+  "other_similarity": {
+   "InputFile": 0.2661818181818182,
+   "MultiPartInputFile": 0.16080402010050251
+  },
+  "reference_similarity": 0.8366197183098592,
+  "nearest_example": "checkOpenEXRFile",
+  "followed_instruction": true,
+  "code": "#include <cstdint>\n#include <ImfCheckFile.h>\n#include <ImfNamespace.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  const char* bytes = reinterpret_cast<const char*>(data);\n  (void)OPENEXR_IMF_NAMESPACE::checkOpenEXRFile(bytes, size, true, true, false);\n  return 0;\n}\n"
+ },
+ {
+  "example": "checkOpenEXRFile",
+  "condition": "directed",
+  "seed": 3000005,
+  "compiled": true,
+  "compile_error": null,
+  "self_similarity": 1.0,
+  "other_similarity": {
+   "InputFile": 0.2661818181818182,
+   "MultiPartInputFile": 0.16080402010050251
+  },
+  "reference_similarity": 0.8366197183098592,
+  "nearest_example": "checkOpenEXRFile",
+  "followed_instruction": true,
+  "code": "#include <cstdint>\n#include <ImfCheckFile.h>\n#include <ImfNamespace.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  const char* bytes = reinterpret_cast<const char*>(data);\n  (void)OPENEXR_IMF_NAMESPACE::checkOpenEXRFile(bytes, size, true, true, false);\n  return 0;\n}\n"
+ },
+ {
+  "example": "checkOpenEXRFile",
+  "condition": "directed",
+  "seed": 3000006,
+  "compiled": true,
+  "compile_error": null,
+  "self_similarity": 1.0,
+  "other_similarity": {
+   "InputFile": 0.2661818181818182,
+   "MultiPartInputFile": 0.16080402010050251
+  },
+  "reference_similarity": 0.8366197183098592,
+  "nearest_example": "checkOpenEXRFile",
+  "followed_instruction": true,
+  "code": "#include <cstdint>\n#include <ImfCheckFile.h>\n#include <ImfNamespace.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  const char* bytes = reinterpret_cast<const char*>(data);\n  (void)OPENEXR_IMF_NAMESPACE::checkOpenEXRFile(bytes, size, true, true, false);\n  return 0;\n}\n"
+ },
+ {
+  "example": "checkOpenEXRFile",
+  "condition": "directed",
+  "seed": 3000007,
+  "compiled": true,
+  "compile_error": null,
+  "self_similarity": 1.0,
+  "other_similarity": {
+   "InputFile": 0.2661818181818182,
+   "MultiPartInputFile": 0.16080402010050251
+  },
+  "reference_similarity": 0.8366197183098592,
+  "nearest_example": "checkOpenEXRFile",
+  "followed_instruction": true,
+  "code": "#include <cstdint>\n#include <ImfCheckFile.h>\n#include <ImfNamespace.h>\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  const char* bytes = reinterpret_cast<const char*>(data);\n  (void)OPENEXR_IMF_NAMESPACE::checkOpenEXRFile(bytes, size, true, true, false);\n  return 0;\n}\n"
+ },
+ {
+  "example": "InputFile",
+  "condition": "directed",
+  "seed": 3000004,
+  "compiled": true,
+  "compile_error": null,
+  "self_similarity": 1.0,
+  "other_similarity": {
+   "checkOpenEXRFile": 0.3330909090909091,
+   "MultiPartInputFile": 0.9916974169741697
+  },
+  "reference_similarity": 0.20875420875420875,
+  "nearest_example": "InputFile",
+  "followed_instruction": true,
+  "code": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+ },
+ {
+  "example": "InputFile",
+  "condition": "directed",
+  "seed": 3000005,
+  "compiled": true,
+  "compile_error": null,
+  "self_similarity": 1.0,
+  "other_similarity": {
+   "checkOpenEXRFile": 0.3330909090909091,
+   "MultiPartInputFile": 0.9916974169741697
+  },
+  "reference_similarity": 0.20875420875420875,
+  "nearest_example": "InputFile",
+  "followed_instruction": true,
+  "code": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+ },
+ {
+  "example": "InputFile",
+  "condition": "directed",
+  "seed": 3000006,
+  "compiled": true,
+  "compile_error": null,
+  "self_similarity": 1.0,
+  "other_similarity": {
+   "checkOpenEXRFile": 0.3330909090909091,
+   "MultiPartInputFile": 0.9916974169741697
+  },
+  "reference_similarity": 0.20875420875420875,
+  "nearest_example": "InputFile",
+  "followed_instruction": true,
+  "code": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+ },
+ {
+  "example": "InputFile",
+  "condition": "directed",
+  "seed": 3000007,
+  "compiled": true,
+  "compile_error": null,
+  "self_similarity": 1.0,
+  "other_similarity": {
+   "checkOpenEXRFile": 0.3330909090909091,
+   "MultiPartInputFile": 0.9916974169741697
+  },
+  "reference_similarity": 0.20875420875420875,
+  "nearest_example": "InputFile",
+  "followed_instruction": true,
+  "code": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n\n#include <ImfIO.h>\n#include <ImfInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+ },
+ {
+  "example": "MultiPartInputFile",
+  "condition": "directed",
+  "seed": 3000004,
+  "compiled": true,
+  "compile_error": null,
+  "self_similarity": 1.0,
+  "other_similarity": {
+   "checkOpenEXRFile": 0.3287867910983489,
+   "InputFile": 0.9916974169741697
+  },
+  "reference_similarity": 0.20625415834996674,
+  "nearest_example": "MultiPartInputFile",
+  "followed_instruction": true,
+  "code": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n\n#include <ImfIO.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+ },
+ {
+  "example": "MultiPartInputFile",
+  "condition": "directed",
+  "seed": 3000005,
+  "compiled": true,
+  "compile_error": null,
+  "self_similarity": 1.0,
+  "other_similarity": {
+   "checkOpenEXRFile": 0.3287867910983489,
+   "InputFile": 0.9916974169741697
+  },
+  "reference_similarity": 0.20625415834996674,
+  "nearest_example": "MultiPartInputFile",
+  "followed_instruction": true,
+  "code": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n\n#include <ImfIO.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+ },
+ {
+  "example": "MultiPartInputFile",
+  "condition": "directed",
+  "seed": 3000006,
+  "compiled": true,
+  "compile_error": null,
+  "self_similarity": 1.0,
+  "other_similarity": {
+   "checkOpenEXRFile": 0.3287867910983489,
+   "InputFile": 0.9916974169741697
+  },
+  "reference_similarity": 0.20625415834996674,
+  "nearest_example": "MultiPartInputFile",
+  "followed_instruction": true,
+  "code": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n\n#include <ImfIO.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+ },
+ {
+  "example": "MultiPartInputFile",
+  "condition": "directed",
+  "seed": 3000007,
+  "compiled": true,
+  "compile_error": null,
+  "self_similarity": 1.0,
+  "other_similarity": {
+   "checkOpenEXRFile": 0.3287867910983489,
+   "InputFile": 0.9916974169741697
+  },
+  "reference_similarity": 0.20625415834996674,
+  "nearest_example": "MultiPartInputFile",
+  "followed_instruction": true,
+  "code": "#include <cstdint>\n#include <cstring>\n#include <exception>\n#include <stdexcept>\n\n#include <ImfIO.h>\n#include <ImfMultiPartInputFile.h>\n#include <ImfNamespace.h>\n\nclass MemoryIStream : public OPENEXR_IMF_NAMESPACE::IStream {\n public:\n  MemoryIStream(const char* data, int64_t size)\n      : OPENEXR_IMF_NAMESPACE::IStream(\"<memory>\"), _data(data), _size(size), _pos(0) {}\n\n  bool read(char c[], int n) override {\n    if (_pos + n > _size) {\n      throw std::runtime_error(\"read past end\");\n    }\n    std::memcpy(c, _data + _pos, static_cast<size_t>(n));\n    _pos += n;\n    return _pos < _size;\n  }\n\n  uint64_t tellg() override { return static_cast<uint64_t>(_pos); }\n  void seekg(uint64_t pos) override { _pos = static_cast<int64_t>(pos); }\n\n private:\n  const char* _data;\n  int64_t _size;\n  int64_t _pos;\n};\n\nextern \"C\" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {\n  MemoryIStream stream(reinterpret_cast<const char*>(data), static_cast<int64_t>(size));\n  try {\n    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n  } catch (const std::exception&) {\n  }\n  return 0;\n}\n"
+ }
+]

@@ -233,7 +233,12 @@ def _validate_cell_evidence(
     validate_binding_for_cell(cell, binding)
     if result.deadline_monotonic_seconds != cell.deadline_monotonic_seconds:
         raise QualificationSmokeError(reason="smoke cell deadline mismatch")
-    if result.status != "completed":
+    # A search cell that ran its whole window ends one of two healthy ways: the
+    # fuzzer exits on its own ("completed"), or the supervisor stops it at the
+    # absolute deadline ("deadline" -- the coordinator's normal terminal reason).
+    # Real Docker start-up always eats the ~0 slack in -max_total_time, so real
+    # cells finish as "deadline". "failed"/"restart_limit" are still rejected.
+    if result.status not in {"completed", "deadline"}:
         raise QualificationSmokeError(reason="smoke cell did not complete")
     if post_search.proof_status != "available":
         raise QualificationSmokeError(reason="deferred proof evidence unavailable")

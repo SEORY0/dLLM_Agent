@@ -1,0 +1,18 @@
+# Pinned deps for Dream-Coder's remote-code model class. Dream-Coder's
+# modeling_dream.py needs transformers 4.x (ROPE_INIT_FUNCTIONS lookup breaks under
+# the project's transformers 5.x — see docs/harness-synthesis-feasibility-20260920.md
+# §"환경 이슈"). torch is NOT listed here: setup.sh layers this venv on top of the
+# project .venv's torch (2.11.0+cu128, Blackwell/sm_120) via a .pth file instead of
+# installing its own, because pypi.nvidia.com timed out on this workstation for a
+# fresh torch+cu128 install.
+#
+# Deliberately NOT listing accelerate: it declares torch as its own dependency, and
+# because that dependency is invisible to uv's installed-package scan (the .pth trick
+# only extends *runtime* sys.path, not what uv's resolver treats as already
+# installed), uv tries to download a fresh torch + its ~1.5GB of nvidia wheels
+# instead of reusing the project's. AutoModel.from_pretrained(...).to("cuda") works
+# without accelerate (only device_map="auto"/low_cpu_mem_usage need it), and that is
+# all this repo's Dream usage does.
+transformers==4.46.2
+tokenizers<0.21
+numpy<2

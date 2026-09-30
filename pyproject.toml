@@ -19,6 +19,21 @@ dependencies = [
 [project.scripts]
 dllm-agent = "dllm_agent.cli:app"
 
+[project.optional-dependencies]
+gpu = [
+    "torch>=2.7",
+    "transformers",
+    "huggingface_hub",
+]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
 [dependency-groups]
 dev = [
     "basedpyright>=1.31",
@@ -62,7 +77,11 @@ reportPrivateUsage = "error"
 target-version = "py312"
 line-length = 100
 src = ["src", "tests"]
-exclude = [".omo"]
+# tools/harness_synthesis_feasibility/: throwaway one-shot simulation scripts from the
+# earliest "is this even possible" feasibility check (superseded by the real
+# src/dllm_agent/harness_synthesis package and tools/harness_synthesis/ study scripts),
+# kept only as a historical record of that check -- not held to lint standards.
+exclude = [".omo", "tools/harness_synthesis_feasibility"]
 
 [tool.ruff.lint]
 select = ["ALL"]

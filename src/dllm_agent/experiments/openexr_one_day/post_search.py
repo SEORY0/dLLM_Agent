@@ -68,6 +68,7 @@ class CampaignConfigView(Protocol):
     coverage_build_manifest_sha256: str
     proof_duration_seconds: int
     proof_seed_base: int
+    search_image_digest: str
 
 
 class CoverageBuilder(Protocol):
@@ -411,12 +412,14 @@ class ProductionPostSearch:
         build_manifest_sha256 = request.build.binary_sha256
         duration_seconds = 30
         proof_seed = request.fuzzer_seed
+        search_image_digest = request.build.image_digest
         if self.config is not None:
             image_digest = self.config.coverage_image_digest
             binary_sha256 = self.config.coverage_binary_sha256
             build_manifest_sha256 = self.config.coverage_build_manifest_sha256
             duration_seconds = self.config.proof_duration_seconds
             proof_seed = _proof_seed(self.config.proof_seed_base, request.fuzzer_seed)
+            search_image_digest = self.config.search_image_digest
         coverage_request = CoverageSeriesRequest(
             execution_profile=request.execution_profile,
             schedule_seconds=request.schedule_seconds,
@@ -447,6 +450,7 @@ class ProductionPostSearch:
             duration_seconds=duration_seconds,
             search_finished_monotonic_seconds=result.finished_monotonic_seconds,
             search_cpu_seconds=result.search_accounting.cpu_seconds,
+            search_image_digest=search_image_digest,
         )
         proof_path = _proof_path(request)
         proof = _load_or_build_proof(

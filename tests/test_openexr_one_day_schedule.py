@@ -78,6 +78,30 @@ def test_gpu_rotation_is_balanced_when_all_five_waves_are_scheduled() -> None:
     assert all(cell.gpu_index is None for cell in schedule.cells if cell.arm == "libfuzzer-only")
 
 
+def test_single_gpu_count_time_multiplexes_every_model_arm_onto_gpu_zero() -> None:
+    # Given a workstation with exactly one resident GPU
+
+    # When
+    schedule = build_campaign_schedule(
+        main_start_monotonic_seconds=MonotonicSeconds(70_000.0), gpu_count=1
+    )
+
+    # Then every model-arm cell shares the single physical GPU and libfuzzer stays GPU-free
+    for cell in schedule.cells:
+        if cell.arm in EXPECTED_MODEL_ARMS:
+            assert cell.gpu_index == 0
+        else:
+            assert cell.gpu_index is None
+
+
+def test_zero_or_negative_gpu_count_is_rejected() -> None:
+    # Given / When / Then
+    with pytest.raises(ValueError, match="gpu_count must be positive"):
+        _ = build_campaign_schedule(
+            main_start_monotonic_seconds=MonotonicSeconds(70_000.0), gpu_count=0
+        )
+
+
 def test_repetition_seed_namespaces_are_disjoint_and_own_each_arm_seed() -> None:
     # Given
     schedule = build_campaign_schedule(main_start_monotonic_seconds=MonotonicSeconds(70_000.0))

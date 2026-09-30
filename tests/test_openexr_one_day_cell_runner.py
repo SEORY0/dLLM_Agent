@@ -6,6 +6,7 @@ Module-size opt-out ``# noqa: SIZE_OK`` keeps Task 4 cell regressions in one own
 from __future__ import annotations
 
 import hashlib
+import os
 import tempfile
 from collections.abc import Generator  # noqa: TC003
 from contextlib import contextmanager
@@ -626,10 +627,29 @@ def test_long_probe_argv_uses_cpuset_and_persistent_private_roots() -> None:
 
         # Then
         assert argv[argv.index("--cpuset-cpus") + 1] == "7"
+        # The bind-mounted roots are created by the host user; with --cap-drop ALL a
+        # root container has no CAP_DAC_OVERRIDE and can't write them, silently
+        # dropping crash artifacts and corpus growth. Run as the host user instead.
+        assert argv[argv.index("--user") + 1] == f"{os.getuid()}:{os.getgid()}"
         assert "--cpus" not in argv
         assert f"{request.artifact_root}:/work:rw" in argv
-        assert f"{request.dictionary_path}:/work/openexr.dict:ro" in argv
+        assert f"{request.dictionary_path.resolve()}:/work/openexr.dict:ro" in argv
+        # Docker reads a relative -v source as a *named volume* and rejects it
+        # (exit 125), so every bind-mount source must be an absolute path.
+        mount_sources = [argv[i + 1].split(":")[0] for i, arg in enumerate(argv) if arg == "-v"]
+        assert mount_sources
+        assert all(source.startswith("/") for source in mount_sources)
         assert "-dict=/work/openexr.dict" in argv
+        # libFuzzer prints a NEW/REDUCE/pulse line per coverage change; a 300s smoke
+        # already overflowed the 8 MiB evidence log cap. verbosity=0 keeps sanitizer
+        # reports and -print_final_stats (all the classifier/evidence use).
+        assert "-verbosity=0" in argv
+        # -verbosity can't silence the *target's* own stderr: OpenEXR's error handler
+        # prints a line per malformed input (~107 MB in one 226 s attempt, measured).
+        # close_fd_mask=2 closes the target's stderr; libFuzzer dups it first and
+        # re-points the sanitizer report fd, so crash reports and stats survive.
+        assert "-close_fd_mask=2" in argv
+        assert "-print_final_stats=1" in argv
         assert "-max_total_time=7200" in argv
         assert "-seed=71" in argv
 

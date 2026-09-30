@@ -181,7 +181,8 @@ def collect_all_measurements(inputs: CollectorInputs) -> Path:
     manifest = build_campaign_manifest(
         inputs.config,
         build_campaign_schedule(
-            main_start_monotonic_seconds=inputs.config.main_start_monotonic_seconds
+            main_start_monotonic_seconds=inputs.config.main_start_monotonic_seconds,
+            gpu_count=len(inputs.config.resource_map.model_cores),
         ),
     )
     if inputs.measurements_root.is_dir() and evidence_path.is_file():
@@ -440,10 +441,12 @@ def collect_disk_space_measurements(path: Path) -> dict[str, JsonValue]:
     )
 
 
-def collect_vram_measurements(runner: QualificationCommandRunner) -> dict[str, JsonValue]:
+def collect_vram_measurements(
+    runner: QualificationCommandRunner, *, gpu_count: int
+) -> dict[str, JsonValue]:
     """Collect per-GPU free VRAM through fixed nvidia-smi argv."""
-    pre = _collect_vram_sample(runner)
-    post = _collect_vram_sample(runner)
+    pre = _collect_vram_sample(runner, gpu_count)
+    post = _collect_vram_sample(runner, gpu_count)
     return _JSON_OBJECT.validate_python(
         {
             "nvidia_smi_argv": list(_NVIDIA_VRAM_ARGV),
@@ -580,9 +583,14 @@ def _collect_measurements(
             inputs.command_runner,
             thread_sibling_root=inputs.topology.thread_sibling_root,
             pci_device_root=inputs.topology.pci_device_root,
+            physical_gpu_indices=tuple(
+                record.index for record in inputs.config.resource_map.gpu_records
+            ),
         ),
         "disk_space": collect_disk_space_measurements(inputs.disk_path),
-        "vram": collect_vram_measurements(inputs.command_runner),
+        "vram": collect_vram_measurements(
+            inputs.command_runner, gpu_count=len(inputs.config.resource_map.model_cores)
+        ),
         "ram": memory["ram"],
         "swap_stable": memory["swap_stable"],
         "reserved_core_load": collect_reserved_core_load_measurements(
@@ -669,7 +677,7 @@ def _policy_json(arm: Literal["selective-revision", "final-only"]) -> dict[str, 
     return _JSON_OBJECT.validate_python(policy.model_dump(mode="json"))
 
 
-def _collect_vram_sample(runner: QualificationCommandRunner) -> dict[str, int]:
+def _collect_vram_sample(runner: QualificationCommandRunner, gpu_count: int) -> dict[str, int]:
     result = runner.run(_NVIDIA_VRAM_ARGV)
     if result.returncode != 0:
         raise CoordinatorError(reason="nvidia-smi VRAM query failed")
@@ -680,7 +688,7 @@ def _collect_vram_sample(runner: QualificationCommandRunner) -> dict[str, int]:
             continue
         index, mib = (part.strip() for part in line.split(",", maxsplit=1))
         values[index] = int(mib) * 1024 * 1024
-    if set(values) != {str(index) for index in range(8)}:
+    if set(values) != {str(index) for index in range(gpu_count)}:
         raise CoordinatorError(reason="nvidia-smi VRAM set incomplete")
     return values
 

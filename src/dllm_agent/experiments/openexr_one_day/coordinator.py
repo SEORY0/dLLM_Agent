@@ -60,6 +60,7 @@ from dllm_agent.experiments.openexr_one_day.candidate_bank import (
     CandidateBank,
     build_candidate_bank,
     build_frozen_bank_adapters,
+    private_worker_delegate,
 )
 from dllm_agent.experiments.openexr_one_day.cell_runner import (
     CellEvidenceError,
@@ -183,7 +184,7 @@ class CoreAssignment(FrozenModel):
 class GpuIdentityRecord(FrozenModel):
     """Explicit GPU identity and NUMA evidence."""
 
-    index: int = Field(ge=0, le=7)
+    index: int = Field(ge=0)
     uuid: str = Field(pattern=r"^GPU-[0-9A-Za-z-]+$")
     numa_node: int = Field(ge=0)
 
@@ -200,11 +201,11 @@ class ResourceMap(FrozenModel):
 
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, extra="forbid", strict=False)
 
-    model_cores: tuple[CoreAssignment, ...] = Field(min_length=8, max_length=8)
+    model_cores: tuple[CoreAssignment, ...] = Field(min_length=1, max_length=8)
     search_cores: tuple[CoreAssignment, ...] = Field(min_length=10, max_length=10)
     proof_cores: tuple[CoreAssignment, ...] = Field(min_length=1)
     monitor_cores: tuple[CoreAssignment, ...] = Field(min_length=1)
-    gpu_numa_nodes: tuple[int, ...] = Field(min_length=8, max_length=8)
+    gpu_numa_nodes: tuple[int, ...] = Field(min_length=1, max_length=8)
     gpu_records: tuple[GpuIdentityRecord, ...] = ()
     core_numa_nodes: dict[int, int] = Field(min_length=20)
 
@@ -275,11 +276,20 @@ class ResourceMap(FrozenModel):
                 != self.core_numa_nodes[assignment.sibling_core_id]
             ):
                 raise CampaignValidationError("resource-map CPU sibling NUMA mismatch")
-        if tuple(sorted(self.gpu_numa_nodes)) != (0, 0, 0, 0, 1, 1, 1, 1):
+        if len(self.model_cores) != len(self.gpu_numa_nodes):
+            raise CampaignValidationError("resource-map model core count must match GPU count")
+        if any(node < 0 for node in self.gpu_numa_nodes):
             raise CampaignValidationError("resource-map GPU NUMA evidence is incomplete")
         if self.gpu_records:
-            if tuple(record.index for record in self.gpu_records) != tuple(range(8)):
+            expected_count = len(self.gpu_numa_nodes)
+            # record.index is the real physical CUDA/nvidia-smi device for
+            # that pool slot -- not required to be 0-based/contiguous, since
+            # a config may pin a smaller GPU count to specific physical
+            # devices on a larger box (e.g. slot 0 -> physical GPU 1).
+            if len(self.gpu_records) != expected_count:
                 raise CampaignValidationError("resource-map GPU identity evidence is incomplete")
+            if len({record.index for record in self.gpu_records}) != expected_count:
+                raise CampaignValidationError("resource-map duplicate physical GPU index")
             if tuple(record.numa_node for record in self.gpu_records) != self.gpu_numa_nodes:
                 raise CampaignValidationError("resource-map GPU identity NUMA mismatch")
             if len({record.uuid for record in self.gpu_records}) != len(self.gpu_numa_nodes):
@@ -958,7 +968,8 @@ def coordinate_campaign(
     if config.qualification_state != "qualified":
         raise CoordinatorError(reason="draft config cannot start the main campaign")
     schedule = build_campaign_schedule(
-        main_start_monotonic_seconds=config.main_start_monotonic_seconds
+        main_start_monotonic_seconds=config.main_start_monotonic_seconds,
+        gpu_count=len(config.resource_map.model_cores),
     )
     manifest = build_campaign_manifest(config, schedule)
     _assert_new_or_resumable_root(config.artifact_root, manifest)
@@ -1802,7 +1813,8 @@ def campaign_status(root: Path) -> CampaignStatus:  # noqa: PLR0911
             config_payload = _JSON_OBJECT.validate_python(manifest_payload["config"])
             config = CampaignConfig.model_validate(config_payload)
             schedule = build_campaign_schedule(
-                main_start_monotonic_seconds=config.main_start_monotonic_seconds
+                main_start_monotonic_seconds=config.main_start_monotonic_seconds,
+                gpu_count=len(config.resource_map.model_cores),
             )
             manifest = build_campaign_manifest(config, schedule)
             _ = load_complete_campaign_outcome(root, manifest)
@@ -2245,7 +2257,7 @@ def _adapters_by_repetition(
             bindings.append(
                 ArmBankBinding(
                     cast("ModelArm", cell.arm),
-                    cast("RevisionSampler", worker),
+                    private_worker_delegate(cast("RevisionSampler", worker)),
                     config.artifact_root / "mutable" / f"rep-{int(cell.repetition):02d}" / cell.arm,
                 )
             )
@@ -2261,8 +2273,8 @@ def _bank_sampler_for_repetition(
         if int(cell.repetition) == repetition and cell.arm in MODEL_ARMS:
             bank_worker_for = getattr(pool, "bank_worker_for", None)
             if callable(bank_worker_for):
-                return cast("RevisionSampler", bank_worker_for(cell))
-            return cast("RevisionSampler", pool.worker_for(cell))
+                return private_worker_delegate(cast("RevisionSampler", bank_worker_for(cell)))
+            return private_worker_delegate(cast("RevisionSampler", pool.worker_for(cell)))
     raise CoordinatorError(reason="model repetition has no resident worker")
 
 
@@ -3075,7 +3087,8 @@ def load_complete_campaign_outcome(root: Path, manifest: CampaignManifest) -> Ca
     _validate_resident_model_load_accounting(root, envelope.outcome)
     events = _existing_events(root)
     schedule = build_campaign_schedule(
-        main_start_monotonic_seconds=manifest.config.main_start_monotonic_seconds
+        main_start_monotonic_seconds=manifest.config.main_start_monotonic_seconds,
+        gpu_count=len(manifest.config.resource_map.model_cores),
     )
     _validate_complete_event_contract(events, schedule, manifest)
     _validate_raw_report_chain(raw_bytes)
@@ -3137,7 +3150,8 @@ def finalize_recovered_campaign_from_events(
 ) -> CampaignOutcome:
     """Finalize a recovered 50-terminal campaign through the canonical outcome envelope."""
     schedule = build_campaign_schedule(
-        main_start_monotonic_seconds=config.main_start_monotonic_seconds
+        main_start_monotonic_seconds=config.main_start_monotonic_seconds,
+        gpu_count=len(config.resource_map.model_cores),
     )
     manifest = build_campaign_manifest(config, schedule)
     existing_events = _existing_events(config.artifact_root)
@@ -3160,7 +3174,8 @@ def expire_recovered_campaign(
 ) -> CampaignOutcome:
     """Freeze every unfinished cell at its original deadline without new model work."""
     schedule = build_campaign_schedule(
-        main_start_monotonic_seconds=config.main_start_monotonic_seconds
+        main_start_monotonic_seconds=config.main_start_monotonic_seconds,
+        gpu_count=len(config.resource_map.model_cores),
     )
     manifest = build_campaign_manifest(config, schedule)
     events = _existing_events(config.artifact_root)

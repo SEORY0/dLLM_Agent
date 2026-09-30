@@ -183,7 +183,8 @@ def resume_campaign(
         == _COMPLETE_CELL_COUNT
     ):
         schedule = build_campaign_schedule(
-            main_start_monotonic_seconds=config.main_start_monotonic_seconds
+            main_start_monotonic_seconds=config.main_start_monotonic_seconds,
+            gpu_count=len(config.resource_map.model_cores),
         )
         campaign_manifest = build_campaign_manifest(config, schedule)
         try:
@@ -192,7 +193,8 @@ def resume_campaign(
             raise RecoveryError(reason=f"campaign is not resumable: {error}") from error
     if now_monotonic_seconds is not None:
         schedule = build_campaign_schedule(
-            main_start_monotonic_seconds=config.main_start_monotonic_seconds
+            main_start_monotonic_seconds=config.main_start_monotonic_seconds,
+            gpu_count=len(config.resource_map.model_cores),
         )
         if now_monotonic_seconds >= float(schedule.absolute_deadline_monotonic_seconds):
             try:
