@@ -7,6 +7,7 @@ lives in ``trajectory_hook.py`` instead, matching spec §7's module split.
 """
 
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from random import Random
 
 from dllm_agent.harness_synthesis.regions import SourceRegion, region_at_line
@@ -218,8 +219,101 @@ def remask_from_position_to_end(
     the end lets everything after the flagged point re-flow, at the cost of also
     erasing already-good tail tokens — accepted for the MVP (spec §5's "one region
     only" scope decision; feasibility prototype `fb_sim.py` used the same policy).
+
+    Known confound (RQ3-v3 pilot, 2026-09-30): because this masks *to the end*, a
+    region nearer the end always costs less to regenerate than one nearer the start.
+    Region-identity and remask cost are therefore entangled whenever selection can
+    prefer one region over another based on its position — ``remask_window`` below
+    exists to remove that entanglement by fixing the cost regardless of which
+    candidate is chosen.
     """
     return tuple(
         mask_token_id if index >= start_position else token_id
+        for index, token_id in enumerate(token_ids)
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class TokenWindow:
+    """A fixed-length span of generated-token positions, used as a remask candidate.
+
+    Unlike ``SourceRegion`` (a whole statement, whose length varies with what the
+    model happened to write), every ``TokenWindow`` at a given ``length`` costs
+    exactly the same number of tokens to remask no matter which one is picked —
+    selection and remask cost are decoupled by construction.
+    """
+
+    start: int
+    length: int
+
+    @property
+    def end(self) -> int:
+        """The position one past this window's last covered token."""
+        return self.start + self.length
+
+
+def fixed_length_windows(
+    token_count: int, window_length: int, *, position_offset: int = 0
+) -> tuple[TokenWindow, ...]:
+    """Partition ``token_count`` positions into non-overlapping, equal-length windows.
+
+    A trailing partial window shorter than ``window_length`` is dropped rather than
+    included short — every returned candidate has exactly ``window_length`` tokens, so
+    ``remask_window`` always masks the same amount regardless of which one is chosen.
+    """
+    if window_length <= 0:
+        return ()
+    count = token_count // window_length
+    return tuple(
+        TokenWindow(start=position_offset + index * window_length, length=window_length)
+        for index in range(count)
+    )
+
+
+def _window_feature(
+    window: TokenWindow, traces: Sequence[TokenTrace], *, feature: _CommitFeature
+) -> float | None:
+    values: list[float] = []
+    for position in range(window.start, window.end):
+        value = feature(position_traces(traces, position))
+        if value is None:
+            return None
+        values.append(value)
+    return sum(values) / len(values)
+
+
+def select_lowest_confidence_window(
+    windows: Sequence[TokenWindow], traces: Sequence[TokenTrace]
+) -> TokenWindow | None:
+    """Pick the window with the lowest mean commit confidence, or ``None`` if none score."""
+    scored = [
+        (window, value)
+        for window in windows
+        if (value := _window_feature(window, traces, feature=commit_confidence)) is not None
+    ]
+    if not scored:
+        return None
+    return min(scored, key=lambda pair: pair[1])[0]
+
+
+def select_random_window(windows: Sequence[TokenWindow], rng: Random) -> TokenWindow | None:
+    """Pick a uniformly random window — the RQ3 null-hypothesis policy, window variant."""
+    if not windows:
+        return None
+    return rng.choice(list(windows))
+
+
+def remask_window(
+    token_ids: Sequence[int], window: TokenWindow, *, mask_token_id: int
+) -> tuple[int, ...]:
+    """Remask only ``window``'s span, leaving every other position untouched.
+
+    Every token before ``window.start`` and from ``window.end`` onward — including
+    the fixed scaffold suffix, when this is applied to a harness's body tokens —
+    keeps its already-committed id, so Dream's masked-diffusion process has nothing
+    to revise there regardless of which window was chosen.
+    """
+    return tuple(
+        mask_token_id if window.start <= index < window.end else token_id
         for index, token_id in enumerate(token_ids)
     )
