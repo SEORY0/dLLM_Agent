@@ -28,7 +28,7 @@ flowchart TB
     experiments --> multitarget["multitarget: artifacts.py, bank_generation.py, budget.py, campaign_coordinator.py, campaign_core.py, campaign_evidence.py, campaign_execution.py, campaign_preparation.py, campaign_recording.py, campaign_recovery.py, candidate_bank.py, container_monitor.py, corpus.py, docker_runtime.py, ledger.py, model_adapter.py, probe_runner.py, proof.py, proof_batch.py, schedule.py, slot_sampler.py, slot_sampler_contracts.py, slot_sampler_utils.py"]
     experiments --> one_day["openexr_one_day: analysis.py, c0_source.py, candidate_bank.py, cell_runner.py, config_digest.py, coordinator.py, corpus_seed.py, coverage_series.py, evidence_backing.py, failure_taxonomy.py, model_executor.py, models.py, post_search.py, proof_batch.py, qualification.py, qualification_banks.py, qualification_collectors.py, qualification_runtime.py, qualification_smoke.py, qualification_smoke_models.py, qualification_smoke_production.py, recovery.py, resident_evidence.py, resident_pool.py, runtime.py, schedule.py"]
     root --> web["web: app.py, catalog.py, contracts.py, jobs.py, processes.py"]
-    root --> harness_synthesis["harness_synthesis: api_knowledge.py, audit_ledger.py, fitness.py, power_calc.py, regions.py, remask.py, token_trace.py, trajectory_hook.py"]
+    root --> harness_synthesis["harness_synthesis: api_knowledge.py, audit_ledger.py, fitness.py, localize.py, power_calc.py, regions.py, remask.py, token_trace.py, trajectory_hook.py"]
 ```
 
 ## Ownership
@@ -45,7 +45,7 @@ flowchart TB
 | `revision` | Approved feedback-conditioned revision schemas, command config, policy, ledger, and deterministic controller orchestration | Target probe/proof implementation or runtime model clients |
 | `experiments` | Multitarget and OpenEXR one-day experiment orchestration, banks, runtime adapters, evidence, recovery, and qualification helpers | Stable core contracts or generic target identity |
 | `web` | FastAPI contracts, catalog, job/process adapters | CLI composition or lower-domain orchestration |
-| `harness_synthesis` | Target-agnostic denoising-trajectory bookkeeping, statement/window region detection, remask-target selection, KB rendering, fitness scoring, audit ledger — pure, no live generation backend or torch import | Live model calls, target identity, orchestration (that lives in `tools/harness_synthesis/*.py`, invoked manually, never wired into the CLI or `openexr_one_day`) |
+| `harness_synthesis` | Target-agnostic denoising-trajectory bookkeeping, statement/window region detection, compiler-diagnostic localization, remask-target selection, KB rendering, fitness scoring, audit ledger — pure, no live generation backend or torch import | Live model calls, target identity, orchestration (that lives in `tools/harness_synthesis/*.py`, invoked manually, never wired into the CLI or `openexr_one_day`) |
 | `cli.py` | Composition root for installed and module-form commands | Reusable domain contracts |
 
 Package `__init__.py` files are documentation-only. Import concrete contracts from
