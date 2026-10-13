@@ -984,3 +984,12 @@ native tournament, 결정론적 replay QA)은 이 문서와 무관하게 계속�
 - dLLM 기반 퍼징 에이전트 프로젝트 자체, 그리고 `docs/README.md`에 기록된 다른
   트랙들(온라인 포트폴리오 revision, native tournament, 결정론적 replay QA, AR-parent
   control sampler 등)은 이 종료의 대상이 아니다.
+
+### 8-5. 후속 (2026-10-13)
+
+팀 리뷰에서 "위치는 컴파일러나 퍼저가 알려주고, dLLM은 양방향 문맥으로 그 구간만 다시
+생성"하는 방향이 제시됐다. 이것은 위 종료 범위(모델 자신의 신호로 위치 선택)를 다시 여는 것이
+아니라, 위치 결정을 외부 oracle로 넘긴 별도 질문(RQ4)이다 —
+[`2026-10-13-compiler-localized-span-infill.md`](../specs/2026-10-13-compiler-localized-span-infill.md).
+이 문서의 결과·원장은 그대로 두고, RQ4는 이 문서의 v3 scaffold와 `remask_window` 검증
+결과를 출발점으로만 재사용한다.

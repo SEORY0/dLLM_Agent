@@ -120,6 +120,7 @@ FINAL_RUNTIME_MODULES: Final = module_set(
     dllm_agent.harness_synthesis.api_knowledge
     dllm_agent.harness_synthesis.audit_ledger
     dllm_agent.harness_synthesis.fitness
+    dllm_agent.harness_synthesis.localize
     dllm_agent.harness_synthesis.power_calc
     dllm_agent.harness_synthesis.regions
     dllm_agent.harness_synthesis.remask

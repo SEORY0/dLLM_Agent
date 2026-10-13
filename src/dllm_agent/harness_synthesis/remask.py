@@ -317,3 +317,27 @@ def remask_window(
         mask_token_id if window.start <= index < window.end else token_id
         for index, token_id in enumerate(token_ids)
     )
+
+
+def infill_window(
+    token_ids: Sequence[int], window: TokenWindow, *, mask_length: int, mask_token_id: int
+) -> tuple[int, ...]:
+    """Replace ``window``'s span with ``mask_length`` masks, keeping both sides intact.
+
+    Unlike ``remask_window``, the masked span need not keep the window's own length: a
+    repaired line is rarely the same token count as the one it replaces, so the caller
+    can give it slack (``mask_length > window.length``). Every token before
+    ``window.start`` and from ``window.end`` onward keeps its committed id -- only its
+    position shifts by ``mask_length - window.length`` -- so the regeneration sees the
+    code on *both* sides of the span, which a left-to-right decoder repairing from
+    ``window.start`` (``remask_from_position_to_end``) cannot. Slack positions the model
+    does not need come back as pad/special tokens; stripping them is the caller's job.
+    """
+    if mask_length <= 0:
+        msg = f"mask_length must be positive, got {mask_length}"
+        raise ValueError(msg)
+    return (
+        *token_ids[: window.start],
+        *([mask_token_id] * mask_length),
+        *token_ids[window.end :],
+    )

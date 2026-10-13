@@ -8,6 +8,7 @@ from dllm_agent.harness_synthesis.regions import SourceRegion
 from dllm_agent.harness_synthesis.remask import (
     TokenWindow,
     fixed_length_windows,
+    infill_window,
     region_confidence,
     region_entropy,
     region_margin,
@@ -323,3 +324,26 @@ def test_remask_window_preserves_tokens_after_the_window() -> None:
     remasked = remask_window(token_ids, TokenWindow(start=0, length=1), mask_token_id=_MASK)
 
     assert remasked[1:] == token_ids[1:]
+
+
+def test_infill_window_keeps_both_sides_and_resizes_the_span() -> None:
+    tokens = (1, 2, 3, 4, 5, 6)
+    result = infill_window(
+        tokens, TokenWindow(start=2, length=2), mask_length=4, mask_token_id=_MASK
+    )
+    assert result == (1, 2, _MASK, _MASK, _MASK, _MASK, 5, 6)
+
+
+def test_infill_window_can_shrink_the_span() -> None:
+    tokens = (1, 2, 3, 4, 5)
+    result = infill_window(
+        tokens, TokenWindow(start=1, length=3), mask_length=1, mask_token_id=_MASK
+    )
+    assert result == (1, _MASK, 5)
+
+
+def test_infill_window_rejects_a_non_positive_mask_length() -> None:
+    with pytest.raises(ValueError, match="mask_length"):
+        _ = infill_window(
+            (1, 2), TokenWindow(start=0, length=1), mask_length=0, mask_token_id=_MASK
+        )
