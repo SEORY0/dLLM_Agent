@@ -1,7 +1,7 @@
 # Compiler-Localized Bidirectional Span Infill (RQ4) — Design
 
-> 상태: **설계 + offline step 0 완료, GPU pilot 미실행.** 동결 프로토콜은
-> `tools/harness_synthesis/rq4_localized_infill_pilot.py` docstring. 실행 전 리뷰 필요.
+> 상태: **설계 + offline step 0 완료, 1-round GPU pilot 완료(2026-10-26, §8).** 동결
+> 프로토콜은 `tools/harness_synthesis/rq4_localized_infill_pilot.py` docstring.
 
 ## 1. 출발점 — 팀원 피드백
 
@@ -112,7 +112,7 @@ PR #3(RQ1/RQ3 종료)를 검토한 연구 동료의 방향 제시:
 | 단계 | 내용 | 진행 조건 |
 |---|---|---|
 | 0 | offline localizability (완료) | — 27/27, 오른쪽 문맥 14/27 |
-| 1 | 1-round pilot (위 §4, **미실행**) | 리뷰 승인 + GPU 가용 시간 확인 |
+| 1 | 1-round pilot (위 §4, **완료 — §8**) | — 게이트 (1)(2) 통과, H-bi 반대 방향 |
 | 2 | 다회 루프(compile → locate → infill, 최대 3 round) + 진단 메시지 요인 | 1단계 게이트 통과, H-loc/anchor 방향 확인 |
 | 3 | 퍼저 리포트 기반 위치 + FIM AR control | 2단계 결과 검토 후 별도 결정 |
 
@@ -120,3 +120,76 @@ PR #3(RQ1/RQ3 종료)를 검토한 연구 동료의 방향 제시:
 
 "compiler-localized infill이 효과가 있다"(pilot은 확증이 아님), "dLLM이 AR보다 낫다"(AR
 control 없음), "양방향 문맥이 원인이다"(오른쪽 문맥 stratum 밖에서는 H-bi가 정의되지 않음).
+
+## 8. 1-round pilot 결과 (2026-10-26, GPU 2장, 동결 프로토콜 그대로)
+
+원시 결과 `docs/assets/harness-rq4-pilot-{inputfile,multipart}-results-20261026.json`, 원장
+`docs/assets/harness-rq4-pilot-ledger-20261026.jsonl`(260줄 = reference 68 + eligible 48 × 4
+arm), 분석 `docs/assets/harness-rq4-pilot-analysis-20261026.json`
+(`tools/harness_synthesis/rq4_analyze.py`). 실행 전 seed 12,900,000으로 1회 스모크(데이터셋
+밖, 결과는 버림)로 스크립트만 확인했다.
+
+### 8-1. 게이트
+
+- 시도 68(InputFile 33, MultiPartInputFile 35), reference 컴파일 20, eligible **48**(예시당 24).
+- 게이트 (1): 컴파일 실패 48건 중 본문으로 위치를 못 찾은 것 **0건** — offline 27/27이 새
+  seed에서도 재현됐다. 게이트 (2): 통과.
+- 오른쪽 문맥 stratum 32/48(offline 14/27과 비슷한 비율).
+
+### 8-2. 1차 결과 (컴파일 성공, eligible 48)
+
+| arm | 컴파일 | ITT 평균 edges | 평균 mask 토큰 |
+|---|---|---|---|
+| located-infill | 10/48 | 219 | 22.1 |
+| random-infill | 0/48 | 0 | 22.1 |
+| located-suffix | **22/48** | 535 | 48.5 |
+| resample | 16/48 | 392 | 60 |
+
+| 비교 | located-infill만 성공 | 상대만 성공 | 동률 | exact sign test p |
+|---|---|---|---|---|
+| H-loc (vs random-infill) | 10 | 0 | 38 | 0.002 |
+| **H-bi, 오른쪽 문맥 stratum (vs located-suffix)** | 2 | **12** | 18 | **0.013** |
+| H-bi, 오른쪽 문맥 없음 (별도 보고) | 2 | 4 | 10 | 0.69 |
+| anchor (vs resample) | 7 | 13 | 28 | 0.26 |
+
+예시별로도 방향은 같다(H-bi 오른쪽 문맥: InputFile 0 대 7 p=0.016, MultiPartInputFile 2 대 5
+p=0.45). 프로토콜은 가설별 개별 검정만 정했고 예시 간 pooling 여부는 명시하지 않았으므로,
+pooled와 예시별 수치를 함께 적는다. infill arm 96건 전부 span 밖 토큰·scaffold 보존이 검증됐다.
+
+해석(pilot, 확증 아님):
+- **H-loc는 거의 구성상 참이다.** random-infill은 오류 줄을 건드리지 않으므로 고칠 수가
+  없다 — 0/48은 "위치 정보가 의미 있다"는 sanity check이지 동료 가설의 독립 증거는 아니다.
+- **H-bi는 예측의 반대 방향이다.** 이 구현의 양방향 infill은 같은 위치에서 끝까지 다시 쓰는
+  left-to-right 수리보다 **유의하게 나빴고**(12 대 2), 처음부터 다시 생성하는 것(resample)도
+  이기지 못했다.
+
+### 8-3. 사후 특성화 (동결 분석 밖 — 원인 설명용, 판정에 쓰지 않음)
+
+1. **slack이 내용으로 채워진다(§5 위험 1이 실제로 발생).** located-infill의 교체 텍스트가
+   원래 줄보다 1.3배 넘게 긴 경우가 **47/48**. 모델이 남는 mask 자리를 pad token으로 비우지
+   않고 인자·문장·주석을 더 써서 채운다 — 예: `InputFile inputFile(&stream);` →
+   `InputFile inputFile OPENEXR_IMF_NAMESPACE::InputFile(stream);`. 고정 길이 canvas 위에서
+   `M = 줄 길이 + 8`을 강제로 채우게 한 설계 자체가 새 오류를 만든다. suffix arm은 원래 생성
+   예산(본문 뒤 꼬리 포함)이 커서 모델이 줄을 끝내고 나머지를 pad로 흘려보낼 수 있다.
+2. **컴파일 성공의 상당수가 "고친" 게 아니라 "지운" 것이다 — 모든 arm 공통.** 컴파일된 본문
+   중 constructor만 남고 header 검사 호출이 사라지거나 주석 처리된 경우: located-infill
+   **10/10**, located-suffix 17/22, resample 10/16. 즉 1차 지표(컴파일)는 API 오용을 올바른
+   호출로 바꾼 것과 그 줄을 지운 것을 구분하지 못한다. edges는 constructor만으로도 대부분
+   나오므로 ITT coverage도 이를 구분하지 못한다.
+3. 같은 줄에 다시 환각(`fileHeader` → `readHeader` 등)하는 패턴은 그대로 남아 있다(§5 위험 2).
+
+### 8-4. 결론과 다음 결정
+
+- **관측**: 컴파일러 위치는 이 substrate에서 신뢰할 수 있다(새 seed 48/48). infill 기제는
+  span 밖을 정확히 보존한다(96/96).
+- **결과**: 이번 구현(고정 slack 8, 진단 메시지 없음)의 양방향 span infill은 같은 위치의
+  left-to-right 수리보다 컴파일률이 낮았고 resample도 넘지 못했다. **"양방향 문맥이 수리를
+  돕는다"는 이 pilot에서 지지되지 않는다** — 다만 관측된 주원인이 문맥이 아니라 고정 길이
+  canvas의 slack 강제 채움이라, 이 결과는 "양방향 문맥이 무익하다"가 아니라 "이 infill
+  구현으로는 이점이 드러나지 않았다"까지만 말한다.
+- **지표 문제**: 다음 설계는 "검사 호출을 유지하면서 컴파일"(또는 constructor 외 API 호출
+  보존)을 1차 지표에 넣어야 한다. 지금 지표로는 삭제가 수리로 집계된다.
+- **확증 실험은 하지 않는다.** 다음 후보(서로 배타적이지 않음, 사용자 결정):
+  (a) 가변 길이 문제 제거 — slack 0을 포함한 여러 mask 길이 후보를 만들고 컴파일러를
+  verifier로 best-of-k(같은 k를 suffix/resample에도 부여), 또는 가변 길이 infill을 지원하는
+  모델(DreamOn 계열) 확인; (b) 진단 메시지를 프롬프트에 넣는 요인; (c) 위 지표 수정.
