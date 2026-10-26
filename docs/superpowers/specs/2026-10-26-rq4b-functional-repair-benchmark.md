@@ -115,16 +115,30 @@ equally. It is part of the feedback factor, recorded per sample as `diagnostic_s
 
 | Arm | Masked | Steps | Candidates |
 |---|---|---|---|
-| infill-sweep | defective-line window replaced by L + {0, +2, −2, +4, +8}[j] masks; both sides fixed | = masked | 5 (one per length) |
-| suffix | from the window start to the end of the continuation, + 8 | = masked | 5 (seeds) |
-| resample | fresh body, 96 tokens | 96 | 5 (seeds) |
-| *infill-oracle-length* (diagnostic) | L* masks | L* | 1, never compared |
+| infill-sweep | defective-line window replaced by L + o_k masks, o = (0, +2, −2, +4, +8); both sides fixed | = masked | 5 (one per length) |
+| suffix | from the window start to the end of the continuation, + 8 | = masked | 5 (seed slots 0–4) |
+| resample | fresh body, 96 tokens | 96 | 5 (seed slots 0–4) |
+| *infill-oracle-length* (diagnostic) | L* masks | L* | 1 (seed slot 9), never compared or selected |
 
-- **Common to all arms.** The same prompt and scaffold prefill. `alg_temp` 0.5, temperature 0.5, top_p 0.95, entropy reveal order. Candidate j's seed is shared across arms (common random numbers): `13,000,000 + 1000·sample + 10·replicate + j`.
+- **Common to all arms.** The same prompt and scaffold prefill. `alg_temp` 0.5, temperature 0.5, top_p 0.95, entropy reveal order.
+- **Seed allocation (frozen).**
+  - Seed slot j of a unit is `13,000,000 + 1000·sample_index + 10·replicate + j`, shared across arms (common random numbers).
+  - Suffix and resample candidate j use slot j.
+  - Infill length position k (o_k above) uses slot **(k + replicate) mod 5**. Over the 5 replicates of a sample, every mask length is paired with every slot exactly once, so a difference between mask lengths cannot be a fixed slot effect. `seed_slot_balance` and `rq4b_freeze.py` check this.
+  - The diagnostic uses slot 9, which no compared candidate uses.
+  - The complete table (960 rows: sample, replicate, arm, order index, seed, slot, masked, steps) is in the freeze manifest.
 - **Continuation.** Benchmark bodies were never generated, so the continuation is `body + "}\n```"`, tokenized by Dream's own tokenizer (`_dream_tokenize.py`, CPU, tokenizer files only). The pieces must reproduce the text exactly (asserted).
 - **Fixed-canvas handling.** Special pieces inside the infilled span are dropped, as in RQ4. Outside-span tokens must be unchanged. Any violation aborts the run (G1). `extract_body` cuts at the try block's `}` or a stray fence or stop token.
-- **Selection rule (frozen).** Walk the candidates in frozen order. The first functional success is selected. Otherwise the first compiled candidate is selected, then the first candidate. Selection matters only for secondary metrics. Compiler invocations and cost count up to the selected success, or all K.
-- **Compute.** Cost = steps × (prompt + continuation length), counted in forward token-positions. Equal attempts do not mean equal compute: in the benchmark, suffix masks 2.3–5.9× the positions of the infill L candidate, and resample 4.8–10.7×. The record also holds denoising seconds (new `generate_seconds` field in `_dream_generate.py`, model load excluded) and subprocess seconds.
+- **Selection rule (frozen).**
+  - Per compared arm, walk the candidates in frozen order: infill by mask length in the order o above (whatever slot it has), suffix and resample by slot. The first functional success is selected, and pass@5 is whether one exists.
+  - Otherwise the first compiled candidate is selected, then the first candidate. This only matters for secondary metrics.
+  - Compiler invocations and cost count up to the selected success, or all K.
+  - The oracle-length diagnostic is **outside every selection**: it is recorded as its own verdict (`unit["diagnostic"]`), never mixed into any arm's candidates, pass@5, budget or comparison.
+- **Compute accounting.**
+  - Forward cost = steps × (prompt + continuation length), in token-positions. Dream runs one full forward pass per denoising step, whatever the number of masks. This proxy is linear in sequence length, so it ignores attention's quadratic term, which is small at about 550–600 positions.
+  - The prompt is about 470 tokens (task prompt + `cpp` fence + scaffold) plus the chat template, so it dominates the sequence. Measured on the benchmark, suffix masks 2.3–5.9× the positions of the infill L candidate, and resample 4.8–10.7×.
+  - Also recorded per candidate: masked positions, steps, `generate_seconds` (denoising only, timed around `diffusion_generate` with a CUDA sync, model load excluded) and subprocess seconds (including model load).
+  - Model load is the same constant for every candidate in this one-process-per-candidate design. It is excluded from compute matching because a persistent server would remove it.
 - **Mask-length policy.** The sweep raises (rather than drops) a nonpositive length, so arms stay attempt-matched. Every sample has L ≥ 9.
 
 ## 5. Functional evaluator (implemented: `functional_eval.py` + `tools/harness_synthesis/_functional_eval.py`)
@@ -184,42 +198,68 @@ information. P2 reuses P1's mask-length policy, K, seeds and samples unchanged. 
 differs, so feedback is not mixed with a mask-length change. `rq4b_analyze.py` refuses to pool
 conditions. P2 runs only after P1 has been analyzed and the user approves.
 
-## 7. Pilot P1 execution plan (NOT scheduled)
+## 7. Pilot P1 execution plan (frozen, NOT scheduled)
 
-- **Population.** 12 samples × R = 4 replicates = 48 units. Each unit has 15 compared candidates plus 1 diagnostic: **768 generations**.
-- **Seeds.** 13,000,000–13,011,034. The 13,000,000–13,499,999 block is pilot-only. Confirmatory runs use 13,500,000+. None overlaps RQ4's 12,000,000 block or earlier blocks.
-- **Resources.** One Dream subprocess per candidate, about 16 GB bf16 on one GPU.
-  - **Estimate, unverified.** Each subprocess takes 10–20 s, mostly model load, so 768 generations ≈ 2–4 GPU-hours. Split over the two GPUs (IF on GPU 0, MP on GPU 1) that is ≈ 1–2 h of wall time.
-  - **Observed.** The evaluator takes about 1.7 s per candidate on CPU, ≈ 25 min in total.
-  - Before launching, check `nvidia-smi` and leave other workloads alone.
-- **Commands.**
+- **Population.** 12 samples × R = 5 replicates = 60 units. Each unit has 15 compared candidates plus 1 diagnostic: **960 generations**. R was raised from 4 to 5 so the infill length/seed-slot rotation is exactly balanced (§4).
+- **Seeds.** 13,000,000–13,011,049. The pilot refuses any other base for P1. Reserved blocks: 9,000,000–12,999,999 (RQ1/RQ3/RQ4), 13,000,000–13,499,999 (RQ4b pilots), 13,500,000–13,999,999 (RQ4b confirmatory).
+- **Hardware.** **GPU 1 only.** At freeze time GPU 0 was fully used by a vLLM engine (≈85 GB, 100% utilization). GPU 1 had about 97 GB free, holding only a small Sinsan training process (≈0.8 GB, idle). One Dream process at a time uses about 16 GB bf16.
+  - Do not start if GPU 1's free memory is below 24 GB, or its utilization is sustained above 20% (that would mean another workload is active).
+  - Nothing on GPU 0 or any other service is touched.
+- **Estimated workload (unverified until the smoke test).** About 10–20 s per generation subprocess (mostly model load), so 960 generations ≈ 2.7–5.3 h on GPU 1. The evaluator takes ≈ 1.7 s per candidate on CPU (≈ 30 min in total, interleaved per unit). Disk use is a few MB of JSON.
+- **Freeze.** `rq4b_freeze.py` writes `docs/assets/harness-rq4b-p1-freeze-20261026.json` containing:
+  - the SHA-256 of every protocol file;
+  - the allocation table and its hash;
+  - the compile image id;
+  - the model config and safetensors-index hashes, plus weight file sizes;
+  - the Dream venv's transformers/torch versions;
+  - the code commit.
+
+  `rq4b_functional_pilot.py` re-verifies those hashes before any GPU run and refuses on a mismatch.
+- **Commands (each requires explicit approval).**
   ```bash
-  uv run python tools/harness_synthesis/rq4b_validate_benchmark.py \
-    --out docs/assets/harness-rq4b-benchmark-validation-20261026.json      # must exit 0
-  uv run python tools/harness_synthesis/rq4b_functional_pilot.py --gpu 0 \
-    --samples IF-ctor-pointer,IF-bad-method,IF-extra-arg,IF-box-namespace,IF-no-semicolon,IF-uncalled-member \
-    --replicates 4 --out rq4b-p1-if.json --ledger /data/dllm-agent/harness-synthesis/rq4b-p1-ledger-gpu0.jsonl
+  # 1. one-unit smoke test (throwaway seeds; output outside docs/assets; not a result)
+  uv run python tools/harness_synthesis/rq4b_functional_pilot.py --gpu 1 --smoke \
+    --seed-base 19000000 --samples IF-ctor-pointer --replicates 1 \
+    --out /data/dllm-agent/harness-synthesis/rq4b-smoke/smoke.json \
+    --ledger /data/dllm-agent/harness-synthesis/rq4b-smoke/smoke-ledger.jsonl
+  # 2. P1
   uv run python tools/harness_synthesis/rq4b_functional_pilot.py --gpu 1 \
-    --samples MP-ctor-pointer,MP-bad-method,MP-missing-arg,MP-header-type,MP-no-semicolon,MP-string-arg \
-    --replicates 4 --out rq4b-p1-mp.json --ledger /data/dllm-agent/harness-synthesis/rq4b-p1-ledger-gpu1.jsonl
-  uv run python tools/harness_synthesis/rq4b_analyze.py --audit-sample 24 --out rq4b-p1-g3-audit.json rq4b-p1-*.json
-  # hand-check G3 first, then:
-  uv run python tools/harness_synthesis/rq4b_analyze.py --out rq4b-p1-analysis.json rq4b-p1-if.json rq4b-p1-mp.json
+    --out /data/dllm-agent/harness-synthesis/rq4b-p1/p1.json \
+    --ledger /data/dllm-agent/harness-synthesis/rq4b-p1/p1-ledger.jsonl
+  # 3. G3 hand check first, then the frozen analysis
+  uv run python tools/harness_synthesis/rq4b_analyze.py --audit-sample 24 \
+    --out /data/dllm-agent/harness-synthesis/rq4b-p1/g3-audit.json /data/dllm-agent/harness-synthesis/rq4b-p1/p1.json
+  uv run python tools/harness_synthesis/rq4b_analyze.py \
+    --out /data/dllm-agent/harness-synthesis/rq4b-p1/p1-analysis.json /data/dllm-agent/harness-synthesis/rq4b-p1/p1.json
   ```
-- **Stop conditions during the run.**
-  - G1 (automatic abort): any change to outside-span tokens.
-  - Stop and report if the first unit takes more than 15 minutes, which would mean the timing estimate is wrong by more than 3×.
-  - Stop and report if a Dream subprocess fails twice on the same candidate.
-- **Smoke test first.** One unit on throwaway seeds outside every reserved block: `--seed-base 19000000 --samples IF-ctor-pointer --replicates 1`, with `--out` and `--ledger` under a scratch directory, never `docs/assets`. It confirms the real backend returns the expected payload shape. It is not a result, and it does not feed the analysis.
+- **Stop conditions.**
+  - G1 aborts automatically (outside-span change).
+  - The run also aborts automatically on a mask-id mismatch between tokenizer and model, or a frozen-file change.
+  - Stop by hand and report if the first unit takes more than 15 min (more than 3× the estimate), if a Dream subprocess fails twice on one candidate, or if GPU 1's free memory falls below 24 GB because another workload started.
+- **Smoke test.** One unit: 16 generations, about 3–6 min on GPU 1. It confirms the real backend's payload shape, mask-id agreement, preservation, timing, and that the freeze check passes.
+  - It is not a result and never feeds the analysis.
+  - Its seeds (19,000,000–19,000,009) lie outside every reserved block, and the pilot refuses `--smoke` output under `docs/assets`.
 
 ## 8. Frozen statistical plan
 
-- **Unit.** The benchmark sample (cluster). Its R replicates share defect, prompt and context, so they are not independent. Each sample contributes d_s = mean over replicates of (success_a − success_b).
+- **Unit of inference: the mutation (pseudoreplication control).**
+  - The 60 units come from only 12 mutations. Replicates of one mutation share its defect, prompt and context, so they are repeated measures, not independent observations.
+  - Every inferential quantity (test, CI, sizing) is computed on 12 per-mutation differences d_s = mean over its 5 replicates of (pass@5_a − pass@5_b).
+  - Replicate-level and candidate-level counts (discordant replicate pairs, per-candidate success rates, success by mask length) are reported as **descriptive only**. They are never used as independent trials.
+  - The 12 mutations also share 2 reference bodies, a second level of clustering. With 2 bodies there is no between-body inference, so each body's estimate is reported separately (`per_example_descriptive`), and no claim extends beyond these two bodies.
 - **Eligibility.** Every sample of the validated benchmark. No exclusion after the run, except a G1 abort of the whole run.
 - **Primary endpoint.** Functional pass@5 per (unit, arm), from the frozen selection rule.
-- **Strata, prespecified and descriptive only.** Example (IF/MP); mutation kind; L* ≤ L vs L* > L.
-- **Estimation.** Mean of d_s, with a 95% percentile cluster-bootstrap CI (10,000 resamples, seed 0).
-- **Test.** Exact sign-flip permutation over clusters (2^12 patterns), two-sided. The replicate-level discordance counts are reported as well; they are never used as independent pairs.
+- **Equal-attempt comparison (H1, H2), operational definition.** Each arm gets exactly K = 5 candidates per unit, whatever each costs. Steps, masked tokens and seconds differ between arms by design, and are reported (§4) but not equalized here.
+- **Equal-compute comparison (H3), operational definition.**
+  - Per unit, the budget is B_m = m × the forward cost of that unit's first resample candidate. That is the most expensive single candidate of any arm, so at m = 1 every arm affords at least one.
+  - Each arm uses the longest prefix of its frozen candidate order whose cumulative forward cost fits within B_m. Success means any functional success in that prefix.
+  - The primary H3 uses m = 1. With the measured lengths that is roughly 5 infill, 1–2 suffix and 1 resample candidates.
+  - A curve over m = 1…5 is reported, along with the same curve using measured `generate_seconds` instead of forward cost (sensitivity to the proxy).
+  - A comparison where any arm affords zero candidates in more than half the units is marked degenerate and not interpreted.
+  - Cost per functional success is also reported per arm.
+- **Strata, prespecified and descriptive only.** Example (IF/MP); mutation kind; L* ≤ L vs L* > L; mask length (success per length, balanced over seed slots).
+- **Estimation.** Mean of d_s. The reported 95% CI inverts the exact sign-flip test (every shift it does not reject; exact under symmetry of d_s about its mean). A percentile cluster bootstrap (10,000 resamples, seed 0) is given as a sensitivity check only: it under-covers at n = 12.
+- **Test.** Exact two-sided sign-flip permutation over the 12 clusters (4096 patterns).
 - **Multiplicity.** Holm over {H1, H2}. H3, H4 and P2 are secondary, reported without confirmatory claims.
 - **Gates.**
   - G1: preservation, enforced at runtime.
@@ -227,24 +267,30 @@ conditions. P2 runs only after P1 has been analyzed and the user approves.
   - G3: a hand check of 24 candidates, stratified by verdict, before reading any contrast. Any disagreement means fixing the evaluator and re-scoring all candidates first.
 - **P1 is not confirmatory.** It estimates SD(d_s) and checks the benchmark and evaluator. Its p-values are labelled exploratory and its seeds are never reused.
 - **Confirmatory sizing.**
-  - n = ⌈((z₀.₉₈₇₅ + z₀.₈) · SD₈₀ / δ)²⌉ + 2, where SD₈₀ is the 80% upper confidence bound on P1's SD(d_s) (Browne 1995; `repair_stats.pilot_sd_upper`). α = 0.025 per hypothesis.
-  - The minimum effect worth pursuing is δ = 0.10 on pass@5; δ = 0.15 is also reported.
-  - The 12 samples cannot reach this n. A confirmatory run requires expanding the benchmark to n samples (more mutations, more reference bodies or APIs), validated by the same script. The sample size is not chosen to fit available hardware.
-- **Decision after P1 (prespecified).**
-  - **Terminate the "local infill advantage" claim for this setting** if the H1 point estimate ≤ 0 **and** the compute-matched H3-vs-suffix point estimate ≤ 0. Then infill shows no advantage at equal attempts or at equal compute, and that is reported as such.
-  - **Proceed to a confirmatory design** (expanded benchmark) only if H1 or H3-vs-suffix ≥ +0.10. The advantage must also appear in at least 2 mutation kinds, and the leave-one-sample-out estimate must stay ≥ +0.05.
-  - **Otherwise inconclusive.** Run P2 (feedback) or study the mask-length curve. No claim is made.
-  - **Canvas diagnostic, independent of the above.** If infill-oracle-length succeeds far more often than every sweep length, the bottleneck is canvas length, not context. That points to a variable-length model (DreamOn-style), not more of this sweep.
+  - n = ⌈((z₀.₉₈₇₅ + z₀.₈) · SD₈₀ / δ)²⌉ + 2 mutations, where SD₈₀ is the 80% upper confidence bound on P1's SD(d_s) (Browne 1995). α = 0.025 per hypothesis.
+  - δ = 0.10 is the minimum effect worth pursuing; δ = 0.15 is also reported.
+  - Twelve mutations cannot reach this. A confirmatory run needs new mutations, and new reference bodies so the body-level clustering can be estimated, validated by the same script. The sample size is not chosen to fit the hardware.
+- **Scope of every decision below.** It covers this model (Dream-Coder-v0-Instruct-7B), this decoding configuration, this fixed scaffold, these 12 single-line mutations of two OpenEXR bodies, a correct location given for free, and this evaluator. **No outcome of P1 is a general statement about bidirectional infilling, diffusion models, or code repair.** A null or negative result says only that this implementation shows no measurable advantage in this setting.
+- **Decision after P1 (prespecified, scoped as above).**
+  - **Stop pursuing this implementation** if the H1 point estimate ≤ 0 **and** the primary H3-vs-suffix (m = 1) point estimate ≤ 0. That means no advantage at equal attempts or at equal compute in this setting, and it is reported as such.
+  - **Proceed to a confirmatory design** (expanded benchmark) only if H1 or primary H3-vs-suffix ≥ +0.10. The advantage must also appear in at least 2 mutation kinds and in both reference bodies, and the leave-one-mutation-out estimate must stay ≥ +0.05.
+  - **Otherwise inconclusive.** Run P2 (feedback, separately frozen) or study the mask-length curve. No claim is made.
+  - **Canvas diagnostic (descriptive).** If the oracle-length candidate succeeds far more often than every sweep length, the bottleneck in this setting is canvas length rather than context. That points to a variable-length model rather than more of this sweep.
 
 ## 9. Verification status
 
-Implemented and tested: offline audit; benchmark and validation; evaluator (pure + Docker runner);
-arms, selection and budget; cluster statistics; pilot harness, including a CPU `--dry-run`
-fake generator; analysis script.
-
-Not tested:
-
-- the real Dream backend path (`dream_generator`) on GPU;
-- the `generate_seconds` field;
-- timing estimates;
-- the G3 hand-check procedure, which needs P1 output.
+- **Implemented and tested on CPU:**
+  - offline audit;
+  - benchmark and validation;
+  - evaluator (pure + Docker runner);
+  - arms, the seed-slot rotation, selection and budget;
+  - cluster statistics with the exact inverted CI;
+  - freeze manifest and verification;
+  - run-mode guards (P1 parameters fixed; smoke seeds and output location restricted; GPU runs refused without a matching manifest);
+  - pilot harness with a CPU `--dry-run` fake generator;
+  - analysis script.
+- **Not tested:**
+  - the real Dream backend path on GPU;
+  - the `generate_seconds` field;
+  - timing estimates;
+  - the G3 hand-check procedure, which needs P1 output.

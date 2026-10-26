@@ -8,7 +8,9 @@ number, the mean over its replicates of ``success_a - success_b``. Inference use
 per-sample differences:
 
 - an exact sign-flip permutation test (all ``2**n`` sign patterns, n <= 20);
-- a percentile cluster-bootstrap CI with a fixed RNG seed;
+- the CI from inverting that test (every shift it does not reject), which is exact
+  under symmetry and is the reported CI. The percentile cluster bootstrap is reported
+  only as a sensitivity check, because it under-covers at n near 12;
 - the Holm step-down adjustment across the prespecified primary family;
 - a normal-approximation sample size for a confirmatory run, from the pilot's SD of the
   per-sample differences.
@@ -35,6 +37,8 @@ class PairedComparison:
     mean_difference: float
     ci_low: float
     ci_high: float
+    bootstrap_ci_low: float
+    bootstrap_ci_high: float
     p_value: float
     replicate_pairs: int
     a_only: int
@@ -69,6 +73,29 @@ def sign_flip_p(differences: Sequence[float]) -> float:
     return hits / (1 << n)
 
 
+def sign_flip_ci(
+    differences: Sequence[float], *, alpha: float = 0.05, step: float = 0.01
+) -> tuple[float, float]:
+    """Shifts ``delta`` on a grid over [-1, 1] that ``sign_flip_p(d - delta)`` keeps (p > alpha).
+
+    Returns the smallest and largest kept shift. Per-sample differences of success
+    indicators lie in [-1, 1], so the grid covers every possible mean. ``(0.0, 0.0)``
+    for no clusters.
+    """
+    if not differences:
+        return (0.0, 0.0)
+    steps = round(2 / step)
+    kept = [
+        delta
+        for i in range(steps + 1)
+        if sign_flip_p([d - (delta := -1 + i * step) for d in differences]) > alpha
+    ]
+    if not kept:
+        mean = fmean(differences)
+        return (mean, mean)
+    return (round(min(kept), 10), round(max(kept), 10))
+
+
 def bootstrap_ci(
     differences: Sequence[float], *, level: float = 0.95, resamples: int = 10_000, seed: int = 0
 ) -> tuple[float, float]:
@@ -89,11 +116,14 @@ def compare(pairs: Mapping[str, Sequence[tuple[bool, bool]]], *, seed: int = 0) 
     differences = cluster_differences(pairs)
     flat = [pair for sample in pairs.values() for pair in sample]
     low, high = bootstrap_ci(differences, seed=seed)
+    exact_low, exact_high = sign_flip_ci(differences)
     return PairedComparison(
         clusters=len(differences),
         mean_difference=fmean(differences) if differences else 0.0,
-        ci_low=low,
-        ci_high=high,
+        ci_low=exact_low,
+        ci_high=exact_high,
+        bootstrap_ci_low=low,
+        bootstrap_ci_high=high,
         p_value=sign_flip_p(differences),
         replicate_pairs=len(flat),
         a_only=sum(1 for a, b in flat if a and not b),

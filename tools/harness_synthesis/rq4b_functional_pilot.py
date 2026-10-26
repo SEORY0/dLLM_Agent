@@ -1,64 +1,70 @@
 # ruff: noqa: T201 -- deliberate console report, not a library module
 r"""RQ4b pilot P1: compiler-localized infill vs suffix vs resample on controlled single defects.
 
-FROZEN protocol, written before any GPU trial. Full rationale, hypotheses and the analysis
-plan are in ``docs/superpowers/specs/2026-10-26-rq4b-functional-repair-benchmark.md``.
+FROZEN protocol, written before any GPU trial. Hashes of this file and of everything it
+depends on are recorded in ``docs/assets/harness-rq4b-p1-freeze-20261026.json``
+(``rq4b_freeze.py``). Every GPU run (P1 or ``--smoke``) re-checks them first and
+refuses to start on any difference. Rationale, hypotheses, analysis plan and the scope
+of any conclusion: ``docs/superpowers/specs/2026-10-26-rq4b-functional-repair-benchmark.md``.
 NOT EXECUTED as part of writing this file. It runs only after explicit approval.
 
 Population. The 12 samples of ``repair_benchmark.samples()``, validated offline by
-``rq4b_validate_benchmark.py`` (``docs/assets/harness-rq4b-benchmark-validation-20261026.json``).
-Each sample is a hand-written body that passes the functional evaluator, with exactly one
-line broken so that every clang error lands on that line, and executable code after it.
+``rq4b_validate_benchmark.py``. Each is a hand-written body that passes the functional
+evaluator, with exactly one line broken so that every clang error lands on that line,
+and executable code after it. The location is the mutated line, so P1 tests repair
+given a correct location, not localization.
 
-Location. The mutated line, which is the line clang reports. Validation asserts this, so
-P1 tests repair given a correct location, not localization.
+Arms. K = 5 candidates each per (sample, replicate) unit. Seed slot j is
+``seed_for(sample, replicate, j, base=13_000_000)`` = 13,000,000 + 1000*sample +
+10*replicate + j, shared across arms (common random numbers).
 
-Arms. K = 5 candidates each per (sample, replicate). Candidate j of every arm uses seed
-``seed_for(sample, replicate, j, base=13_000_000)`` (``repair_arms.plan``).
-
-- ``infill-sweep``: mask the defective line's token window (L tokens) with
-  L + (0, +2, -2, +4, +8)[j] masks. Left and right context are fixed. Special pieces
-  inside the span are dropped, and outside-span tokens are asserted unchanged (gate G1).
-- ``suffix``: keep everything before the window; mask the rest of the continuation plus 8.
-- ``resample``: a fresh body from scratch, 96 tokens.
+- ``infill-sweep``: mask the defective line's token window (L tokens) with L + o_k
+  masks, o = (0, +2, -2, +4, +8) in that frozen selection order. Length position k uses
+  seed slot (k + replicate) % 5, so over the 5 replicates every length meets every slot
+  exactly once per sample. Length effects are therefore not confounded with fixed slot
+  effects. Left and right context are fixed. Special pieces inside the span are
+  dropped, and outside-span tokens are asserted unchanged (G1).
+- ``suffix``: keep everything before the window; mask the rest of the continuation plus
+  8. Candidate j uses slot j.
+- ``resample``: a fresh 96-token body. Candidate j uses slot j.
 
 Decoding is the same everywhere: ``alg_temp=0.5``, temperature 0.5, top_p 0.95, entropy
-reveal order, one token per step (steps = masked positions), scaffold prefix as prefill.
-Every arm gets the same prompt, ``repair_prompt(example)``, in which inspection is
-required. ``--feedback message`` appends the mutant's first clang message, identically
-for all arms. That is pilot P2, a separate run; it is never mixed into P1's analysis.
+reveal order, one token per step (steps = masked positions), scaffold prefix as prefill,
+and the same prompt ``repair_prompt(example)`` with inspection required. No compiler
+message is given (that is P2, not frozen, refused here).
 
-Outcome. Primary: functional success (``functional_eval``: compiles, constructs from
-``stream``, runs every required call chain on the validation input with no exception and
-exit 0). Per arm, the frozen selection rule (``repair_arms.select``) gives pass@5.
-Secondary, per candidate: compile, failure reasons, unaffected statements kept,
-lexical edit distance to the mutant and to the reference, executed chains, masked
-tokens, steps, forward cost, denoising seconds, subprocess seconds. There is no fuzzing:
-scaffold-level edge counts do not show that the required API ran, and the evaluator
-measures that directly.
+Selection (frozen). Per arm, walk the candidates in frozen order (infill: by mask
+length as above; suffix and resample: by slot) and select the first functional success.
+pass@5 = any success. Otherwise select the first compiled candidate (that only matters
+for secondary metrics). The diagnostic below never enters any selection.
 
-Diagnostic (not compared). One extra infill candidate per unit, masked to the target's
-own token length L* (oracle information; 5 of 12 samples have L* = L-1, which the sweep
-never offers). Seed of candidate 0. It answers "with exactly the right canvas, does
-infill repair?" and is excluded from H1-H3.
+Diagnostic (never compared, never selected). One extra infill candidate per unit masked
+to the target's own token length L* (oracle information), on its own seed slot 9.
 
-Size. 12 samples, R = 4 replicates (0..3) = 48 (sample, replicate) units, 768
-generations (15 compared + 1 diagnostic per unit). Seeds 13,000,000-13,011,034. The
-13,000,000-13,499,999 block is pilot-only; confirmatory runs draw from 13,500,000+.
+Outcome. Primary: functional success (``functional_eval``). Secondary, per candidate:
+compile, failure reasons, unaffected statements kept, lexical edit distances, executed
+chains, masked tokens, steps, forward cost (steps x sequence length), denoising seconds
+(model load excluded) and subprocess seconds. There is no fuzzing.
 
-Gates.
-- G1 (runtime, abort): any infill candidate whose outside-span tokens changed. That is a
-  pipeline bug, not a result.
-- G2 (analysis): every arm's pooled pass@5 >= 0.95 or <= 0.05. The benchmark does not
-  discriminate; stop and redesign it, with no confirmatory run.
-- G3 (analysis, before reading arm contrasts): hand-check 24 candidates drawn by
-  ``rq4b_analyze.py --audit-sample``. Any evaluator/hand disagreement means fixing the
-  evaluator and re-scoring before analysis.
+Size. 12 samples x R = 5 replicates (0..4) = 60 units; 16 generations per unit (15
+compared + 1 diagnostic) = 960. Seeds 13,000,000-13,011,049 (P1 accepts no other base).
 
-    uv run python tools/harness_synthesis/rq4b_functional_pilot.py --gpu 0 \
-      --samples IF-ctor-pointer,IF-bad-method,IF-extra-arg,IF-box-namespace,IF-no-semicolon,\
-IF-uncalled-member --replicates 4 --out rq4b-p1-if.json \
-      --ledger /data/dllm-agent/harness-synthesis/rq4b-p1-ledger-gpu0.jsonl
+Gates. G1 (runtime abort): any infill candidate's outside-span tokens changed. G2, G3:
+see ``rq4b_analyze.py`` and the spec.
+
+Hardware. GPU 1 only. GPU 0 is occupied by another service (vLLM). One Dream process at
+a time, about 16 GB. Check ``nvidia-smi`` before starting and leave other processes
+alone.
+
+    # smoke test (approval required; not a result)
+    uv run python tools/harness_synthesis/rq4b_functional_pilot.py --gpu 1 --smoke \
+      --seed-base 19000000 --samples IF-ctor-pointer --replicates 1 \
+      --out /data/dllm-agent/harness-synthesis/rq4b-smoke/smoke.json \
+      --ledger /data/dllm-agent/harness-synthesis/rq4b-smoke/smoke-ledger.jsonl
+    # P1 (approval required)
+    uv run python tools/harness_synthesis/rq4b_functional_pilot.py --gpu 1 \
+      --out /data/dllm-agent/harness-synthesis/rq4b-p1/p1.json \
+      --ledger /data/dllm-agent/harness-synthesis/rq4b-p1/p1-ledger.jsonl
 
 CPU plumbing check (no model, fake generator; never a result):
 
@@ -77,6 +83,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from _compile import syntax_diagnostics_many
+from _freeze import RESERVED_SEED_BLOCKS, verify_freeze
 from _functional_eval import evaluate_many
 from _replay import run_dream_generate, tokenize
 from kb_v3_fixed_scaffold import assemble, extract_body, scaffold_prefix
@@ -95,6 +102,7 @@ from dllm_agent.harness_synthesis.localize import (
 from dllm_agent.harness_synthesis.repair_arms import (
     ARMS,
     DIAGNOSTIC_ARM,
+    PILOT_REPLICATES,
     PILOT_SEED_BASE,
     CandidateOutcome,
     CandidatePlan,
@@ -103,6 +111,8 @@ from dllm_agent.harness_synthesis.repair_arms import (
     infill_continuation,
     outside_span_preserved,
     plan,
+    seed_for,
+    seed_slot,
     select,
     suffix_continuation,
 )
@@ -267,7 +277,7 @@ def fake_generator(mode: str, pieces_of: dict[int, str]) -> Generator:
 
 
 def _candidate(
-    prep: Prepared, candidate: CandidatePlan, prompt: str, generator: Generator
+    prep: Prepared, candidate: CandidatePlan, prompt: str, generator: Generator, *, base: int
 ) -> dict[str, Any]:
     initial = _initial(prep, candidate)
     started = time.perf_counter()
@@ -282,7 +292,10 @@ def _candidate(
         raise SystemExit(reason)
     ids: list[int] = payload["generated_token_ids"]
     pieces: list[str] = payload["generated_token_pieces"]
-    record: dict[str, Any] = {**asdict(candidate)}
+    record: dict[str, Any] = {
+        **asdict(candidate),
+        "seed_slot": seed_slot(candidate.seed, base=base),
+    }
     if candidate.arm in {"infill-sweep", DIAGNOSTIC_ARM}:
         start, end = prep.window.start, prep.window.start + candidate.masked
         record["preserved"] = outside_span_preserved(
@@ -330,7 +343,7 @@ def run_unit(
         base=base,
         oracle_length=prep.reference_window.length,
     )
-    candidates = [_candidate(prep, p, prompt, generator) for p in plans]
+    candidates = [_candidate(prep, p, prompt, generator, base=base) for p in plans]
     bad = [c for c in candidates if "preserved" in c and not c["preserved"]]
     if bad:
         reason = f"G1: {sample.sample_id} r{replicate}: infill changed outside-span tokens"
@@ -363,7 +376,7 @@ def run_unit(
             }
         )
     selection = {}
-    for arm in (*ARMS, DIAGNOSTIC_ARM):
+    for arm in ARMS:
         outcomes = [
             CandidateOutcome(
                 c["index"], c["compiled"], c["success"], c["cost"], c["generate_seconds"]
@@ -372,6 +385,9 @@ def run_unit(
             if c["arm"] == arm
         ]
         selection[arm] = asdict(select(outcomes))
+    # The oracle-length diagnostic never enters a selection or a comparison; it is
+    # reported as its single candidate's own verdict.
+    diagnostic = next((c for c in candidates if c["arm"] == DIAGNOSTIC_ARM), None)
     return {
         "sample_id": sample.sample_id,
         "example": sample.example,
@@ -383,6 +399,9 @@ def run_unit(
         "target_tokens": prep.reference_window.length,
         "candidates": candidates,
         "selection": selection,
+        "diagnostic": None
+        if diagnostic is None
+        else {"compiled": diagnostic["compiled"], "success": diagnostic["success"]},
     }
 
 
@@ -391,14 +410,18 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--gpu", type=int, default=None)
     parser.add_argument("--samples", default="all")
-    parser.add_argument("--replicates", type=int, default=4)
+    parser.add_argument("--replicates", type=int, default=PILOT_REPLICATES)
     parser.add_argument("--replicate-start", type=int, default=0)
     parser.add_argument("--feedback", choices=("none", "message"), default="none")
     parser.add_argument("--seed-base", type=int, default=PILOT_SEED_BASE)
     parser.add_argument("--dry-run", choices=("oracle", "delete"), default=None)
+    parser.add_argument("--smoke", action="store_true")
     parser.add_argument("--out", required=True)
     parser.add_argument("--ledger", required=True)
     args = parser.parse_args()
+    _check_run_mode(args)
+    for path in (args.out, args.ledger):
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
 
     bench = list(samples())
     if args.samples != "all":
@@ -423,7 +446,7 @@ def main() -> None:
         generator = dream_generator(args.gpu)
 
     backend = f"dry-{args.dry_run}" if args.dry_run else f"gpu{args.gpu}"
-    run_id = f"rq4b-p1-{backend}-{int(time.time())}"
+    run_id = f"rq4b-{'smoke' if args.smoke else 'p1'}-{backend}-{int(time.time())}"
     units: list[dict[str, Any]] = []
     for prep in prepared:
         for replicate in range(args.replicate_start, args.replicate_start + args.replicates):
@@ -457,6 +480,43 @@ def main() -> None:
                 + " ".join(f"{arm}={s['pass_at_k']}" for arm, s in unit["selection"].items())
             )
             Path(args.out).write_text(json.dumps(units, indent=1))
+
+
+def _check_run_mode(args: argparse.Namespace) -> None:
+    """Refuse any GPU run that is not exactly the frozen P1 or a labelled smoke test.
+
+    - P1: frozen files unchanged (``verify_freeze``), the pilot seed block, all R
+      replicates from 0, no feedback. P2 is not frozen yet.
+    - ``--smoke``: frozen files unchanged too (the smoke test exercises the frozen code),
+      but on a seed base outside every reserved block, and never writing into
+      ``docs/assets``.
+    - ``--dry-run``: a fake generator on CPU; no checks, never a result.
+    """
+    if args.dry_run is not None:
+        return
+    if args.gpu is None:
+        reason = "a GPU run needs an explicit --gpu"
+        raise SystemExit(reason)
+    problems = verify_freeze()
+    if problems:
+        raise SystemExit("frozen protocol changed:\n  " + "\n  ".join(problems))
+    if args.smoke:
+        lo, hi = args.seed_base, seed_for(499, 99, 9, base=args.seed_base)
+        if any(lo <= b_hi and b_lo <= hi for b_lo, b_hi in RESERVED_SEED_BLOCKS):
+            reason = f"--smoke seed range {lo}-{hi} overlaps a reserved block"
+            raise SystemExit(reason)
+        if any("docs/assets" in str(Path(p).resolve()) for p in (args.out, args.ledger)):
+            reason = "--smoke output must not go to docs/assets"
+            raise SystemExit(reason)
+        return
+    if (args.seed_base, args.replicate_start, args.replicates, args.feedback) != (
+        PILOT_SEED_BASE,
+        0,
+        PILOT_REPLICATES,
+        "none",
+    ):
+        reason = "P1 is frozen at --seed-base 13000000, replicates 0..4, --feedback none"
+        raise SystemExit(reason)
 
 
 def _reference_pieces(prep: Prepared) -> list[str]:

@@ -3,13 +3,18 @@
 Pure. Builds no prompt and calls no model. ``tools/harness_synthesis/rq4b_functional_pilot.py``
 feeds these sequences to Dream and evaluates what comes back.
 
-Every arm gets the same number of candidates ``K`` per (sample, replicate). Candidate
-``j`` of every arm uses the same seed (common random numbers). The selection rule is
-frozen before running: walk the candidates in their frozen order and stop at the first
-that passes the functional evaluator. Compute is recorded per candidate and is never
-assumed equal across arms. A Dream denoising step is one forward pass over the whole
-prompt plus continuation, however many positions are masked, so ``forward_cost`` is
-steps times sequence length.
+Every arm gets the same number of candidates ``K`` per (sample, replicate). Seed slot
+``j`` (``seed_for(..., j)``) is shared across arms (common random numbers). Suffix and
+resample candidate ``j`` use slot ``j``. The infill arm's candidates are ordered by mask
+length (``INFILL_MASK_OFFSETS``), and the slot paired with each length rotates by
+replicate: in replicate ``r``, length position ``k`` uses slot ``(k + r) % K``. With
+``R = K`` replicates, every length meets every slot exactly once per sample, so a
+length difference cannot be a fixed slot effect (``seed_slot_balance`` checks this).
+The selection rule is frozen before running: walk the candidates in their frozen order
+and stop at the first that passes the functional evaluator. Compute is recorded per
+candidate and is never assumed equal across arms. A Dream denoising step is one
+forward pass over the whole prompt plus continuation, however many positions are
+masked, so ``forward_cost`` is steps times sequence length.
 """
 
 from collections.abc import Sequence
@@ -26,7 +31,10 @@ type ArmName = Literal["infill-sweep", "suffix", "resample", "infill-oracle-leng
 # excluded from every arm comparison.
 ARMS: tuple[ArmName, ...] = ("infill-sweep", "suffix", "resample")
 DIAGNOSTIC_ARM: ArmName = "infill-oracle-length"
+# The diagnostic's own seed slot, shared with no compared candidate.
+DIAGNOSTIC_SEED_SLOT = 9
 K = 5
+PILOT_REPLICATES = K
 # Candidate j of the infill arm masks L + INFILL_MASK_OFFSETS[j] positions, where L is
 # the defective line's own token window (observable, unlike the target's length). The
 # order is frozen nearest-first so cost-to-first-success means the same thing per sample.
@@ -80,8 +88,8 @@ def plan(  # noqa: PLR0913 - the unit's identity plus its two optional sizes.
 ) -> tuple[CandidatePlan, ...]:
     """All ``3 * K`` generation calls for one (sample, replicate), in frozen order.
 
-    With ``oracle_length``, one diagnostic infill candidate (seed of candidate 0) is
-    appended. It is never part of an arm comparison.
+    With ``oracle_length``, one diagnostic infill candidate is appended, on its own seed
+    slot (``DIAGNOSTIC_SEED_SLOT``). It is never part of an arm comparison or a selection.
 
     One token per denoising step in every arm (``steps == masked``). The RQ4 pilot's
     resample arm decoded two tokens per step, which made it cheaper per token and
@@ -90,8 +98,8 @@ def plan(  # noqa: PLR0913 - the unit's identity plus its two optional sizes.
     seeds = [seed_for(sample_index, replicate, j, base=base) for j in range(K)]
     suffix_masked = continuation_length - window.start + SUFFIX_SLACK
     plans = [
-        CandidatePlan("infill-sweep", j, seeds[j], length, length)
-        for j, length in enumerate(infill_mask_lengths(window.length))
+        CandidatePlan("infill-sweep", k, seeds[(k + replicate) % K], length, length)
+        for k, length in enumerate(infill_mask_lengths(window.length))
     ]
     plans += [CandidatePlan("suffix", j, seeds[j], suffix_masked, suffix_masked) for j in range(K)]
     plans += [
@@ -99,8 +107,27 @@ def plan(  # noqa: PLR0913 - the unit's identity plus its two optional sizes.
         for j in range(K)
     ]
     if oracle_length is not None:
-        plans.append(CandidatePlan(DIAGNOSTIC_ARM, 0, seeds[0], oracle_length, oracle_length))
+        seed = seed_for(sample_index, replicate, DIAGNOSTIC_SEED_SLOT, base=base)
+        plans.append(CandidatePlan(DIAGNOSTIC_ARM, 0, seed, oracle_length, oracle_length))
     return tuple(plans)
+
+
+def seed_slot(seed: int, *, base: int) -> int:
+    """The slot ``j`` a seed from ``seed_for`` was drawn with."""
+    return (seed - base) % 10
+
+
+def seed_slot_balance(plans: Sequence[CandidatePlan], *, base: int) -> dict[int, set[int]]:
+    """For the infill arm: length position -> set of seed slots it was paired with.
+
+    Over one sample's ``R = K`` replicates, a balanced design gives every position all
+    ``K`` slots.
+    """
+    balance: dict[int, set[int]] = {}
+    for p in plans:
+        if p.arm == "infill-sweep":
+            balance.setdefault(p.index, set()).add(seed_slot(p.seed, base=base))
+    return balance
 
 
 def infill_continuation(

@@ -7,13 +7,25 @@ are paired across arms by shared seeds.
 
 - Gates: G1 (every infill candidate preserved its context), G2 (some arm's pooled pass@5
   lies strictly between 0.05 and 0.95).
-- H1: infill-sweep vs suffix, functional pass@5. H2: infill-sweep vs resample. Each is
-  the mean per-sample difference with a cluster-bootstrap 95% CI and an exact sign-flip
-  p, Holm-adjusted over {H1, H2}. In the pilot these are estimates for sizing the
-  confirmatory run, not confirmatory results.
-- H3 (secondary, compute-matched): success within the infill arm's total forward cost
-  for that unit (``success_within_budget``), plus how many candidates each arm could
-  afford.
+- Pseudoreplication. The 60 units come from only 12 mutations, so every inferential
+  quantity is computed on 12 per-mutation differences. Replicates are averaged inside a
+  mutation first. Replicate- and candidate-level counts appear only as descriptive
+  numbers, and are never treated as independent. The 12 mutations share 2 reference
+  bodies. With 2 examples there is no between-example inference, so each example's
+  estimate is reported separately.
+- H1: infill-sweep vs suffix, functional pass@5 (equal attempts: K = 5 per arm,
+  whatever each costs). H2: infill-sweep vs resample. Each is the mean per-sample
+  difference, an exact sign-flip p and its inverted 95% CI (bootstrap CI as a
+  sensitivity check), Holm-adjusted over {H1, H2}. In the pilot these are estimates for
+  sizing, not confirmatory results.
+- H3 (secondary, equal compute). Per unit, the budget is m times the forward cost
+  (steps x sequence positions) of one resample candidate, the most expensive candidate
+  of any arm. Each arm gets the longest prefix of its frozen order that fits
+  (``success_within_budget``). Primary m = 1, so every arm affords at least one
+  candidate. m = 1..5 is reported as a curve. The same curve is repeated with measured
+  denoising seconds (``generate_seconds``; model load excluded) as a sensitivity check.
+  A comparison where an arm affords zero candidates in more than half the units is
+  marked degenerate and not interpreted.
 - Descriptive: per-candidate success by infill mask offset, compile rate, failure
   reasons, unaffected statements kept, edit distances, cost, seconds.
 - Sizing: ``required_clusters`` from the 80% upper confidence bound of H1's per-sample
@@ -54,23 +66,47 @@ from dllm_agent.harness_synthesis.repair_stats import (
 _FLOOR, _CEILING = 0.05, 0.95
 
 
-def _outcomes(unit: dict[str, Any], arm: str) -> list[CandidateOutcome]:
+_BUDGET_MULTIPLES = (1, 2, 3, 4, 5)
+_DEGENERATE_SHARE = 0.5
+
+
+def _cost(candidate: dict[str, Any], measure: str) -> int:
+    if measure == "forward":
+        return int(candidate["cost"])
+    return round(float(candidate["generate_seconds"]) * 1_000_000)  # microseconds
+
+
+def _outcomes(unit: dict[str, Any], arm: str, measure: str = "forward") -> list[CandidateOutcome]:
     return [
-        CandidateOutcome(c["index"], c["compiled"], c["success"], c["cost"], c["generate_seconds"])
+        CandidateOutcome(
+            c["index"], c["compiled"], c["success"], _cost(c, measure), c["generate_seconds"]
+        )
         for c in unit["candidates"]
         if c["arm"] == arm
     ]
 
 
-def _pairs(
-    units: list[dict[str, Any]], a: str, b: str, *, matched: bool
+def _budget(unit: dict[str, Any], multiple: int, measure: str) -> int:
+    """``multiple`` x the cost of the unit's first resample candidate (the dearest kind)."""
+    first = next(c for c in unit["candidates"] if c["arm"] == "resample" and c["index"] == 0)
+    return multiple * _cost(first, measure)
+
+
+def _pairs(  # noqa: PLR0913 - two arms plus the frozen budget definition.
+    units: list[dict[str, Any]],
+    a: str,
+    b: str,
+    *,
+    matched: bool,
+    multiple: int = 1,
+    measure: str = "forward",
 ) -> dict[str, list[tuple[bool, bool]]]:
     pairs: dict[str, list[tuple[bool, bool]]] = {}
     for unit in units:
         if matched:
-            budget = sum(o.cost for o in _outcomes(unit, "infill-sweep"))
-            sa, _ = success_within_budget(_outcomes(unit, a), budget)
-            sb, _ = success_within_budget(_outcomes(unit, b), budget)
+            budget = _budget(unit, multiple, measure)
+            sa, _ = success_within_budget(_outcomes(unit, a, measure), budget)
+            sb, _ = success_within_budget(_outcomes(unit, b, measure), budget)
         else:
             sa = unit["selection"][a]["pass_at_k"]
             sb = unit["selection"][b]["pass_at_k"]
@@ -82,7 +118,7 @@ def _descriptive(units: list[dict[str, Any]]) -> dict[str, Any]:
     out: dict[str, Any] = {}
     for arm in ARMS:
         cands = [c for u in units for c in u["candidates"] if c["arm"] == arm]
-        budgets = [sum(o.cost for o in _outcomes(u, "infill-sweep")) for u in units]
+        budgets = [_budget(u, 1, "forward") for u in units]
         afforded = [
             success_within_budget(_outcomes(u, arm), b)[1]
             for u, b in zip(units, budgets, strict=True)
@@ -213,6 +249,43 @@ def main() -> None:
             _pairs(units, "infill-sweep", "resample", matched=True)
         ),
     }
+    curves: dict[str, Any] = {}
+    for measure in ("forward", "seconds"):
+        for multiple in _BUDGET_MULTIPLES:
+            row: dict[str, Any] = {}
+            for arm in ARMS:
+                afforded = [
+                    success_within_budget(_outcomes(u, arm, measure), _budget(u, multiple, measure))
+                    for u in units
+                ]
+                row[arm] = {
+                    "success_units": sum(ok for ok, _ in afforded),
+                    "zero_candidates_share": fmean(n == 0 for _, n in afforded),
+                    "mean_candidates_afforded": fmean(n for _, n in afforded),
+                }
+            row["degenerate"] = any(
+                row[arm]["zero_candidates_share"] > _DEGENERATE_SHARE for arm in ARMS
+            )
+            curves[f"{measure}_x{multiple}"] = row
+    per_example = {
+        example: {
+            name: asdict(
+                compare(
+                    _pairs(
+                        [u for u in units if u["example"] == example],
+                        "infill-sweep",
+                        other,
+                        matched=False,
+                    )
+                )
+            )
+            for name, other in (
+                ("H1_infill_vs_suffix", "suffix"),
+                ("H2_infill_vs_resample", "resample"),
+            )
+        }
+        for example in sorted({u["example"] for u in units})
+    }
     robustness = {
         name: _leave_one_out(_pairs(units, "infill-sweep", other, matched=matched))
         for name, other, matched in (
@@ -240,6 +313,13 @@ def main() -> None:
             name: {**asdict(c), "holm_p": adjusted[name]} for name, c in primary.items()
         },
         "secondary": {name: asdict(c) for name, c in secondary.items()},
+        "secondary_H3_primary_budget_degenerate": curves["forward_x1"]["degenerate"],
+        "equal_compute_curves": curves,
+        "per_example_descriptive": per_example,
+        "pseudoreplication_note": (
+            "inference uses one difference per mutation (clusters); replicate/candidate "
+            "counts are descriptive only; 2 reference bodies allow no between-example inference"
+        ),
         "descriptive": descriptive,
         "decision_inputs": robustness,
         "by_kind_pass_at_5": {

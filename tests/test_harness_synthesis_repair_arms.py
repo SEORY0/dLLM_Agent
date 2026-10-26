@@ -7,6 +7,8 @@ from dllm_agent.harness_synthesis.repair_arms import (
     ARMS,
     CONFIRMATORY_SEED_BASE,
     DIAGNOSTIC_ARM,
+    DIAGNOSTIC_SEED_SLOT,
+    PILOT_REPLICATES,
     PILOT_SEED_BASE,
     SUFFIX_SLACK,
     CandidateOutcome,
@@ -18,6 +20,8 @@ from dllm_agent.harness_synthesis.repair_arms import (
     outside_span_preserved,
     plan,
     seed_for,
+    seed_slot,
+    seed_slot_balance,
     select,
     success_within_budget,
     suffix_continuation,
@@ -49,7 +53,10 @@ def test_plan_is_attempt_matched_with_common_seeds() -> None:
         "suffix": K,
         "resample": K,
     }
-    assert by_arm["infill-sweep"] == by_arm["suffix"] == by_arm["resample"]
+    # Same seed slots in every arm (common random numbers); infill's are rotated by
+    # replicate (replicate 1 here), so length position k uses slot (k + 1) % K.
+    assert sorted(by_arm["infill-sweep"]) == by_arm["suffix"] == by_arm["resample"]
+    assert by_arm["infill-sweep"] == [*by_arm["suffix"][1:], by_arm["suffix"][0]]
     suffix = next(p for p in plans if p.arm == "suffix")
     assert suffix.masked == 60 - 4 + SUFFIX_SLACK
 
@@ -62,8 +69,24 @@ def test_oracle_length_adds_one_diagnostic_candidate_outside_the_compared_arms()
     )
     assert with_oracle[: len(plain)] == plain
     extra = with_oracle[-1]
-    assert (extra.arm, extra.masked, extra.seed) == (DIAGNOSTIC_ARM, 13, plain[0].seed)
+    assert (extra.arm, extra.masked) == (DIAGNOSTIC_ARM, 13)
+    assert seed_slot(extra.seed, base=PILOT_SEED_BASE) == DIAGNOSTIC_SEED_SLOT
+    assert extra.seed not in {p.seed for p in plain}
     assert DIAGNOSTIC_ARM not in ARMS
+
+
+def test_every_mask_length_meets_every_seed_slot_once_over_k_replicates() -> None:
+    window = TokenWindow(start=0, length=14)
+    plans = [
+        p
+        for r in range(PILOT_REPLICATES)
+        for p in plan(window, 60, sample_index=3, replicate=r, base=PILOT_SEED_BASE)
+    ]
+    balance = seed_slot_balance(plans, base=PILOT_SEED_BASE)
+    assert balance == {k: set(range(K)) for k in range(K)}
+    # With fewer replicates the design is not balanced; that is why P1 uses R = K.
+    short = [p for p in plans if p.seed < seed_for(3, 4, 0, base=PILOT_SEED_BASE)]
+    assert any(len(s) < K for s in seed_slot_balance(short, base=PILOT_SEED_BASE).values())
 
 
 def test_seed_blocks_do_not_collide_between_pilot_and_confirmatory() -> None:

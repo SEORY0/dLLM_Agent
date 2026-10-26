@@ -11,6 +11,7 @@ from dllm_agent.harness_synthesis.repair_stats import (
     holm,
     pilot_sd_upper,
     required_clusters,
+    sign_flip_ci,
     sign_flip_p,
 )
 
@@ -79,3 +80,20 @@ def test_pilot_sd_upper_exceeds_the_point_estimate() -> None:
     assert pilot_sd_upper(diffs) > stdev(diffs)
     with pytest.raises(ValueError, match="two"):
         _ = pilot_sd_upper([0.1])
+
+
+def test_sign_flip_ci_inverts_the_test_and_brackets_the_mean() -> None:
+    diffs = [0.2, 0.4, 0.0, 0.6, 0.2, 0.0, 0.4, 0.2, 0.0, 0.2, 0.6, 0.4]
+    low, high = sign_flip_ci(diffs)
+    assert low <= sum(diffs) / len(diffs) <= high
+    assert low > 0  # every difference is >= 0 and most are > 0
+    assert sign_flip_p([d - low for d in diffs]) > 0.05
+    assert sign_flip_p([d - (low - 0.02) for d in diffs]) <= 0.05
+    assert sign_flip_ci([]) == (0.0, 0.0)
+
+
+def test_compare_reports_exact_ci_and_bootstrap_separately() -> None:
+    pairs = {f"s{i}": [(i % 2 == 0, False)] * 3 for i in range(8)}
+    result = compare(pairs)
+    assert result.ci_low <= result.mean_difference <= result.ci_high
+    assert result.bootstrap_ci_low <= result.mean_difference <= result.bootstrap_ci_high
