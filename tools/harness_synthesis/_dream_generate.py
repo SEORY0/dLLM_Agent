@@ -16,6 +16,7 @@ TrajectoryRecorder/regions/remask modules.
 
 import argparse
 import json
+import time
 
 import torch
 from transformers import AutoModel, AutoTokenizer
@@ -123,6 +124,7 @@ def main() -> None:
         return x
 
     torch.manual_seed(args.seed)
+    started = time.perf_counter()
     output = model.diffusion_generate(
         prompt_ids,
         attention_mask=torch.ones_like(prompt_ids),
@@ -135,6 +137,8 @@ def main() -> None:
         return_dict_in_generate=True,
         generation_tokens_hook_func=tokens_hook,
     )
+    torch.cuda.synchronize()
+    generate_seconds = time.perf_counter() - started  # denoising only; excludes model load
     generated_ids = output.sequences[0, prompt_length:].tolist()
     generated_pieces = [
         tokenizer.decode([token_id], skip_special_tokens=False) for token_id in generated_ids
@@ -146,6 +150,7 @@ def main() -> None:
         "generated_token_ids": generated_ids,
         "generated_token_pieces": generated_pieces,
         "decoded_text": "".join(generated_pieces),
+        "generate_seconds": generate_seconds,
         "steps_log": steps_log,
         "events": events,
     }

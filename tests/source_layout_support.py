@@ -119,11 +119,16 @@ FINAL_RUNTIME_MODULES: Final = module_set(
     dllm_agent.harness_synthesis
     dllm_agent.harness_synthesis.api_knowledge
     dllm_agent.harness_synthesis.audit_ledger
+    dllm_agent.harness_synthesis.body_analysis
     dllm_agent.harness_synthesis.fitness
+    dllm_agent.harness_synthesis.functional_eval
     dllm_agent.harness_synthesis.localize
     dllm_agent.harness_synthesis.power_calc
     dllm_agent.harness_synthesis.regions
     dllm_agent.harness_synthesis.remask
+    dllm_agent.harness_synthesis.repair_arms
+    dllm_agent.harness_synthesis.repair_benchmark
+    dllm_agent.harness_synthesis.repair_stats
     dllm_agent.harness_synthesis.token_trace
     dllm_agent.harness_synthesis.trajectory_hook
     dllm_agent.replay dllm_agent.replay.pipeline dllm_agent.replay.sampler
