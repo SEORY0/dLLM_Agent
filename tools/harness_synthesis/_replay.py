@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +20,7 @@ from dllm_agent.harness_synthesis.trajectory_hook import CommitObservation, Traj
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 DREAM_VENV_PYTHON = _REPO_ROOT / "tools/dream_runtime/venv/bin/python"
 DREAM_GENERATE = Path(__file__).with_name("_dream_generate.py")
+DREAM_TOKENIZE = Path(__file__).with_name("_dream_tokenize.py")
 MODEL_PATH = "/data/dllm-agent/cache-dream-coder"
 
 
@@ -121,3 +123,31 @@ def decode_code_block(payload: dict[str, Any]) -> tuple[str, list[tuple[int, int
             end = min(end, index)
     code_offsets = [offset for offset in offsets if offset[0] < end]
     return text[:end], code_offsets
+
+
+def tokenize(texts: list[str]) -> tuple[int, list[dict[str, Any]]]:
+    """``(mask_token_id, [{"ids", "pieces"}, ...])`` from Dream's tokenizer, CPU only.
+
+    Runs ``_dream_tokenize.py`` under the Dream venv with ``CUDA_VISIBLE_DEVICES=""``.
+    It loads the tokenizer files only, never the model weights.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        src, out = Path(tmp) / "in.json", Path(tmp) / "out.json"
+        src.write_text(json.dumps(texts))
+        subprocess.run(  # noqa: S603 - fixed argv, shell=False.
+            [
+                str(DREAM_VENV_PYTHON),
+                str(DREAM_TOKENIZE),
+                "--model-path",
+                MODEL_PATH,
+                "--texts",
+                str(src),
+                "--out",
+                str(out),
+            ],
+            check=True,
+            capture_output=True,
+            env={**os.environ, "CUDA_VISIBLE_DEVICES": "", "HF_HUB_OFFLINE": "1"},
+        )
+        payload = json.loads(out.read_text())
+        return int(payload["special"]["mask_token_id"]), payload["tokens"]

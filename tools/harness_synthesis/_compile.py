@@ -183,3 +183,56 @@ def compile_and_fuzz(
             return FuzzResult(compiled=False, compile_error=error, edges=None)
         edges = fuzz_once(binary_dir, fuzz_seconds=fuzz_seconds, seed=seed)
         return FuzzResult(compiled=True, compile_error=None, edges=edges)
+
+
+_INCLUDE_FLAGS = (
+    "-I/opt/openexr-coverage/include/OpenEXR",
+    "-I/opt/openexr-coverage/include/Imath",
+    "-I/opt/openexr-coverage/include",
+)
+
+
+def syntax_diagnostics_many(sources: list[str], *, timeout: float = 600.0) -> list[list[str]]:
+    """Every ``harness.cc`` ``error:`` line clang reports for each source, uncapped.
+
+    ``compile_harness``/``_build_coverage_binary`` keep only the first three error lines,
+    which is enough to pick a location but not to count diagnostics. This runs
+    ``clang++ -fsyntax-only -ferror-limit=0`` against the same pinned OpenEXR headers,
+    with one container for the whole batch (about 0.3 s per source instead of a 3 s
+    container start each). It does not link, so a link-only failure would read as
+    clean. The retrospective audit checks that its verdict matches the stored build
+    result for every source.
+    """
+    _ensure_image()
+    with tempfile.TemporaryDirectory() as tmp:
+        work = Path(tmp)
+        work.chmod(0o777)
+        for index, source in enumerate(sources):
+            case = work / str(index)
+            case.mkdir()
+            case.chmod(0o777)
+            (case / "harness.cc").write_text(source)
+        flags = " ".join(("-std=c++17", "-fsyntax-only", "-ferror-limit=0", *_INCLUDE_FLAGS))
+        script = (
+            f"for i in $(seq 0 {len(sources) - 1}); do "
+            f"clang++ {flags} /work/$i/harness.cc > /work/$i/diag.txt 2>&1; done; exit 0"
+        )
+        uid = f"{os.getuid()}:{os.getgid()}"
+        subprocess.run(  # noqa: S603 - fixed argv, shell=False on the host side.
+            [  # noqa: S607
+                "docker", "run", "--rm", "-u", uid, "-v", f"{work}:/work",
+                "--entrypoint", "sh", IMAGE, "-c", script,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=True,
+        )
+        return [
+            [
+                line.replace("/work/", "").removeprefix(f"{index}/")
+                for line in (work / str(index) / "diag.txt").read_text().splitlines()
+                if _ERROR_LINE.search(line)
+            ]
+            for index in range(len(sources))
+        ]

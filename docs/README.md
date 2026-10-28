@@ -23,6 +23,7 @@
 | 논문 효능 연구 | 없음 | **설계.** protocol과 판정 gate가 있으며 powered AR/dLLM 비교는 아직 없다. | dLLM 탐지 우월성, 일반화, 유의한 효과 크기 |
 | trajectory 신호 기반 harness synthesis (RQ1/RQ3, 종료) | `tools/harness_synthesis/*.py`(수동 실행 스크립트, 기본 CLI·`openexr_one_day` 파이프라인에는 연결되지 않음) | **측정, RQ3 종료.** Dream-Coder로 OpenEXR 하네스(본문) 생성·컴파일·fuzz가 실제 GPU에서 가능함을 확인(고정 scaffold, 수정량을 고정한 window remask까지). confidence 기반 위치 선택이 random보다 컴파일률·coverage에서 낫다는 증거는 RQ1(N=224, 3개 신호)과 RQ3의 여러 재설계(스모크, B0/B0v2 baseline 감사, region 기반·수정량 통제 window pilot)에서 일관되게 나오지 않았다. | confidence 신호에 효과가 "없다"는 확정(표본이 작아 판정 불가에 가까움), dLLM 대 AR의 퍼징 성능·버그 발견·비용 우위(미판정), 프로덕션 파이프라인 연동 |
 | compiler-localized span infill (RQ4, 1-round pilot 완료) | `tools/harness_synthesis/rq4_*.py`(수동 실행 스크립트, 미연동) | **측정(pilot).** 새 seed 48건에서 컴파일러 첫 오류가 본문 줄로 48/48 매핑. 하지만 그 줄만 양방향 infill한 arm(10/48 컴파일)은 같은 줄부터 끝까지 다시 쓰는 left-to-right 수리(22/48)보다 낮았고(오른쪽 문맥 stratum 2 대 12, p=0.013) resample(16/48)도 못 이겼다. 사후 확인으로 slack 강제 채움(47/48)과 '삭제를 수리로 집계'하는 지표 문제를 발견. | 양방향 문맥의 이점(이 구현에서 미지지), 확증 효과, dLLM 대 AR(FIM control 없음) |
+| controlled single-defect functional repair (RQ4b, P1 pilot 완료) | `tools/harness_synthesis/rq4b_*.py`, `rq4_retro_audit.py`(수동 실행, 미연동) | **측정(exploratory pilot, 동결 프로토콜).** 단일 결함 12개×반복 5 = 60 unit, 960 생성. 위치를 정답으로 준 상태에서 mask 길이 sweep infill의 기능 pass@5가 35/60, suffix 1/60, resample 0/60. 변이 12개 단위 차이 +0.57(H1, exact CI 0.28–0.88), +0.58(H2), compute 맞춘 H3 +0.55. 사전 규칙상 확증 설계로 진행. 단 baseline은 존재하지 않는 OpenEXR API를 만들어 바닥이었고, 차이는 대부분 "알려진 정상 코드 보존"에서 온다. 실패는 모델 사전지식이 곧 결함인 경우(`&stream`, `Box2i` namespace). | 오른쪽 문맥 자체의 효과(왼쪽 문맥만 쓰는 located-line arm 없음), 이 12개·본문 2개·이 모델 밖으로의 일반화, 확증 효과, dLLM 대 AR |
 
 위 표의 OpenEXR 비교는 한 번의 bring-up 실행이다. native proof가 static baseline보다 target
 coverage가 소폭 높았지만 후보 source와 trajectory가 서로 같고 반복 측정도 없어서 controller
@@ -77,6 +78,9 @@ flowchart LR
 | [`superpowers/specs/2026-08-31-dllm-native-online-portfolio-design.md`](superpowers/specs/2026-08-31-dllm-native-online-portfolio-design.md) | 승인 설계. 실제 구현 상태와 효능은 online portfolio 문서에서 분리 |
 | [`superpowers/plans/2026-09-29-trajectory-signal-harness-synthesis.md`](superpowers/plans/2026-09-29-trajectory-signal-harness-synthesis.md) | 동결 프로토콜·원시 결과·판정 근거를 함께 담은 통합 기록. RQ1/RQ3 확정 결과와 RQ3 종료 판단, N=469는 사용하지 않은 과거 pilot 추정치임을 명시한 종합 결론 포함 |
 | [`superpowers/specs/2026-10-13-compiler-localized-span-infill.md`](superpowers/specs/2026-10-13-compiler-localized-span-infill.md) | RQ1/RQ3 종료 후 팀 피드백으로 연 RQ4 설계. offline step 0 결과, 동결 pilot 요약, 위험(고정 길이 canvas, AR FIM control 부재) |
+| [`superpowers/specs/2026-10-26-rq4-retrospective-audit.md`](superpowers/specs/2026-10-26-rq4-retrospective-audit.md) | RQ4 pilot 48건의 read-only 사후 감사(영문). 통계 재계산, 전체 진단 재컴파일, stratum 교란, 컴파일 성공의 내용, canvas 길이 |
+| [`superpowers/specs/2026-10-26-rq4b-functional-repair-benchmark.md`](superpowers/specs/2026-10-26-rq4b-functional-repair-benchmark.md) | RQ4b 동결 설계(영문, P1 실행 완료). 단일 결함 benchmark, 기능 평가기, arm·예산·선택 규칙, 동결 통계 계획, P1 실행 계획 |
+| [`superpowers/specs/2026-10-28-rq4b-p1-results.md`](superpowers/specs/2026-10-28-rq4b-p1-results.md) | RQ4b P1 결과(영문, exploratory). 실행 기록(첫 실행이 다른 GPU 작업과 충돌해 OOM으로 중단된 기록 포함), gate, 동결 대비, 변이별 결과, 해석, 사전 결정 규칙 적용 |
 
 ## 증거와 source of truth
 

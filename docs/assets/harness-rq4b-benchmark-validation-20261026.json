@@ -1,0 +1,570 @@
+{
+ "status": "offline validation; CPU only; no model inference",
+ "all_samples_valid": true,
+ "all_controls_as_expected": true,
+ "samples": [
+  {
+   "sample_id": "IF-ctor-pointer",
+   "example": "InputFile",
+   "kind": "constructor-argument",
+   "line_number": 1,
+   "target_line": "    OPENEXR_IMF_NAMESPACE::InputFile file(stream);",
+   "defective_line": "    OPENEXR_IMF_NAMESPACE::InputFile file(&stream);",
+   "mutant_diagnostics": [
+    "no matching constructor for initialization of 'Imf::InputFile'"
+   ],
+   "diagnostic_suggests_fix": false,
+   "defect_window_tokens_L": 14,
+   "target_tokens_L_star": 13,
+   "infill_mask_lengths": [
+    14,
+    16,
+    12,
+    18,
+    22
+   ],
+   "L_star_in_sweep": false,
+   "leaks": [],
+   "checks": {
+    "reference_syntax_clean": true,
+    "reference_functional_success": true,
+    "mutant_does_not_compile": true,
+    "all_errors_on_mutated_line": true,
+    "code_after_mutated_line": true,
+    "no_leakage": true,
+    "mask_lengths_positive": true
+   },
+   "valid": true
+  },
+  {
+   "sample_id": "IF-bad-method",
+   "example": "InputFile",
+   "kind": "invalid-method",
+   "line_number": 2,
+   "target_line": "    const OPENEXR_IMF_NAMESPACE::Header& header = file.header();",
+   "defective_line": "    const OPENEXR_IMF_NAMESPACE::Header& header = file.readHeader();",
+   "mutant_diagnostics": [
+    "no member named 'readHeader' in 'Imf_3_4::InputFile'"
+   ],
+   "diagnostic_suggests_fix": false,
+   "defect_window_tokens_L": 17,
+   "target_tokens_L_star": 16,
+   "infill_mask_lengths": [
+    17,
+    19,
+    15,
+    21,
+    25
+   ],
+   "L_star_in_sweep": false,
+   "leaks": [],
+   "checks": {
+    "reference_syntax_clean": true,
+    "reference_functional_success": true,
+    "mutant_does_not_compile": true,
+    "all_errors_on_mutated_line": true,
+    "code_after_mutated_line": true,
+    "no_leakage": true,
+    "mask_lengths_positive": true
+   },
+   "valid": true
+  },
+  {
+   "sample_id": "IF-extra-arg",
+   "example": "InputFile",
+   "kind": "argument-count",
+   "line_number": 2,
+   "target_line": "    const OPENEXR_IMF_NAMESPACE::Header& header = file.header();",
+   "defective_line": "    const OPENEXR_IMF_NAMESPACE::Header& header = file.header(0);",
+   "mutant_diagnostics": [
+    "too many arguments to function call, expected 0, have 1"
+   ],
+   "diagnostic_suggests_fix": false,
+   "defect_window_tokens_L": 18,
+   "target_tokens_L_star": 16,
+   "infill_mask_lengths": [
+    18,
+    20,
+    16,
+    22,
+    26
+   ],
+   "L_star_in_sweep": true,
+   "leaks": [],
+   "checks": {
+    "reference_syntax_clean": true,
+    "reference_functional_success": true,
+    "mutant_does_not_compile": true,
+    "all_errors_on_mutated_line": true,
+    "code_after_mutated_line": true,
+    "no_leakage": true,
+    "mask_lengths_positive": true
+   },
+   "valid": true
+  },
+  {
+   "sample_id": "IF-box-namespace",
+   "example": "InputFile",
+   "kind": "namespace-or-type",
+   "line_number": 3,
+   "target_line": "    const IMATH_NAMESPACE::Box2i& dataWindow = header.dataWindow();",
+   "defective_line": "    const OPENEXR_IMF_NAMESPACE::Box2i& dataWindow = header.dataWindow();",
+   "mutant_diagnostics": [
+    "no type named 'Box2i' in namespace 'Imf'; did you mean 'Imath::Box2i'?"
+   ],
+   "diagnostic_suggests_fix": true,
+   "defect_window_tokens_L": 20,
+   "target_tokens_L_star": 17,
+   "infill_mask_lengths": [
+    20,
+    22,
+    18,
+    24,
+    28
+   ],
+   "L_star_in_sweep": false,
+   "leaks": [],
+   "checks": {
+    "reference_syntax_clean": true,
+    "reference_functional_success": true,
+    "mutant_does_not_compile": true,
+    "all_errors_on_mutated_line": true,
+    "code_after_mutated_line": true,
+    "no_leakage": true,
+    "mask_lengths_positive": true
+   },
+   "valid": true
+  },
+  {
+   "sample_id": "IF-no-semicolon",
+   "example": "InputFile",
+   "kind": "syntax-missing-semicolon",
+   "line_number": 1,
+   "target_line": "    OPENEXR_IMF_NAMESPACE::InputFile file(stream);",
+   "defective_line": "    OPENEXR_IMF_NAMESPACE::InputFile file(stream)",
+   "mutant_diagnostics": [
+    "expected ';' at end of declaration"
+   ],
+   "diagnostic_suggests_fix": false,
+   "defect_window_tokens_L": 13,
+   "target_tokens_L_star": 13,
+   "infill_mask_lengths": [
+    13,
+    15,
+    11,
+    17,
+    21
+   ],
+   "L_star_in_sweep": true,
+   "leaks": [],
+   "checks": {
+    "reference_syntax_clean": true,
+    "reference_functional_success": true,
+    "mutant_does_not_compile": true,
+    "all_errors_on_mutated_line": true,
+    "code_after_mutated_line": true,
+    "no_leakage": true,
+    "mask_lengths_positive": true
+   },
+   "valid": true
+  },
+  {
+   "sample_id": "IF-uncalled-member",
+   "example": "InputFile",
+   "kind": "missing-call-parentheses",
+   "line_number": 3,
+   "target_line": "    const IMATH_NAMESPACE::Box2i& dataWindow = header.dataWindow();",
+   "defective_line": "    const IMATH_NAMESPACE::Box2i& dataWindow = header.dataWindow;",
+   "mutant_diagnostics": [
+    "reference to non-static member function must be called; did you mean to call it with no arguments?"
+   ],
+   "diagnostic_suggests_fix": true,
+   "defect_window_tokens_L": 17,
+   "target_tokens_L_star": 17,
+   "infill_mask_lengths": [
+    17,
+    19,
+    15,
+    21,
+    25
+   ],
+   "L_star_in_sweep": true,
+   "leaks": [],
+   "checks": {
+    "reference_syntax_clean": true,
+    "reference_functional_success": true,
+    "mutant_does_not_compile": true,
+    "all_errors_on_mutated_line": true,
+    "code_after_mutated_line": true,
+    "no_leakage": true,
+    "mask_lengths_positive": true
+   },
+   "valid": true
+  },
+  {
+   "sample_id": "MP-ctor-pointer",
+   "example": "MultiPartInputFile",
+   "kind": "constructor-argument",
+   "line_number": 1,
+   "target_line": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);",
+   "defective_line": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(&stream);",
+   "mutant_diagnostics": [
+    "no matching constructor for initialization of 'Imf::MultiPartInputFile'"
+   ],
+   "diagnostic_suggests_fix": false,
+   "defect_window_tokens_L": 16,
+   "target_tokens_L_star": 15,
+   "infill_mask_lengths": [
+    16,
+    18,
+    14,
+    20,
+    24
+   ],
+   "L_star_in_sweep": false,
+   "leaks": [],
+   "checks": {
+    "reference_syntax_clean": true,
+    "reference_functional_success": true,
+    "mutant_does_not_compile": true,
+    "all_errors_on_mutated_line": true,
+    "code_after_mutated_line": true,
+    "no_leakage": true,
+    "mask_lengths_positive": true
+   },
+   "valid": true
+  },
+  {
+   "sample_id": "MP-bad-method",
+   "example": "MultiPartInputFile",
+   "kind": "invalid-method",
+   "line_number": 2,
+   "target_line": "    const int partCount = file.parts();",
+   "defective_line": "    const int partCount = file.numParts();",
+   "mutant_diagnostics": [
+    "no member named 'numParts' in 'Imf_3_4::MultiPartInputFile'"
+   ],
+   "diagnostic_suggests_fix": false,
+   "defect_window_tokens_L": 10,
+   "target_tokens_L_star": 9,
+   "infill_mask_lengths": [
+    10,
+    12,
+    8,
+    14,
+    18
+   ],
+   "L_star_in_sweep": false,
+   "leaks": [],
+   "checks": {
+    "reference_syntax_clean": true,
+    "reference_functional_success": true,
+    "mutant_does_not_compile": true,
+    "all_errors_on_mutated_line": true,
+    "code_after_mutated_line": true,
+    "no_leakage": true,
+    "mask_lengths_positive": true
+   },
+   "valid": true
+  },
+  {
+   "sample_id": "MP-missing-arg",
+   "example": "MultiPartInputFile",
+   "kind": "argument-count",
+   "line_number": 3,
+   "target_line": "    const OPENEXR_IMF_NAMESPACE::Header& header = file.header(0);",
+   "defective_line": "    const OPENEXR_IMF_NAMESPACE::Header& header = file.header();",
+   "mutant_diagnostics": [
+    "too few arguments to function call, single argument 'partNumber' was not specified"
+   ],
+   "diagnostic_suggests_fix": false,
+   "defect_window_tokens_L": 16,
+   "target_tokens_L_star": 18,
+   "infill_mask_lengths": [
+    16,
+    18,
+    14,
+    20,
+    24
+   ],
+   "L_star_in_sweep": true,
+   "leaks": [],
+   "checks": {
+    "reference_syntax_clean": true,
+    "reference_functional_success": true,
+    "mutant_does_not_compile": true,
+    "all_errors_on_mutated_line": true,
+    "code_after_mutated_line": true,
+    "no_leakage": true,
+    "mask_lengths_positive": true
+   },
+   "valid": true
+  },
+  {
+   "sample_id": "MP-header-type",
+   "example": "MultiPartInputFile",
+   "kind": "namespace-or-type",
+   "line_number": 3,
+   "target_line": "    const OPENEXR_IMF_NAMESPACE::Header& header = file.header(0);",
+   "defective_line": "    const OPENEXR_IMF_NAMESPACE::PartHeader& header = file.header(0);",
+   "mutant_diagnostics": [
+    "no type named 'PartHeader' in namespace 'Imf'"
+   ],
+   "diagnostic_suggests_fix": false,
+   "defect_window_tokens_L": 19,
+   "target_tokens_L_star": 18,
+   "infill_mask_lengths": [
+    19,
+    21,
+    17,
+    23,
+    27
+   ],
+   "L_star_in_sweep": false,
+   "leaks": [],
+   "checks": {
+    "reference_syntax_clean": true,
+    "reference_functional_success": true,
+    "mutant_does_not_compile": true,
+    "all_errors_on_mutated_line": true,
+    "code_after_mutated_line": true,
+    "no_leakage": true,
+    "mask_lengths_positive": true
+   },
+   "valid": true
+  },
+  {
+   "sample_id": "MP-no-semicolon",
+   "example": "MultiPartInputFile",
+   "kind": "syntax-missing-semicolon",
+   "line_number": 2,
+   "target_line": "    const int partCount = file.parts();",
+   "defective_line": "    const int partCount = file.parts()",
+   "mutant_diagnostics": [
+    "expected ';' at end of declaration"
+   ],
+   "diagnostic_suggests_fix": false,
+   "defect_window_tokens_L": 9,
+   "target_tokens_L_star": 9,
+   "infill_mask_lengths": [
+    9,
+    11,
+    7,
+    13,
+    17
+   ],
+   "L_star_in_sweep": true,
+   "leaks": [],
+   "checks": {
+    "reference_syntax_clean": true,
+    "reference_functional_success": true,
+    "mutant_does_not_compile": true,
+    "all_errors_on_mutated_line": true,
+    "code_after_mutated_line": true,
+    "no_leakage": true,
+    "mask_lengths_positive": true
+   },
+   "valid": true
+  },
+  {
+   "sample_id": "MP-string-arg",
+   "example": "MultiPartInputFile",
+   "kind": "argument-type",
+   "line_number": 3,
+   "target_line": "    const OPENEXR_IMF_NAMESPACE::Header& header = file.header(0);",
+   "defective_line": "    const OPENEXR_IMF_NAMESPACE::Header& header = file.header(\"0\");",
+   "mutant_diagnostics": [
+    "cannot initialize a parameter of type 'int' with an lvalue of type 'const char[2]'"
+   ],
+   "diagnostic_suggests_fix": false,
+   "defect_window_tokens_L": 18,
+   "target_tokens_L_star": 18,
+   "infill_mask_lengths": [
+    18,
+    20,
+    16,
+    22,
+    26
+   ],
+   "L_star_in_sweep": true,
+   "leaks": [],
+   "checks": {
+    "reference_syntax_clean": true,
+    "reference_functional_success": true,
+    "mutant_does_not_compile": true,
+    "all_errors_on_mutated_line": true,
+    "code_after_mutated_line": true,
+    "no_leakage": true,
+    "mask_lengths_positive": true
+   },
+   "valid": true
+  }
+ ],
+ "evaluator_controls": [
+  {
+   "control": "reference",
+   "example": "InputFile",
+   "compiled": true,
+   "expected_success": true,
+   "success": true,
+   "reasons": [],
+   "as_expected": true
+  },
+  {
+   "control": "alt-correct-direct-chain",
+   "example": "InputFile",
+   "compiled": true,
+   "expected_success": true,
+   "success": true,
+   "reasons": [],
+   "as_expected": true
+  },
+  {
+   "control": "alt-correct-auto-copy",
+   "example": "InputFile",
+   "compiled": true,
+   "expected_success": true,
+   "success": true,
+   "reasons": [],
+   "as_expected": true
+  },
+  {
+   "control": "use-removed (limitation: value use unchecked)",
+   "example": "InputFile",
+   "compiled": true,
+   "expected_success": true,
+   "success": true,
+   "reasons": [],
+   "as_expected": true
+  },
+  {
+   "control": "deleted-inspection",
+   "example": "InputFile",
+   "compiled": true,
+   "expected_success": false,
+   "success": false,
+   "reasons": [
+    "chain-missing:header>dataWindow"
+   ],
+   "as_expected": true
+  },
+  {
+   "control": "commented-out-inspection",
+   "example": "InputFile",
+   "compiled": true,
+   "expected_success": false,
+   "success": false,
+   "reasons": [
+    "chain-missing:header>dataWindow"
+   ],
+   "as_expected": true
+  },
+  {
+   "control": "string-literal-mention",
+   "example": "InputFile",
+   "compiled": true,
+   "expected_success": false,
+   "success": false,
+   "reasons": [
+    "chain-missing:header>dataWindow"
+   ],
+   "as_expected": true
+  },
+  {
+   "control": "dead-branch",
+   "example": "InputFile",
+   "compiled": true,
+   "expected_success": false,
+   "success": false,
+   "reasons": [
+    "chain-not-executed:header>dataWindow"
+   ],
+   "as_expected": true
+  },
+  {
+   "control": "early-return",
+   "example": "InputFile",
+   "compiled": true,
+   "expected_success": false,
+   "success": false,
+   "reasons": [
+    "chain-not-executed:header>dataWindow"
+   ],
+   "as_expected": true
+  },
+  {
+   "control": "wrong-receiver",
+   "example": "InputFile",
+   "compiled": true,
+   "expected_success": false,
+   "success": false,
+   "reasons": [
+    "chain-missing:header>dataWindow"
+   ],
+   "as_expected": true
+  },
+  {
+   "control": "body-try-swallows",
+   "example": "InputFile",
+   "compiled": true,
+   "expected_success": false,
+   "success": false,
+   "reasons": [
+    "body-contains-try"
+   ],
+   "as_expected": true
+  },
+  {
+   "control": "reference",
+   "example": "MultiPartInputFile",
+   "compiled": true,
+   "expected_success": true,
+   "success": true,
+   "reasons": [],
+   "as_expected": true
+  },
+  {
+   "control": "alt-correct-inline",
+   "example": "MultiPartInputFile",
+   "compiled": true,
+   "expected_success": true,
+   "success": true,
+   "reasons": [],
+   "as_expected": true
+  },
+  {
+   "control": "throws-at-runtime (header of part 1 in a one-part file)",
+   "example": "MultiPartInputFile",
+   "compiled": true,
+   "expected_success": false,
+   "success": false,
+   "reasons": [
+    "exception-reached-scaffold-catch"
+   ],
+   "as_expected": true
+  },
+  {
+   "control": "partial (parts only)",
+   "example": "MultiPartInputFile",
+   "compiled": true,
+   "expected_success": false,
+   "success": false,
+   "reasons": [
+    "chain-missing:header>dataWindow"
+   ],
+   "as_expected": true
+  },
+  {
+   "control": "deleted-inspection",
+   "example": "MultiPartInputFile",
+   "compiled": true,
+   "expected_success": false,
+   "success": false,
+   "reasons": [
+    "chain-missing:parts",
+    "chain-missing:header>dataWindow"
+   ],
+   "as_expected": true
+  }
+ ]
+}
