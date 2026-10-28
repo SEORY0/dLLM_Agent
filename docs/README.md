@@ -80,7 +80,7 @@ flowchart LR
 | [`superpowers/specs/2026-10-13-compiler-localized-span-infill.md`](superpowers/specs/2026-10-13-compiler-localized-span-infill.md) | RQ1/RQ3 종료 후 팀 피드백으로 연 RQ4 설계. offline step 0 결과, 동결 pilot 요약, 위험(고정 길이 canvas, AR FIM control 부재) |
 | [`superpowers/specs/2026-10-26-rq4-retrospective-audit.md`](superpowers/specs/2026-10-26-rq4-retrospective-audit.md) | RQ4 pilot 48건의 read-only 사후 감사(영문). 통계 재계산, 전체 진단 재컴파일, stratum 교란, 컴파일 성공의 내용, canvas 길이 |
 | [`superpowers/specs/2026-10-26-rq4b-functional-repair-benchmark.md`](superpowers/specs/2026-10-26-rq4b-functional-repair-benchmark.md) | RQ4b 동결 설계(영문, P1 실행 완료). 단일 결함 benchmark, 기능 평가기, arm·예산·선택 규칙, 동결 통계 계획, P1 실행 계획 |
-| [`superpowers/specs/2026-10-28-rq4b-p1-results.md`](superpowers/specs/2026-10-28-rq4b-p1-results.md) | RQ4b P1 결과(영문, exploratory). 실행 기록(첫 실행 vLLM 충돌로 OOM 중단 포함), gate, 동결 대비, 변이별 결과, 해석, 사전 결정 규칙 적용 |
+| [`superpowers/specs/2026-10-28-rq4b-p1-results.md`](superpowers/specs/2026-10-28-rq4b-p1-results.md) | RQ4b P1 결과(영문, exploratory). 실행 기록(첫 실행이 다른 GPU 작업과 충돌해 OOM으로 중단된 기록 포함), gate, 동결 대비, 변이별 결과, 해석, 사전 결정 규칙 적용 |
 
 ## 증거와 source of truth
 

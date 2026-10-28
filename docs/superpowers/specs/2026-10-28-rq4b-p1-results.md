@@ -14,8 +14,8 @@ Every statement is labelled **observed** (computed from the artefacts), **inferr
 ## 1. Execution (observed)
 
 - **Smoke test** (one unit, seeds 19,000,000+, outside every reserved block, kept outside the repo): 16/16 generations, freeze check passed, mask id 151666 matched, preservation held, 156 s, peak 17.6 GB on GPU 1.
-- **First P1 launch (10:35):** aborted before any ledger row was written. A shared vLLM service (`solar-open2-250b`, tensor-parallel over both GPUs) started in the same second and grew to 88 GB on GPU 1, and the first Dream subprocess hit CUDA out-of-memory. Per protocol there was no retry. Its log is kept as `/data/dllm-agent/harness-synthesis/rq4b-p1/run-oom-20261028-1035.log`. No candidate from it exists, so nothing was excluded.
-- **P1 run (11:16–13:46, about 2.5 h, GPU 1 only, one Dream process at a time):** 60 units, 960 generations, no errors. The freeze check passed at start, and G1 (outside-span preservation) held for every infill candidate. A `hybrid-document-search` job ran on GPU 0 for part of the run; GPU 1 held only P1 and an idle Sinsan process (772 MiB).
+- **First P1 launch (10:35):** aborted before any ledger row was written. Another tenant's large inference service, spanning both GPUs, started in the same second and grew to 88 GB on GPU 1, and the first Dream subprocess hit CUDA out-of-memory. Per protocol there was no retry. Its log is kept as `/data/dllm-agent/harness-synthesis/rq4b-p1/run-oom-20261028-1035.log`. No candidate from it exists, so nothing was excluded.
+- **P1 run (11:16–13:46, about 2.5 h, GPU 1 only, one Dream process at a time):** 60 units, 960 generations, no errors. The freeze check passed at start, and G1 (outside-span preservation) held for every infill candidate. An unrelated job ran on GPU 0 for part of the run; GPU 1 held only P1 and a small idle process from another project (772 MiB).
 - **Analysis:** the frozen commands from spec §7, step 3, unchanged.
 
 ## 2. Gates
@@ -27,6 +27,8 @@ Every statement is labelled **observed** (computed from the artefacts), **inferr
 | G3 hand check, 24 candidates stratified by verdict | 24/24 agree (11 functional successes, 2 compiled-not-functional, 11 not compiled; every compile failure is a nonexistent API or type, such as `numberOfParts`, `FileHeader`, `DataWindow`, `Box2`, `OPENEXR_IMF_NAMESPACE::Box2i`, or a truncated body) |
 
 **Protocol deviation (observed).** The spec says G3 comes before reading any contrast. The analysis script was run immediately after the G3 sample was drawn, and the hand check was done afterwards, by Claude, not a human. G3 found no disagreement, so no re-scoring was needed and the contrasts below are the frozen pipeline's output. A human review of the 24 candidates is still **outstanding**.
+
+**Independent blinded review (2026-10-28).** The 24 candidates were later re-judged in a blinded package kept outside the repo: shuffled order; reference, defect, diagnostic, repair and required behaviour shown; arm and verdict sealed until all judgments were recorded. That review was **AI-assisted, not a human adjudication**. It agreed with the evaluator on 24/24, including two candidates that compile but drop the required `dataWindow` call. It does not satisfy the human-review requirement, which remains outstanding.
 
 ## 3. Primary contrasts (exploratory)
 
@@ -111,4 +113,4 @@ Recommended before freezing the confirmatory protocol (inferred from §5, not pr
 - **Not established:** that right-hand context causes the advantage (no left-only located-line arm).
 - **Not established:** anything beyond these 12 mutations of 2 OpenEXR bodies, this model, this decoding configuration and this evaluator.
 - **Not established:** anything about dLLM vs AR (no AR or FIM-AR model was run).
-- **Unverified:** a human review of the G3 sample.
+- **Unverified:** human adjudication of the G3 sample. An independent blinded AI-assisted review agreed 24/24.
