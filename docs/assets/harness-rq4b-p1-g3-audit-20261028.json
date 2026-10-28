@@ -1,0 +1,268 @@
+[
+ {
+  "sample_id": "IF-bad-method",
+  "arm": "infill-sweep",
+  "index": 1,
+  "seed": 13001034,
+  "body": "    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n    const OPENEXR_IMF_NAMESPACE::Imf::Header& header = file.header();\n    const IMATH_NAMESPACE::Box2i& dataWindow = header.dataWindow();\n    static_cast<void>(dataWindow.max.x - dataWindow.min.x);\n  ",
+  "compiled": false,
+  "success": false,
+  "reasons": [
+   "not-compiled"
+  ]
+ },
+ {
+  "sample_id": "MP-missing-arg",
+  "arm": "suffix",
+  "index": 1,
+  "seed": 13008011,
+  "body": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    const int partCount = file.parts();\n    if (partCount == 0) {\n      throw std::runtime_error(\"no parts in the file\");\n    }\n    OPENEXR_IMF_NAMESPACE::Header header = file.header(0);\n   ",
+  "compiled": true,
+  "success": false,
+  "reasons": [
+   "chain-missing:header>dataWindow"
+  ]
+ },
+ {
+  "sample_id": "MP-string-arg",
+  "arm": "infill-sweep",
+  "index": 2,
+  "seed": 13011041,
+  "body": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    const int partCount = file.parts();\n    OPENEXR_IMF_NAMESPACE::Header header = file.header(0);\n    static_cast<void>(partCount + header.dataWindow().max.x);\n  ",
+  "compiled": true,
+  "success": true,
+  "reasons": []
+ },
+ {
+  "sample_id": "IF-bad-method",
+  "arm": "suffix",
+  "index": 4,
+  "seed": 13001044,
+  "body": "    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n    OPENEXR_IMF_NAMESPACE::Header header = file.header();\n    OPENEXR_IMF_NAMESPACE::Box2i dataWindow = header.dataWindow();\n    auto extent = dataWindow.extent();\n  ",
+  "compiled": false,
+  "success": false,
+  "reasons": [
+   "not-compiled"
+  ]
+ },
+ {
+  "sample_id": "MP-missing-arg",
+  "arm": "suffix",
+  "index": 4,
+  "seed": 13008044,
+  "body": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    const int partCount = file.parts();\n    if (partCount == 0) {\n      throw std::runtime_error(\"no parts in the file\");\n    }\n\n    OPENEXR_IMF_NAMESPACE::Header header = file.header(0);\n   ",
+  "compiled": true,
+  "success": false,
+  "reasons": [
+   "chain-missing:header>dataWindow"
+  ]
+ },
+ {
+  "sample_id": "MP-bad-method",
+  "arm": "infill-sweep",
+  "index": 2,
+  "seed": 13007041,
+  "body": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    int partCount = file.parts();\n    const OPENEXR_IMF_NAMESPACE::Header& header = file.header(0);\n    static_cast<void>(partCount + header.dataWindow().max.x);\n  ",
+  "compiled": true,
+  "success": true,
+  "reasons": []
+ },
+ {
+  "sample_id": "MP-bad-method",
+  "arm": "resample",
+  "index": 4,
+  "seed": 13007024,
+  "body": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    int partCount = file.numberOfParts();\n    const OPENEXR_IMF_NAMESPACE::Header& header = file.partHeader(0);\n    OPENEXR_IMF_NAMESPACE::Box2 dataWindow = header.dataWindow();\n    partCount; // Use part count and data window in an expression\n  ",
+  "compiled": false,
+  "success": false,
+  "reasons": [
+   "not-compiled"
+  ]
+ },
+ {
+  "sample_id": "IF-bad-method",
+  "arm": "infill-sweep",
+  "index": 4,
+  "seed": 13001021,
+  "body": "    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n    OPENEXR_IMF_NAMESPACE::Header header = file.header();\n\n    // Use the data window extent in an expression\n    const IMATH_NAMESPACE::Box2i& dataWindow = header.dataWindow();\n    static_cast<void>(dataWindow.max.x - dataWindow.min.x);\n  ",
+  "compiled": true,
+  "success": true,
+  "reasons": []
+ },
+ {
+  "sample_id": "IF-ctor-pointer",
+  "arm": "suffix",
+  "index": 3,
+  "seed": 13000003,
+  "body": "    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n    const OPENEXR_IMF_NAMESPACE::Header header = file.header();\n    OPENEXR_IMF_NAMESPACE::DataWindow dataWindow = file.header().dataWindow();\n    \n    // Use the extent in an expression\n    const auto extent = dataWindow.extent();\n\n    return 0;\n  ",
+  "compiled": false,
+  "success": false,
+  "reasons": [
+   "not-compiled"
+  ]
+ },
+ {
+  "sample_id": "MP-missing-arg",
+  "arm": "infill-sweep",
+  "index": 0,
+  "seed": 13008011,
+  "body": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    const int partCount = file.parts();\n    OPENEXR_IMF_NAMESPACE::Header header = file.header(0);\n    static_cast<void>(partCount + header.dataWindow().max.x);\n  ",
+  "compiled": true,
+  "success": true,
+  "reasons": []
+ },
+ {
+  "sample_id": "MP-missing-arg",
+  "arm": "resample",
+  "index": 1,
+  "seed": 13008001,
+  "body": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(&stream);\n    int partCount = file.numberOfParts();\n    IMF::Header header = file.part(0).header();\n    IMF::Box dataWindow = header.window();\n    int unusedExpression = partCount + dataWindow.xMax + dataWindow.yMax;\n  ",
+  "compiled": false,
+  "success": false,
+  "reasons": [
+   "not-compiled"
+  ]
+ },
+ {
+  "sample_id": "MP-ctor-pointer",
+  "arm": "infill-oracle-length",
+  "index": 0,
+  "seed": 13006049,
+  "body": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    const int partCount = file.parts();\n    const OPENEXR_IMF_NAMESPACE::Header& header = file.header(0);\n    static_cast<void>(partCount + header.dataWindow().max.x);\n  ",
+  "compiled": true,
+  "success": true,
+  "reasons": []
+ },
+ {
+  "sample_id": "IF-no-semicolon",
+  "arm": "resample",
+  "index": 2,
+  "seed": 13004032,
+  "body": "    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n    OPENEXR_IMF_NAMESPACE::FileHeader header = file.header();\n    OPENEXR_IMF_NAMESPACE::DataWindow dataWindow = header.dataWindow();\n\n    // Use the data window's extent in an expression\n    int result = dataWindow.extent.width() + dataWindow.extent.height();\n  ",
+  "compiled": false,
+  "success": false,
+  "reasons": [
+   "not-compiled"
+  ]
+ },
+ {
+  "sample_id": "MP-ctor-pointer",
+  "arm": "infill-oracle-length",
+  "index": 0,
+  "seed": 13006029,
+  "body": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    const int partCount = file.parts();\n    const OPENEXR_IMF_NAMESPACE::Header& header = file.header(0);\n    static_cast<void>(partCount + header.dataWindow().max.x);\n  ",
+  "compiled": true,
+  "success": true,
+  "reasons": []
+ },
+ {
+  "sample_id": "IF-extra-arg",
+  "arm": "infill-sweep",
+  "index": 4,
+  "seed": 13002043,
+  "body": "    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n    static_cast<void>(file.isOpenFile());\n    const OPENEXR_IMF_NAMESPACE::Header& header = file.header();\n    const IMATH_NAMESPACE::Box2i& dataWindow = header.dataWindow();\n    static_cast<void>(dataWindow.max.x - dataWindow.min.x);\n  ",
+  "compiled": false,
+  "success": false,
+  "reasons": [
+   "not-compiled"
+  ]
+ },
+ {
+  "sample_id": "MP-string-arg",
+  "arm": "infill-sweep",
+  "index": 4,
+  "seed": 13011021,
+  "body": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    const int partCount = file.parts();\n    OPENEXR_IMF_NAMESPACE::Header header = file.header(0);\n\n    // Use part count and data window information\n    static_cast<void>(partCount + header.dataWindow().max.x);\n  ",
+  "compiled": true,
+  "success": true,
+  "reasons": []
+ },
+ {
+  "sample_id": "IF-box-namespace",
+  "arm": "suffix",
+  "index": 2,
+  "seed": 13003042,
+  "body": "    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n    const OPENEXR_IMF_NAMESPACE::Header& header = file.header();\n    OPENEXR_IMF_NAMESPACE::Box2i dataWindow = header.dataWindow();\n    int extent = dataWindow.max.x - dataWindow.min.x * (dataWindow.max.y - dataWindow.min.y + 1);\n",
+  "compiled": false,
+  "success": false,
+  "reasons": [
+   "not-compiled"
+  ]
+ },
+ {
+  "sample_id": "MP-header-type",
+  "arm": "infill-sweep",
+  "index": 4,
+  "seed": 13009021,
+  "body": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    const int partCount = file.parts();\n    const OPENEXR_IMF_NAMESPACE::Header header = file.header(0);\n\n    // Use the part count and data window\n    static_cast<void>(partCount + header.dataWindow().max.x);\n  ",
+  "compiled": true,
+  "success": true,
+  "reasons": []
+ },
+ {
+  "sample_id": "IF-no-semicolon",
+  "arm": "resample",
+  "index": 2,
+  "seed": 13004042,
+  "body": "    OPENEXR_IMF_NAMESPACE::InputFile file(static_cast<OPENEXR_IMF_NAMESPACE::IStream*>(&stream));\n    const OPENEXR_IMF_NAMESPACE::Header& header = file.header();\n    const OPENEXR_IMF_NAMESPACE::Box2i& dataWindow = header.dataWindow();\n\n    // Use the data window's extent in an expression\n    int width = dataWindow.xMax() - dataWindow.xMin();\n    int height = dataWindow.y",
+  "compiled": false,
+  "success": false,
+  "reasons": [
+   "not-compiled"
+  ]
+ },
+ {
+  "sample_id": "MP-bad-method",
+  "arm": "infill-sweep",
+  "index": 2,
+  "seed": 13007030,
+  "body": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    int partCount = file.parts();\n    const OPENEXR_IMF_NAMESPACE::Header& header = file.header(0);\n    static_cast<void>(partCount + header.dataWindow().max.x);\n  ",
+  "compiled": true,
+  "success": true,
+  "reasons": []
+ },
+ {
+  "sample_id": "IF-ctor-pointer",
+  "arm": "resample",
+  "index": 0,
+  "seed": 13000030,
+  "body": "    OPENEXR_IMF_NAMESPACE::InputFile file(&stream);\n    OPENEXR_IMF_NAMESPACE::Header header = file.header();\n    OPENEXR_IMF_NAMESPACE::BoxI2D extent = header.dataWindow();\n\n    // Use the data window's extent in an expression so the result is not unused\n    extent.width + extent.height;\n  ",
+  "compiled": false,
+  "success": false,
+  "reasons": [
+   "not-compiled"
+  ]
+ },
+ {
+  "sample_id": "IF-extra-arg",
+  "arm": "infill-sweep",
+  "index": 2,
+  "seed": 13002041,
+  "body": "    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n    const OPENEXR_IMF_NAMESPACE::Header& header = file.header();\n    const IMATH_NAMESPACE::Box2i& dataWindow = header.dataWindow();\n    static_cast<void>(dataWindow.max.x - dataWindow.min.x);\n  ",
+  "compiled": true,
+  "success": true,
+  "reasons": []
+ },
+ {
+  "sample_id": "IF-uncalled-member",
+  "arm": "infill-sweep",
+  "index": 0,
+  "seed": 13005022,
+  "body": "    OPENEXR_IMF_NAMESPACE::InputFile file(stream);\n    const OPENEXR_IMF_NAMESPACE::Header& header = file.header();\n    OPENEXR_IMF_NAMESPACE::Box2 dataWindow = header.dataWindow();\n    static_cast<void>(dataWindow.max.x - dataWindow.min.x);\n  ",
+  "compiled": false,
+  "success": false,
+  "reasons": [
+   "not-compiled"
+  ]
+ },
+ {
+  "sample_id": "MP-header-type",
+  "arm": "infill-sweep",
+  "index": 3,
+  "seed": 13009031,
+  "body": "    OPENEXR_IMF_NAMESPACE::MultiPartInputFile file(stream);\n    const int partCount = file.parts();\n    OPENEXR_IMF_NAMESPACE::Header header = file.header(0);\n\n    // Ensure values are used\n    static_cast<void>(partCount + header.dataWindow().max.x);\n  ",
+  "compiled": true,
+  "success": true,
+  "reasons": []
+ }
+]
